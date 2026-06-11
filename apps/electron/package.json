@@ -31,6 +31,7 @@
     "dist:mac": "bash scripts/build-dmg.sh arm64",
     "dist:mac:x64": "bash scripts/build-dmg.sh x64",
     "dist:win": "powershell -ExecutionPolicy Bypass -File scripts/build-win.ps1",
+    "dist:win:nosign": "powershell -ExecutionPolicy Bypass -File scripts/build-win.ps1 -NoSign",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"
   },

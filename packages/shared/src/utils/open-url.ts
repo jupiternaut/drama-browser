@@ -20,10 +20,30 @@ export async function openUrl(url: string): Promise<void> {
     await shell.openExternal(url);
     return;
   } catch {
-    // Not in Electron main process — fall back to 'open' package.
+    // Not in Electron main process — use platform commands.
   }
 
-  const open = await import('open');
-  const openFn = open.default || open;
-  await openFn(url);
+  const { exec } = await import('node:child_process');
+  const escapedUrl = JSON.stringify(url);
+
+  if (typeof process === 'undefined' || typeof process.env === 'undefined') {
+    return;
+  }
+
+  const command =
+    process.platform === 'win32'
+      ? `start "" ${escapedUrl}`
+      : process.platform === 'darwin'
+        ? `open ${escapedUrl}`
+        : `xdg-open ${escapedUrl}`;
+
+  await new Promise<void>((resolve, reject) => {
+    exec(command, (error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
 }

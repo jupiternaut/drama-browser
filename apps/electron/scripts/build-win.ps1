@@ -1,5 +1,10 @@
 # Build script for Windows NSIS installer
 # Usage: powershell -ExecutionPolicy Bypass -File scripts/build-win.ps1
+# Optional: -NoSign disable code signing for local troubleshooting builds
+
+param(
+  [switch] $NoSign
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -428,7 +433,21 @@ while (-not $builderSuccess -and $builderRetry -lt $maxBuilderRetries) {
         Start-Sleep -Seconds 1
     }
 
-    npx electron-builder --win --x64 2>&1 | Tee-Object -Variable builderOutput
+    $builderArgs = @("npx", "electron-builder", "--win", "--x64")
+    if ($NoSign) {
+        $builderArgs += @(
+            "--config.win.forceCodeSigning=false",
+            "--config.win.signAndEditExecutable=false"
+        )
+    }
+
+    $builderCommand = $builderArgs[0]
+    $builderCommandArgs = @()
+    if ($builderArgs.Count -gt 1) {
+        $builderCommandArgs = $builderArgs[1..($builderArgs.Count - 1)]
+    }
+
+    & $builderCommand @builderCommandArgs 2>&1 | Tee-Object -Variable builderOutput
 
     if ($LASTEXITCODE -eq 0) {
         $builderSuccess = $true

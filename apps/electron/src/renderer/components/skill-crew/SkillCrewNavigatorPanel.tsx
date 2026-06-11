@@ -148,7 +148,7 @@ export function SkillCrewNavigatorPanel() {
   const skills = useAtomValue(skillsAtom)
   const setSkills = useSetAtom(skillsAtom)
   const activeWorkspace = useActiveWorkspace()
-  const { activeWorkspaceId, activeSessionWorkingDirectory } = useAppShellContext()
+  const { activeWorkspaceId, activeSessionWorkingDirectory, onOpenFile } = useAppShellContext()
   const [activeChannel, setActiveChannel] = useAtom(skillCrewChannelAtom)
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set(DEFAULT_SKILL_CREW_ROOMS))
   const [customFolders, setCustomFolders] = React.useState<CrewFolder[]>([])
@@ -512,9 +512,9 @@ export function SkillCrewNavigatorPanel() {
     }
   }, [activeSessionWorkingDirectory, activeWorkspaceId, importTargetFolder, moveSkill, refreshSkills, setActiveChannel])
 
-  const openSkillPath = React.useCallback(async (skill: LoadedSkill) => {
-    await window.electronAPI.openFile(skillFilePath(skill))
-  }, [])
+  const openSkillPath = React.useCallback((skill: LoadedSkill) => {
+    onOpenFile(skillFilePath(skill))
+  }, [onOpenFile])
 
   const showSkillInFolder = React.useCallback(async (skill: LoadedSkill) => {
     await window.electronAPI.showInFolder(skill.path)

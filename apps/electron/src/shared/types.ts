@@ -2,6 +2,28 @@
 // Protocol re-exports (channels, DTOs, events, wire types)
 // =============================================================================
 export * from '@craft-agent/shared/protocol'
+export type {
+  PlotPilotLogEntry,
+  PlotPilotRuntimeStartOptions,
+  PlotPilotRuntimeStatus,
+} from './plotpilot'
+export type {
+  DramaGraph,
+  DramaDraftUpsertInput,
+  DramaEdgeCreateInput,
+  DramaEdgeUpdate,
+  DramaTaskBindingDeleteInput,
+  DramaTaskBindingUpsertInput,
+  DramaNodeCreateInput,
+  DramaNodeDeleteInput,
+  DramaNodeUpdate,
+} from './drama-graph'
+export type {
+  StoryletBridgeLoadOptions,
+  StoryletBridgeSnapshot,
+  StoryletChapterWritebackFileResult,
+  StoryletChapterWritebackRequest,
+} from './storylet-plotpilot-bridge'
 
 // =============================================================================
 // Package re-exports (convenience for renderer imports)
@@ -21,6 +43,29 @@ import type {
   ToolDisplayMeta,
   AnnotationV1,
 } from '@craft-agent/core/types';
+import type {
+  PlotPilotLogEntry,
+  PlotPilotRuntimeStartOptions,
+  PlotPilotRuntimeStatus,
+} from './plotpilot'
+import type {
+  DramaDraftUpsertInput,
+  DramaEdgeCreateInput,
+  DramaEdgeUpdate,
+  DramaGraph,
+  DramaNodeCreateInput,
+  DramaNodeDeleteInput,
+  DramaTaskBindingDeleteInput,
+  DramaTaskBindingUpsertInput,
+  DramaNodePositionUpdate,
+  DramaNodeUpdate,
+} from './drama-graph'
+import type {
+  StoryletBridgeLoadOptions,
+  StoryletBridgeSnapshot,
+  StoryletChapterWritebackFileResult,
+  StoryletChapterWritebackRequest,
+} from './storylet-plotpilot-bridge'
 
 // Mode types from dedicated subpath export (avoids pulling in SDK)
 import type { PermissionMode } from '@craft-agent/shared/agent/modes';
@@ -494,6 +539,28 @@ export interface ElectronAPI {
   relaunchApp(): Promise<void>
   removeWorkspace(workspaceId: string): Promise<boolean>
   invokeOnServer(url: string, token: string, channel: string, ...args: any[]): Promise<any>
+
+  // PlotPilot PLM runtime
+  getPlotPilotRuntimeStatus(): Promise<PlotPilotRuntimeStatus>
+  startPlotPilotRuntime(options?: PlotPilotRuntimeStartOptions): Promise<PlotPilotRuntimeStatus>
+  stopPlotPilotRuntime(): Promise<PlotPilotRuntimeStatus>
+  restartPlotPilotRuntime(options?: PlotPilotRuntimeStartOptions): Promise<PlotPilotRuntimeStatus>
+  getPlotPilotRuntimeLogs(): Promise<PlotPilotLogEntry[]>
+  loadDramaGraph(options?: DramaGraphLoadOptions): Promise<DramaGraphLoadResult>
+  loadDramaGraphHistory(request: DramaGraphHistoryRequest): Promise<DramaGraphHistoryResult>
+  restoreDramaGraphBackup(request: DramaGraphRestoreBackupRequest): Promise<DramaGraphMutationResult>
+  updateDramaGraphNodePositions(request: DramaGraphNodePositionUpdateRequest): Promise<DramaGraphMutationResult>
+  createDramaGraphNode(request: DramaGraphNodeCreateRequest): Promise<DramaGraphMutationResult>
+  updateDramaGraphNode(request: DramaGraphNodeUpdateRequest): Promise<DramaGraphMutationResult>
+  deleteDramaGraphNode(request: DramaGraphNodeDeleteRequest): Promise<DramaGraphMutationResult>
+  upsertDramaGraphDraft(request: DramaGraphDraftUpsertRequest): Promise<DramaGraphMutationResult>
+  createDramaGraphEdge(request: DramaGraphEdgeCreateRequest): Promise<DramaGraphMutationResult>
+  updateDramaGraphEdge(request: DramaGraphEdgeUpdateRequest): Promise<DramaGraphMutationResult>
+  deleteDramaGraphEdge(request: DramaGraphEdgeDeleteRequest): Promise<DramaGraphMutationResult>
+  upsertDramaGraphTaskBinding(request: DramaGraphTaskBindingUpsertRequest): Promise<DramaGraphMutationResult>
+  deleteDramaGraphTaskBinding(request: DramaGraphTaskBindingDeleteRequest): Promise<DramaGraphMutationResult>
+  loadStoryletBridgeSnapshot(options?: StoryletBridgeLoadOptions): Promise<StoryletBridgeSnapshot>
+  writeStoryletChapterFromPlotPilot(request: StoryletChapterWritebackRequest): Promise<StoryletChapterWritebackFileResult>
 
   // Remote session transfer (main-process orchestrated, supports chunked upload)
   transferSessionToWorkspace(sessionId: string, targetWorkspaceId: string, sessionIndex?: number, sessionCount?: number): Promise<{ sessionId: string }>
@@ -1180,6 +1247,113 @@ export interface SkillCrewNavigationState {
   navigator: 'skillCrew'
   details: null
   rightSidebar?: RightSidebarPanel
+}
+
+export interface DramaGraphLoadOptions {
+  graphId?: string
+  storyletPath?: string
+  importStoryletIfMissing?: boolean
+}
+
+export interface DramaGraphLoadResult {
+  graph: DramaGraph
+  path: string
+  sourcePath?: string
+  imported: boolean
+  backupPath?: string
+}
+
+export interface DramaGraphNodePositionUpdateRequest {
+  graphId: string
+  updates: DramaNodePositionUpdate[]
+}
+
+export interface DramaGraphNodeUpdateRequest {
+  graphId: string
+  update: DramaNodeUpdate
+}
+
+export interface DramaGraphNodeCreateRequest {
+  graphId: string
+  input: DramaNodeCreateInput
+}
+
+export interface DramaGraphNodeDeleteRequest {
+  graphId: string
+  input: DramaNodeDeleteInput
+}
+
+export interface DramaGraphDraftUpsertRequest {
+  graphId: string
+  input: DramaDraftUpsertInput
+}
+
+export interface DramaGraphEdgeUpdateRequest {
+  graphId: string
+  update: DramaEdgeUpdate
+}
+
+export interface DramaGraphEdgeCreateRequest {
+  graphId: string
+  input: DramaEdgeCreateInput
+}
+
+export interface DramaGraphEdgeDeleteRequest {
+  graphId: string
+  edgeId: string
+}
+
+export interface DramaGraphTaskBindingUpsertRequest {
+  graphId: string
+  input: DramaTaskBindingUpsertInput
+}
+
+export interface DramaGraphTaskBindingDeleteRequest {
+  graphId: string
+  input: DramaTaskBindingDeleteInput
+}
+
+export interface DramaGraphMutationResult {
+  graph: DramaGraph
+  path: string
+  backupPath?: string
+}
+
+export interface DramaGraphHistoryRequest {
+  graphId: string
+  maxBackups?: number
+  maxEvents?: number
+}
+
+export interface DramaGraphHistoryBackup {
+  path: string
+  createdAt: number
+  graphName?: string
+  nodeCount?: number
+  edgeCount?: number
+  valid: boolean
+  error?: string
+}
+
+export interface DramaGraphHistoryEvent {
+  id: string
+  graphId: string
+  type: string
+  actor?: string
+  details?: Record<string, unknown>
+  createdAt: number
+}
+
+export interface DramaGraphHistoryResult {
+  graphId: string
+  backups: DramaGraphHistoryBackup[]
+  events: DramaGraphHistoryEvent[]
+  eventLogPath: string
+}
+
+export interface DramaGraphRestoreBackupRequest {
+  graphId: string
+  backupPath: string
 }
 
 /**

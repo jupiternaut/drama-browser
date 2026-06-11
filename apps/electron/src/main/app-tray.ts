@@ -93,6 +93,7 @@ function buildTrayMenu(windowManager: WindowManager): Electron.Menu {
 export function initAppTray(windowManager: WindowManager): void {
   if (process.platform === 'darwin') return
   if (appTray) return
+  windowManager.setHideToTrayOnClose(false)
 
   const iconPath = resolveTrayIconPath()
   if (!iconPath) {
@@ -114,6 +115,7 @@ export function initAppTray(windowManager: WindowManager): void {
   appTray.setContextMenu(buildTrayMenu(windowManager))
   appTray.on('click', () => showOrCreateMainWindow(windowManager))
   appTray.on('double-click', () => showOrCreateMainWindow(windowManager))
+  windowManager.setHideToTrayOnClose(true)
   mainLog.info('[tray] System tray initialized', { iconPath })
 }
 

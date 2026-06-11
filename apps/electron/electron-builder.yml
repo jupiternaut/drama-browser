@@ -149,7 +149,7 @@ dmg:
     height: 380
 
 win:
-  icon: resources/icon.ico
+  icon: resources/drama-icon.ico
   target:
     - target: nsis
       arch:
@@ -191,7 +191,7 @@ nsis:
   deleteAppDataOnUninstall: true
 
 linux:
-  icon: resources/icon.png
+  icon: resources/drama-icon-256.png
   category: Utility
   maintainer: "Drama"
   target:

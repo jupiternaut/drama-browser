@@ -1,7 +1,5 @@
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
-
 export type AgentOSBrowserUseCapability = {
   enabled: boolean
   provider: 'brave'
@@ -38,8 +36,9 @@ export function resolveAgentOSBrowserUseCapability(args: {
   const homeDir = args.homeDir ?? homedir()
   const exists = args.exists ?? existsSync
   const executablePath = env.CRAFT_AGENTOS_BRAVE_PATH?.trim() || DEFAULT_BRAVE_EXECUTABLE_PATH
-  const profileDir = env.CRAFT_AGENTOS_BRAVE_PROFILE_DIR?.trim()
-    || join(homeDir, '.craft-agent', 'agentos', 'browser-use', 'brave-profile')
+  const normalizedHomeDir = homeDir.replace(/\\/g, '/').replace(/\/+$/, '')
+  const defaultProfileDir = `${normalizedHomeDir}/.craft-agent/agentos/browser-use/brave-profile`
+  const profileDir = env.CRAFT_AGENTOS_BRAVE_PROFILE_DIR?.trim() || defaultProfileDir
   const remoteDebuggingPort = parsePort(env.CRAFT_AGENTOS_BRAVE_CDP_PORT)
 
   const base: Omit<AgentOSBrowserUseCapability, 'enabled' | 'reason'> = {

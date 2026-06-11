@@ -2453,7 +2453,7 @@ export default function SkillCrewPage() {
           </ScrollArea>
 
           <div
-            className="z-50 shrink-0 border-t border-border/60 bg-background px-4 py-3 shadow-[0_-12px_24px_rgba(0,0,0,0.04)]"
+            className="z-50 shrink-0 border-t border-border/60 bg-background px-4 py-3 shadow-strong"
             style={composerFrame ? {
               position: 'fixed',
               left: composerFrame.left,
@@ -2501,7 +2501,7 @@ export default function SkillCrewPage() {
               )}
               <div className="relative flex items-end gap-2 rounded-[8px] border border-border/70 bg-background shadow-minimal">
                 {mentionState && filteredMentionRoles.length > 0 && (
-                  <div className="absolute bottom-[calc(100%+8px)] left-2 z-50 w-[min(360px,calc(100vw-80px))] overflow-hidden rounded-[8px] border border-border/70 bg-background shadow-lg">
+              <div className="absolute bottom-[calc(100%+8px)] left-2 z-50 w-[min(360px,calc(100vw-80px))] overflow-hidden rounded-[8px] border border-border/70 bg-background shadow-strong">
                     <div className="border-b border-border/50 px-2 py-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
                       #{formatChannelLabel(activeChannel)} local variables
                     </div>

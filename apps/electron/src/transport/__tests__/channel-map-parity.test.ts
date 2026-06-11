@@ -26,6 +26,26 @@ type ApiToChannelMapKeys = Exclude<
   | 'relaunchApp' // direct IPC to main process — not through WS RPC
   | 'removeWorkspace' // direct IPC to main process — modifies local config
   | 'invokeOnServer' // direct IPC to main process — cross-server RPC
+  | 'getPlotPilotRuntimeStatus' // direct IPC to main process — local PlotPilot sidecar manager
+  | 'startPlotPilotRuntime'
+  | 'stopPlotPilotRuntime'
+  | 'restartPlotPilotRuntime'
+  | 'getPlotPilotRuntimeLogs'
+  | 'loadDramaGraph'
+  | 'loadDramaGraphHistory'
+  | 'restoreDramaGraphBackup'
+  | 'updateDramaGraphNodePositions'
+  | 'createDramaGraphNode'
+  | 'updateDramaGraphNode'
+  | 'deleteDramaGraphNode'
+  | 'upsertDramaGraphDraft'
+  | 'createDramaGraphEdge'
+  | 'updateDramaGraphEdge'
+  | 'deleteDramaGraphEdge'
+  | 'upsertDramaGraphTaskBinding'
+  | 'deleteDramaGraphTaskBinding'
+  | 'loadStoryletBridgeSnapshot'
+  | 'writeStoryletChapterFromPlotPilot'
   | 'transferSessionToWorkspace' // direct IPC to main process — orchestrated remote transfer
   | 'onTransferProgress' // direct IPC listener — chunk upload progress
   | 'changeLanguage' // direct IPC to main process — syncs i18n language

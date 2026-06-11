@@ -1330,7 +1330,7 @@ export function sourceNeedsAuthentication(source: LoadedSource): boolean {
   const mcp = source.config.mcp;
   const api = source.config.api;
 
-  // MCP sources with oauth/bearer auth (stdio transport never needs auth)
+    // MCP sources with oauth/bearer auth (stdio transport never needs auth)
   if (source.config.type === 'mcp' && mcp) {
     if (mcp.transport === 'stdio') {
       // Stdio sources run locally and don't need authentication
@@ -1338,14 +1338,18 @@ export function sourceNeedsAuthentication(source: LoadedSource): boolean {
     }
     // Only require auth if authType is explicitly set to 'oauth' or 'bearer'
     // Undefined or 'none' means no authentication required
-    if (mcp.authType && mcp.authType !== 'none' && !source.config.isAuthenticated) {
+    if (mcp.authType && mcp.authType !== 'none' && source.config.connectionStatus !== 'connected') {
       return true;
     }
   }
 
   // API sources with auth requirements
   if (source.config.type === 'api' && api) {
-    if (api.authType !== 'none' && api.authType !== undefined && !source.config.isAuthenticated) {
+    if (
+      api.authType !== 'none' &&
+      api.authType !== undefined &&
+      source.config.connectionStatus !== 'connected'
+    ) {
       return true;
     }
   }

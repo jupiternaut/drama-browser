@@ -12,8 +12,11 @@ export type WorkspaceTool = {
   endpointLabel: string
   description: string
   url: string
+  healthUrl?: string
   embedUrl?: string
   externalUrl?: string
+  localProjectPath?: string
+  startCommand?: string
   icon: LucideIcon
 }
 
@@ -21,29 +24,35 @@ export const WORKSPACE_TOOLS = {
   storylet: {
     id: 'storylet',
     title: 'Drama Graph',
-    sourceName: 'Storylet',
+    sourceName: 'Drama Graph',
     subtitle: '状态机图谱',
     role: '状态机投影',
-    bridge: '本地 iframe 桥',
-    endpointLabel: 'localhost:3000',
-    description: '保留 Storylet 图谱画布与节点风格，由 Drama 负责外层工作区、状态和恢复。',
-    url: 'http://localhost:3000/',
-    embedUrl: 'http://localhost:3000/?embed=drama',
-    externalUrl: 'http://localhost:3000/',
+    bridge: '内置状态机引擎',
+    endpointLabel: 'Drama 本机引擎',
+    description: '读取本地图状态，在 Drama React 原生画布中渲染节点、关系和状态字段。',
+    url: 'drama-graph://native',
+    healthUrl: 'drama://engine/ready',
+    embedUrl: undefined,
+    externalUrl: 'drama-graph://native',
+    localProjectPath: undefined,
+    startCommand: undefined,
     icon: Layers,
   },
   plotPilot: {
     id: 'plotPilot',
     title: 'Drama PLM',
-    sourceName: 'PlotPilot',
+    sourceName: 'Drama PLM',
     subtitle: '长上下文生成',
     role: '长上下文投影',
     bridge: 'PLM 运行时桥',
-    endpointLabel: '127.0.0.1:8005',
-    description: '承接长短上下文、bible、beat 和章节稿生成，作为 Drama 的长篇叙事投影。',
-    url: 'http://127.0.0.1:8005/',
-    embedUrl: 'http://127.0.0.1:8005/?embed=drama',
-    externalUrl: 'http://127.0.0.1:8005/',
+    endpointLabel: 'Drama PLM 运行时',
+    description: '承接长上下文、Bible、Beat 和章节稿生成，作为 Drama 的长篇叙事投影。',
+    url: 'drama-plm://runtime',
+    healthUrl: 'drama://engine/ready',
+    embedUrl: undefined,
+    externalUrl: 'drama-plm://runtime',
+    localProjectPath: undefined,
+    startCommand: undefined,
     icon: FileText,
   },
 } as const satisfies Record<WorkspaceToolId, WorkspaceTool>

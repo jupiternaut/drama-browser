@@ -130,6 +130,34 @@ import { BrowserPaneManager } from './browser-pane-manager'
 import { OAuthFlowStore } from '@craft-agent/shared/auth'
 import { registerThumbnailScheme, registerThumbnailHandler } from './thumbnail-protocol'
 import log, { isDebugMode, mainLog, getLogFilePath, getMessagingGatewayLogFilePath, messagingGatewayLog } from './logger'
+import { PlotPilotRuntimeManager, resolveDefaultPlotPilotProjectRoot } from './plotpilot-runtime'
+import { DramaGraphStore } from './drama-graph-store'
+import { createEmptyDramaGraph, dramaGraphFromStoryletState } from '../shared/drama-graph'
+import {
+  applyPlotPilotChapterToStoryletGraph,
+  buildStoryletBridgeSnapshot,
+  type StoryletBridgeLoadOptions,
+  type StoryletChapterWritebackFileResult,
+  type StoryletChapterWritebackRequest,
+} from '../shared/storylet-plotpilot-bridge'
+import type {
+  DramaGraphLoadOptions,
+  DramaGraphLoadResult,
+  DramaGraphHistoryRequest,
+  DramaGraphHistoryResult,
+  DramaGraphRestoreBackupRequest,
+  DramaGraphDraftUpsertRequest,
+  DramaGraphEdgeCreateRequest,
+  DramaGraphEdgeDeleteRequest,
+  DramaGraphEdgeUpdateRequest,
+  DramaGraphTaskBindingUpsertRequest,
+  DramaGraphTaskBindingDeleteRequest,
+  DramaGraphMutationResult,
+  DramaGraphNodeCreateRequest,
+  DramaGraphNodeDeleteRequest,
+  DramaGraphNodeUpdateRequest,
+  DramaGraphNodePositionUpdateRequest,
+} from '../shared/types'
 import { setPerfEnabled, enableDebug } from '@craft-agent/shared/utils'
 import { registerPiModelResolver } from '@craft-agent/shared/config'
 import { getPiModelsForAuthProvider, getAllPiModels } from '@craft-agent/shared/config'
@@ -280,6 +308,7 @@ let windowManager: WindowManager | null = null
 let sessionManager: SessionManager | null = null
 let browserPaneManager: BrowserPaneManager | null = null
 let oauthFlowStore: OAuthFlowStore | null = null
+let plotPilotRuntime: PlotPilotRuntimeManager | null = null
 let moduleSink: EventSink | null = null
 let moduleClientResolver: ((webContentsId: number) => string | undefined) | null = null
 const flowBridges = new Map<string, FlowBridge>()
@@ -295,6 +324,36 @@ let messagingHandle: MessagingBootstrapHandle | null = null
 
 // Store pending deep link if app not ready yet (cold start)
 let pendingDeepLink: string | null = null
+
+function getPlotPilotRuntime(): PlotPilotRuntimeManager {
+  if (!plotPilotRuntime) {
+    plotPilotRuntime = new PlotPilotRuntimeManager({
+      projectRoot: resolveDefaultPlotPilotProjectRoot(),
+      dataDir: process.env.PLOTPILOT_PROD_DATA_DIR ?? join(app.getPath('userData'), 'plotpilot'),
+      pythonExe: process.env.PLOTPILOT_PYTHON_EXE,
+    })
+  }
+  return plotPilotRuntime
+}
+
+function resolveStoryletGraphPath(options?: StoryletBridgeLoadOptions): string {
+  return options?.path
+    ?? process.env.STORYLET_GRAPH_PATH
+    ?? join(homedir(), 'Downloads', 'Storylet-Codex', '.data', 'storylet-current.graph.json')
+}
+
+function storyletBackupPath(graphPath: string, updatedAt: number): string {
+  const stamp = new Date(updatedAt).toISOString().replace(/[:.]/g, '-')
+  return `${graphPath}.${stamp}.bak`
+}
+
+function resolveWorkspaceRootForEvent(event: IpcMainInvokeEvent): string {
+  const storedConfig = loadStoredConfig()
+  const workspaceId = windowManager?.getWorkspaceForWindow(event.sender.id)
+    ?? storedConfig?.activeWorkspaceId
+  const workspace = workspaceId ? getWorkspaceByNameOrId(workspaceId) : undefined
+  return workspace?.rootPath ?? process.cwd()
+}
 
 function getFlowBridge(workspaceRoot: string): FlowBridge {
   let bridge = flowBridges.get(workspaceRoot)
@@ -4600,6 +4659,8 @@ app.whenReady().then(async () => {
     // In packaged app, resources are at dist/resources/ (same level as __dirname)
     // In dev, resources are at ../resources/ (sibling of dist/)
     const dockIconPath = [
+      join(__dirname, 'resources/drama-icon-256.png'),
+      join(__dirname, '../resources/drama-icon-256.png'),
       join(__dirname, 'resources/icon.png'),
       join(__dirname, '../resources/icon.png'),
     ].find(p => existsSync(p))
@@ -4952,6 +5013,350 @@ app.whenReady().then(async () => {
           return await client.invoke(channel, ...args)
         } finally {
           client.destroy()
+        }
+      })
+
+      ipcMain.handle('plotpilot:runtime:status', async () => {
+        return await getPlotPilotRuntime().status({ checkHealth: true })
+      })
+
+      ipcMain.handle('plotpilot:runtime:start', async (_event, options) => {
+        return await getPlotPilotRuntime().start(options)
+      })
+
+      ipcMain.handle('plotpilot:runtime:stop', async () => {
+        return await getPlotPilotRuntime().stop({ forceAdopted: true })
+      })
+
+      ipcMain.handle('plotpilot:runtime:restart', async (_event, options) => {
+        return await getPlotPilotRuntime().restart(options)
+      })
+
+      ipcMain.handle('plotpilot:runtime:logs', async () => {
+        return getPlotPilotRuntime().getLogs()
+      })
+
+      ipcMain.handle('drama:graph:load', async (event, options?: DramaGraphLoadOptions): Promise<DramaGraphLoadResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const storyletPath = options?.storyletPath ?? resolveStoryletGraphPath(options ? { path: options.storyletPath } : undefined)
+        const requestedGraphId = options?.graphId?.trim()
+        const shouldImport = options?.importStoryletIfMissing ?? true
+        const defaultGraphId = 'default'
+
+        if (requestedGraphId) {
+          try {
+            return { graph: await store.loadGraph(requestedGraphId), path: store.graphPath(requestedGraphId), imported: false }
+          } catch (error) {
+            if (!shouldImport) throw error
+          }
+        }
+
+        let snapshot: ReturnType<typeof buildStoryletBridgeSnapshot> | null = null
+        if (shouldImport) {
+          try {
+            const raw = await readFile(storyletPath, 'utf8')
+            snapshot = buildStoryletBridgeSnapshot(JSON.parse(raw), { sourcePath: storyletPath })
+          } catch (error) {
+            const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined
+            if (code !== 'ENOENT') {
+              mainLog.warn('[drama:graph:load] Failed to read Storylet source:', error)
+            } else {
+              mainLog.info('[drama:graph:load] Storylet source missing, initializing native graph')
+            }
+          }
+        }
+
+        const graphId = requestedGraphId ?? snapshot?.storyState.graphId ?? defaultGraphId
+
+        try {
+          return {
+            graph: await store.loadGraph(graphId),
+            path: store.graphPath(graphId),
+            sourcePath: snapshot ? storyletPath : undefined,
+            imported: false,
+          }
+        } catch {
+          if (snapshot) {
+            const graphFromStorylet = dramaGraphFromStoryletState(snapshot.storyState, {
+              sourcePath: storyletPath,
+            })
+            const graph = {
+              ...graphFromStorylet,
+              id: graphId,
+              source: { ...graphFromStorylet.source, graphId },
+              bible: {
+                ...graphFromStorylet.bible,
+                id: `${graphId}-bible`,
+              },
+            }
+            const result = await store.saveGraph(graph, {
+              type: 'graph.imported',
+              actor: 'drama:graph:load',
+              details: {
+                source: 'storylet',
+                sourcePath: storyletPath,
+              },
+            })
+            return {
+              graph,
+              path: result.path,
+              backupPath: result.backupPath,
+              sourcePath: storyletPath,
+              imported: true,
+            }
+          }
+
+          const fallbackGraph = createEmptyDramaGraph({
+            id: graphId,
+            title: 'Drama Graph',
+            source: { path: storyletPath, graphId },
+          })
+          const result = await store.saveGraph(fallbackGraph, {
+            type: 'graph.created',
+            actor: 'drama:graph:load',
+            details: {
+              source: 'native',
+              requestedGraphId,
+            },
+          })
+          return {
+            graph: fallbackGraph,
+            path: result.path,
+            backupPath: result.backupPath,
+            sourcePath: storyletPath,
+            imported: false,
+          }
+        }
+      })
+
+      ipcMain.handle('drama:graph:history', async (
+        event,
+        request: DramaGraphHistoryRequest,
+      ): Promise<DramaGraphHistoryResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        return store.listHistory(request.graphId, {
+          maxBackups: request.maxBackups,
+          maxEvents: request.maxEvents,
+        })
+      })
+
+      ipcMain.handle('drama:graph:restoreBackup', async (
+        event,
+        request: DramaGraphRestoreBackupRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.restoreBackup(request.graphId, request.backupPath, {
+          type: 'graph.restored',
+          actor: 'drama:graph',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('drama:graph:updateNodePositions', async (
+        event,
+        request: DramaGraphNodePositionUpdateRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.updateNodePositions(request.graphId, request.updates, {
+          type: 'graph.nodes.position.updated',
+          actor: 'drama:graph',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('drama:graph:updateNode', async (
+        event,
+        request: DramaGraphNodeUpdateRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.updateNode(request.graphId, request.update, {
+          type: 'graph.node.updated',
+          actor: 'drama:graph',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('drama:graph:createNode', async (
+        event,
+        request: DramaGraphNodeCreateRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.createNode(request.graphId, request.input, {
+          type: 'graph.node.created',
+          actor: 'drama:graph',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('drama:graph:deleteNode', async (
+        event,
+        request: DramaGraphNodeDeleteRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.deleteNode(request.graphId, request.input, {
+          type: 'graph.node.deleted',
+          actor: 'drama:graph',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('drama:graph:upsertDraft', async (
+        event,
+        request: DramaGraphDraftUpsertRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.upsertDraft(request.graphId, request.input, {
+          type: 'graph.draft.upserted',
+          actor: 'drama:plm',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('drama:graph:upsertTaskBinding', async (
+        event,
+        request: DramaGraphTaskBindingUpsertRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.upsertTaskBinding(request.graphId, request.input, {
+          type: 'graph.taskBinding.upserted',
+          actor: 'drama:graph',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('drama:graph:deleteTaskBinding', async (
+        event,
+        request: DramaGraphTaskBindingDeleteRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.deleteTaskBinding(request.graphId, request.input, {
+          type: 'graph.taskBinding.deleted',
+          actor: 'drama:graph',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('drama:graph:updateEdge', async (
+        event,
+        request: DramaGraphEdgeUpdateRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.updateEdge(request.graphId, request.update, {
+          type: 'graph.edge.updated',
+          actor: 'drama:graph',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('drama:graph:createEdge', async (
+        event,
+        request: DramaGraphEdgeCreateRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.createEdge(request.graphId, request.input, {
+          type: 'graph.edge.created',
+          actor: 'drama:graph',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('drama:graph:deleteEdge', async (
+        event,
+        request: DramaGraphEdgeDeleteRequest,
+      ): Promise<DramaGraphMutationResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        const store = new DramaGraphStore({ workspaceRoot })
+        const { graph, result } = await store.deleteEdge(request.graphId, request.edgeId, {
+          type: 'graph.edge.deleted',
+          actor: 'drama:graph',
+        })
+        return {
+          graph,
+          path: result.path,
+          backupPath: result.backupPath,
+        }
+      })
+
+      ipcMain.handle('storylet:bridge:snapshot', async (_event, options?: StoryletBridgeLoadOptions) => {
+        const graphPath = resolveStoryletGraphPath(options)
+        const raw = await readFile(graphPath, 'utf8')
+        return buildStoryletBridgeSnapshot(JSON.parse(raw), {
+          sourcePath: graphPath,
+          novelIdPrefix: options?.novelIdPrefix,
+        })
+      })
+
+      ipcMain.handle('storylet:bridge:writeChapter', async (_event, request: StoryletChapterWritebackRequest): Promise<StoryletChapterWritebackFileResult> => {
+        const graphPath = resolveStoryletGraphPath(request)
+        const raw = await readFile(graphPath, 'utf8')
+        const graph = JSON.parse(raw)
+        const updatedAt = typeof request.now === 'function' ? request.now() : request.now ?? Date.now()
+        const backupPath = storyletBackupPath(graphPath, updatedAt)
+        await mkdir(dirname(backupPath), { recursive: true })
+        await writeFile(backupPath, raw, 'utf8')
+
+        const result = applyPlotPilotChapterToStoryletGraph(graph, request.chapter, {
+          now: updatedAt,
+          scriptStatus: request.scriptStatus,
+        })
+        await writeFile(graphPath, `${JSON.stringify(result.graph, null, 2)}\n`, 'utf8')
+
+        return {
+          path: graphPath,
+          backupPath,
+          summary: result.summary,
         }
       })
 
@@ -5504,6 +5909,81 @@ app.on('will-quit', () => {
 let isQuitting = false
 let forceQuitTimer: NodeJS.Timeout | null = null
 
+async function shutdownAppForQuit(): Promise<void> {
+  if (windowManager) {
+    const windows = windowManager.getWindowStates()
+    if (windows.length === 0 && isUpdating()) {
+      mainLog.warn('[window-state] skip save: empty snapshot during update-quit (pre-update snapshot wins)')
+    } else {
+      captureAndSaveWindowState('before-quit')
+    }
+    mainLog.info('[update-flow] before-quit save', {
+      windowCount: windows.length,
+      electronWindowCount: BrowserWindow.getAllWindows().length,
+      isUpdating: isUpdating(),
+      reason: isUpdating() ? 'update-quit' : 'user-quit',
+    })
+  }
+
+  // App-level cleanup: all non-conditional resources are always attempted.
+  if (sessionManager) {
+    try {
+      await sessionManager.flushAllSessions()
+      mainLog.info('Flushed all pending session writes')
+    } catch (error) {
+      mainLog.error('Failed to flush sessions:', error)
+    }
+    sessionManager.cleanup()
+  }
+
+  if (browserPaneManager) {
+    try {
+      browserPaneManager.destroyAll()
+    } catch (error) {
+      mainLog.error('[browser pane] destroy failed:', error)
+    }
+  }
+
+  if (oauthFlowStore) {
+    try {
+      oauthFlowStore.dispose()
+    } catch (error) {
+      mainLog.error('[oauth] dispose failed:', error)
+    }
+  }
+
+  try {
+    getModelRefreshService().stopAll()
+  } catch (error) {
+    mainLog.error('[model-refresh] stop failed:', error)
+  }
+
+  if (plotPilotRuntime) {
+    try {
+      await plotPilotRuntime.stop({ forceAdopted: true })
+    } catch (err) {
+      mainLog.error('[plotpilot] failed to stop runtime:', err)
+    }
+  }
+
+  if (messagingHandle) {
+    try {
+      await messagingHandle.dispose()
+    } catch (err) {
+      mainLog.error('[messaging] dispose failed:', err)
+    }
+  }
+
+  try {
+    const { cleanup: cleanupPowerManager } = await import('./power-manager')
+    cleanupPowerManager()
+  } catch (error) {
+    mainLog.warn('[power-manager] cleanup skipped:', error)
+  }
+
+  releaseServerLock()
+}
+
 /**
  * Capture the current multi-window state and persist it to disk.
  * Called from two sites:
@@ -5544,77 +6024,16 @@ app.on('before-quit', async (event) => {
   // Ensure Cmd+Q/app quit bypasses layered window close interception (Cmd+W behavior).
   windowManager?.setAppQuitting(true)
 
-  if (windowManager) {
-    const windows = windowManager.getWindowStates()
-    // Empty-snapshot guard: during update-quit, electron-updater has already
-    // destroyed all BrowserWindows by the time before-quit fires. The pre-update
-    // hook already saved the real state — don't let this late save overwrite it.
-    if (windows.length === 0 && isUpdating()) {
-      mainLog.warn('[window-state] skip save: empty snapshot during update-quit (pre-update snapshot wins)')
-    } else {
-      captureAndSaveWindowState('before-quit')
-    }
-    // Diagnostic correlation with installUpdate's [update-flow] log.
-    mainLog.info('[update-flow] before-quit save', {
-      windowCount: windows.length,
-      electronWindowCount: BrowserWindow.getAllWindows().length,
-      isUpdating: isUpdating(),
-      reason: isUpdating() ? 'update-quit' : 'user-quit',
-    })
-  }
-
-  // Flush all pending session writes before quitting
-  if (sessionManager) {
-    // Prevent quit until sessions are flushed
-    event.preventDefault()
-    try {
-      await sessionManager.flushAllSessions()
-      mainLog.info('Flushed all pending session writes')
-    } catch (error) {
-      mainLog.error('Failed to flush sessions:', error)
-    }
-    // Clean up SessionManager resources (file watchers, timers, etc.)
-    sessionManager.cleanup()
-
-    // Clean up browser pane instances
-    if (browserPaneManager) {
-      browserPaneManager.destroyAll()
-    }
-
-    // Clean up OAuth flow store (stop periodic cleanup timer)
-    if (oauthFlowStore) {
-      oauthFlowStore.dispose()
-    }
-
-    // Stop all model refresh timers
-    getModelRefreshService().stopAll()
-
-    // Stop messaging gateways so the WhatsApp worker subprocess exits cleanly.
-    if (messagingHandle) {
-      try {
-        await messagingHandle.dispose()
-      } catch (err) {
-        mainLog.error('[messaging] dispose failed:', err)
-      }
-    }
-
-    // Clean up power manager (release power blocker)
-    const { cleanup: cleanupPowerManager } = await import('./power-manager')
-    cleanupPowerManager()
-
-    // Release the server lock file so the next launch doesn't see a stale PID.
-    // This must happen regardless of the exit path (normal quit or update quit).
-    releaseServerLock()
-
-    // If update is in progress, let electron-updater handle the quit flow
-    // Force exit breaks the NSIS installer on Windows
+  event.preventDefault()
+  try {
+    await shutdownAppForQuit()
+  } finally {
     if (isUpdating()) {
       mainLog.info('Update in progress, letting electron-updater handle quit')
       app.quit()
       return
     }
 
-    // Now actually quit
     if (forceQuitTimer) {
       clearTimeout(forceQuitTimer)
       forceQuitTimer = null

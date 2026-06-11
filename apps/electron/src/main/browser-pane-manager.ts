@@ -3334,8 +3334,14 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
     toolbarWc.on('did-finish-load', () => {
       const loadedUrl = typeof toolbarWc.getURL === 'function' ? toolbarWc.getURL() : ''
+      const shouldShow = instance.showOnCreate || instance.pendingShowOnReady
+      const isBlank = loadedUrl === 'about:blank' || loadedUrl.startsWith('about:blank#') || loadedUrl.startsWith('about:blank?')
+
       if (!this.isToolbarUiDocumentUrl(loadedUrl)) {
         mainLog.info(`[browser-pane] toolbar did-finish-load ignored id=${instance.id} url=${loadedUrl || 'unknown'}`)
+        if (shouldShow && !isBlank) {
+          this.markToolbarReady(instance, 'did-finish-load-fallback')
+        }
         this.pushToolbarState(instance)
         return
       }

@@ -399,15 +399,13 @@ export function getEnabledSources(workspaceRootPath: string): LoadedSource[] {
  */
 export function isSourceUsable(source: LoadedSource): boolean {
   if (!source.config.enabled) return false;
-
-  // Get auth type from MCP or API config
   const authType = source.config.mcp?.authType || source.config.api?.authType;
 
-  // Sources with no auth requirement are always usable when enabled
+  // No auth requirement: usable when enabled.
   if (authType === 'none' || authType === undefined) return true;
 
-  // Sources requiring auth must be authenticated
-  return source.config.isAuthenticated === true;
+  // Auth-required sources need an explicitly connected status.
+  return source.config.connectionStatus === 'connected';
 }
 
 /**

@@ -6,6 +6,8 @@ import { exportResources, importResources, validateResourceBundle } from '../res
 import type { ResourceBundle, SourceBundleEntry, SkillBundleEntry, AutomationBundleEntry } from '../types'
 import type { FolderSourceConfig } from '../../sources/types'
 import type { AutomationMatcher } from '../../automations/types'
+import { isSourceUsable } from '../../sources/storage'
+import type { LoadedSource } from '../../sources/types'
 
 // ============================================================
 // Helpers
@@ -136,9 +138,10 @@ describe('resource-bundle', () => {
       expect(bundle.resources.sources).toHaveLength(1)
 
       const source = bundle.resources.sources![0]!
+      const loadedSource = source as unknown as LoadedSource
       expect(source.slug).toBe('github')
       // Auth state should be reset
-      expect(source.config.isAuthenticated).toBe(false)
+      expect(isSourceUsable(loadedSource)).toBe(false)
       expect(source.config.connectionStatus).toBe('needs_auth')
       expect(source.config.connectionError).toBeUndefined()
       expect(source.config.lastTestedAt).toBeUndefined()

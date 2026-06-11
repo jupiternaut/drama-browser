@@ -1,0 +1,71 @@
+:root {
+  /* Source tokens are Drama's existing theme variables from renderer index.css. */
+  --od-drama-bg-0: var(--background);
+  --od-drama-bg-elevated: var(--background-elevated);
+  --od-drama-bg-panel: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
+  --od-drama-bg-canvas: var(--background);
+  --od-drama-bg-strip: var(--foreground-2);
+  --od-drama-bg-row-hover: color-mix(in srgb, var(--foreground) 3.5%, transparent);
+  --od-drama-bg-row-active: color-mix(in srgb, var(--foreground) 7%, transparent);
+  --od-drama-bg-chip: color-mix(in srgb, var(--foreground) 6%, transparent);
+  --od-drama-bg-input: var(--background);
+
+  --od-drama-border-subtle: var(--border);
+  --od-drama-border-strong: color-mix(in srgb, var(--foreground) 12%, transparent);
+
+  --od-drama-text-strong: var(--foreground);
+  --od-drama-text-default: color-mix(in srgb, var(--foreground) 90%, var(--background));
+  --od-drama-text-muted: var(--muted-foreground);
+  --od-drama-text-faint: color-mix(in srgb, var(--foreground) 35%, var(--background));
+
+  --od-drama-accent: var(--accent);
+  --od-drama-success: var(--success);
+  --od-drama-info: var(--info);
+  --od-drama-destructive: var(--destructive);
+
+  --od-drama-font-body: var(--font-sans);
+  --od-drama-font-code: var(--font-mono);
+  --od-drama-type-page-title: 14px;
+  --od-drama-type-row-title: 13px;
+  --od-drama-type-body: 13px;
+  --od-drama-type-secondary: 12px;
+  --od-drama-type-caption: 11px;
+  --od-drama-type-micro: 10px;
+  --od-drama-line-tight: 1.2;
+  --od-drama-line-body: 1.5;
+
+  --od-drama-radius-root: 0px;
+  --od-drama-radius-badge: 4px;
+  --od-drama-radius-chip: 5px;
+  --od-drama-radius-control: 6px;
+  --od-drama-radius-input: 7px;
+  --od-drama-radius-pane: 8px;
+  --od-drama-radius-outer-panel: 8px;
+
+  --od-drama-space-1: 4px;
+  --od-drama-space-1-5: 6px;
+  --od-drama-space-2: 8px;
+  --od-drama-space-2-5: 10px;
+  --od-drama-space-3: 12px;
+  --od-drama-space-4: 16px;
+  --od-drama-space-5: 20px;
+
+  --od-drama-topbar-height: 48px;
+  --od-drama-panel-header-height: 42px;
+  --od-drama-panel-gap: 6px;
+  --od-drama-panel-edge-inset: 6px;
+  --od-drama-panel-min-width: 440px;
+  --od-drama-icon-button-size: 28px;
+  --od-drama-header-icon-button-size: 28px;
+  --od-drama-nav-icon-size: 14px;
+  --od-drama-action-icon-size: 16px;
+  --od-drama-status-dot-size: 6px;
+
+  --od-drama-shadow-minimal: var(--shadow-minimal);
+  --od-drama-shadow-flat: var(--shadow-minimal-flat);
+  --od-drama-shadow-modal: var(--shadow-modal-small);
+
+  --od-drama-motion-fast: 120ms;
+  --od-drama-motion-medium: 180ms;
+  --od-drama-motion-panel: 200ms;
+}

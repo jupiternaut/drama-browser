@@ -62,9 +62,18 @@ export class WindowManager {
   private keyboardCloseIntents: Set<number> = new Set()  // webContents.id flagged by Cmd/Ctrl+W before close
   private keyboardCloseIntentTimeouts: Map<number, NodeJS.Timeout> = new Map()  // Auto-clear stale keyboard-close intents
   private isAppQuitting = false  // Skip layered close interception during app quit
+  private hideToTrayOnClose = false
 
   private shouldHideToTrayOnClose(): boolean {
-    return !this.isAppQuitting && process.platform !== 'darwin'
+    return !this.isAppQuitting && this.hideToTrayOnClose && process.platform !== 'darwin'
+  }
+
+  /**
+   * Controls whether close-to-tray is enabled.
+   * This is only true when system tray initialization succeeds.
+   */
+  setHideToTrayOnClose(enabled: boolean): void {
+    this.hideToTrayOnClose = enabled
   }
 
   /**
@@ -203,13 +212,29 @@ export class WindowManager {
     // In packaged app, resources are at dist/resources/ (same level as __dirname)
     // In dev, resources are at ../resources/ (sibling of dist/)
     const getIconPath = () => {
-      const iconName = process.platform === 'darwin' ? 'icon.icns'
-        : process.platform === 'win32' ? 'icon.ico'
-        : 'icon.png'
-      return [
-        join(__dirname, 'resources', iconName),
-        join(__dirname, '../resources', iconName),
-      ].find(p => existsSync(p)) ?? join(__dirname, '../resources', iconName)
+      const iconCandidates = process.platform === 'darwin'
+        ? ['icon.icns', 'drama-icon.icns']
+        : process.platform === 'win32'
+          ? ['drama-icon.ico', 'icon.ico']
+          : ['drama-icon.png', 'drama-icon-256.png', 'icon.png']
+
+      const roots = [
+        join(__dirname, 'resources'),
+        join(__dirname, '../resources'),
+      ]
+
+      for (const root of roots) {
+        for (const iconName of iconCandidates) {
+          const candidate = join(root, iconName)
+          if (existsSync(candidate)) return candidate
+        }
+      }
+
+      return join(roots[1], process.platform === 'darwin'
+        ? 'icon.icns'
+        : process.platform === 'win32'
+          ? 'icon.ico'
+          : 'icon.png')
     }
 
     const iconPath = getIconPath()
