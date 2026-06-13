@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { appendFile, mkdir, writeFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { CONFIG_DIR } from '@craft-agent/shared/config/paths'
 
 export type AgentOSBrowserWorkerEventStatus = 'info' | 'ok' | 'warning' | 'error'
 
@@ -109,7 +109,7 @@ function parsePort(value: string | undefined): number {
 }
 
 function workerStorageDir(): string {
-  return join(homedir(), '.craft-agent', 'agentos', 'browser-worker')
+  return join(CONFIG_DIR, 'agentos', 'browser-worker')
 }
 
 function mergeSnapshot(

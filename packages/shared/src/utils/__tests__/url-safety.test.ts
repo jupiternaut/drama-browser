@@ -40,12 +40,16 @@ describe('classifyExternalUrl — safe external (custom app schemes)', () => {
 })
 
 describe('classifyExternalUrl — internal deep links', () => {
-  it('classifies craftagents:// as internal-deeplink', () => {
-    expect(classifyExternalUrl('craftagents://settings').kind).toBe('internal-deeplink')
+  it('classifies drama:// as internal-deeplink', () => {
+    expect(classifyExternalUrl('drama://settings').kind).toBe('internal-deeplink')
   })
 
   it('is case-insensitive for the scheme', () => {
-    expect(classifyExternalUrl('CRAFTAGENTS://settings').kind).toBe('internal-deeplink')
+    expect(classifyExternalUrl('DRAMA://settings').kind).toBe('internal-deeplink')
+  })
+
+  it('treats craftagents:// as an external app scheme for Craft Agents', () => {
+    expect(classifyExternalUrl('craftagents://settings').kind).toBe('safe-external')
   })
 })
 
@@ -128,7 +132,7 @@ describe('formatBlockedUrlError', () => {
 
   it('returns an empty string for non-dangerous classifications', () => {
     expect(formatBlockedUrlError(classifyExternalUrl('https://example.com'))).toBe('')
-    expect(formatBlockedUrlError(classifyExternalUrl('craftagents://settings'))).toBe('')
+    expect(formatBlockedUrlError(classifyExternalUrl('drama://settings'))).toBe('')
   })
 })
 
@@ -144,7 +148,7 @@ describe('isSafeExternalUrl', () => {
   })
 
   it('returns false for internal deep links', () => {
-    expect(isSafeExternalUrl('craftagents://settings')).toBe(false)
+    expect(isSafeExternalUrl('drama://settings')).toBe(false)
   })
 
   it('returns false for dangerous schemes', () => {

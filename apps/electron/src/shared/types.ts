@@ -549,6 +549,7 @@ export interface ElectronAPI {
   loadDramaGraph(options?: DramaGraphLoadOptions): Promise<DramaGraphLoadResult>
   loadDramaGraphHistory(request: DramaGraphHistoryRequest): Promise<DramaGraphHistoryResult>
   restoreDramaGraphBackup(request: DramaGraphRestoreBackupRequest): Promise<DramaGraphMutationResult>
+  recordDramaProjectFile(request: DramaProjectFileRecordRequest): Promise<DramaProjectFileRecordResult>
   updateDramaGraphNodePositions(request: DramaGraphNodePositionUpdateRequest): Promise<DramaGraphMutationResult>
   createDramaGraphNode(request: DramaGraphNodeCreateRequest): Promise<DramaGraphMutationResult>
   updateDramaGraphNode(request: DramaGraphNodeUpdateRequest): Promise<DramaGraphMutationResult>
@@ -692,7 +693,7 @@ export interface ElectronAPI {
   onMenuToggleFocusMode(callback: () => void): () => void
   onMenuToggleSidebar(callback: () => void): () => void
 
-  // Deep link navigation listener (for external craftagents:// URLs)
+  // Deep link navigation listener (for external drama:// URLs)
   onDeepLinkNavigate(callback: (nav: DeepLinkNavigation) => void): () => void
 
   // Auth
@@ -1354,6 +1355,22 @@ export interface DramaGraphHistoryResult {
 export interface DramaGraphRestoreBackupRequest {
   graphId: string
   backupPath: string
+}
+
+export type DramaProjectFileSource = 'graph' | 'plm' | 'storylet' | 'manual' | string
+
+export interface DramaProjectFileRecordRequest {
+  projectId: string
+  source: DramaProjectFileSource
+  type: string
+  title?: string
+  summary?: Record<string, unknown>
+  payload?: unknown
+}
+
+export interface DramaProjectFileRecordResult {
+  projectDir: string
+  filePath: string
 }
 
 /**

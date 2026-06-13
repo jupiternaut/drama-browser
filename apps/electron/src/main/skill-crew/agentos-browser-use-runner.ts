@@ -1,10 +1,10 @@
 import { execFile } from 'node:child_process'
 import { appendFile, mkdir, writeFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import { dirname, extname, join } from 'node:path'
 import { promisify } from 'node:util'
 
 import WebSocket from 'ws'
+import { CONFIG_DIR } from '@craft-agent/shared/config/paths'
 
 import { getAgentOSBrowserWorker, type AgentOSBrowserWorkerEventStatus, type AgentOSBrowserWorkerService, type AgentOSBrowserWorkerSnapshot } from './agentos-browser-worker'
 import { resolveAgentOSBrowserUseCapability, type AgentOSBrowserUseCapability } from './agentos-browser-use'
@@ -2245,7 +2245,7 @@ export const agentOSBrowserUseRunnerTestables = {
 
 async function appendBrowserRunLog(record: AgentOSBrowserUseRunResult): Promise<string | undefined> {
   try {
-    const logDir = join(homedir(), '.craft-agent', 'agentos')
+    const logDir = join(CONFIG_DIR, 'agentos')
     const logPath = join(logDir, 'browser-runs.jsonl')
     await mkdir(logDir, { recursive: true })
     await appendFile(logPath, `${JSON.stringify(record)}\n`, 'utf-8')
@@ -2257,7 +2257,7 @@ async function appendBrowserRunLog(record: AgentOSBrowserUseRunResult): Promise<
 
 async function appendBrowserE2ERunLog(record: AgentOSBrowserImageE2EResult): Promise<string | undefined> {
   try {
-    const logDir = join(homedir(), '.craft-agent', 'agentos')
+    const logDir = join(CONFIG_DIR, 'agentos')
     const logPath = join(logDir, 'browser-runs.jsonl')
     await mkdir(logDir, { recursive: true })
     await appendFile(logPath, `${JSON.stringify(record)}\n`, 'utf-8')

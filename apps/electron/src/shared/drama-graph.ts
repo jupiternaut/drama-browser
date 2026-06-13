@@ -62,7 +62,7 @@ export interface DramaScene {
   nodeId: string
   chapterId?: string
   order?: number
-  status: 'empty' | 'draft' | 'revision' | 'final'
+  status: 'empty' | 'draft' | 'revision' | 'final' | 'blocked'
   draftIds: string[]
 }
 
@@ -73,7 +73,7 @@ export interface DramaChapter {
   number: number
   sceneIds: string[]
   draftIds: string[]
-  status: 'empty' | 'draft' | 'revision' | 'final'
+  status: 'empty' | 'draft' | 'revision' | 'final' | 'blocked'
 }
 
 export interface DramaBible {
@@ -90,7 +90,7 @@ export interface DramaDraft {
   targetType: 'graph' | 'chapter' | 'scene' | 'node'
   targetId: string
   content: string
-  status: 'draft' | 'revision' | 'final'
+  status: 'draft' | 'revision' | 'final' | 'blocked'
   source: 'manual' | 'plotpilot' | 'crew'
   createdAt: number
   updatedAt: number

@@ -289,6 +289,52 @@ describe('DramaGraph schema', () => {
     expect(updated.updatedAt).toBe(1710000005000)
   })
 
+  it('records WritingSpec failures as blocked PLM drafts and node fields', () => {
+    const graph = updateDramaGraphNode(
+      dramaGraphFromStoryletState(storyletState, { now: 1710000000000 }),
+      {
+        nodeId: 'scene-1',
+        title: '第一章',
+        kind: 'chapter',
+      },
+      { now: 1710000001000 },
+    )
+    const chapter = graph.chapters[0]
+    expect(chapter).toBeDefined()
+
+    const updated = upsertDramaGraphDraft(graph, {
+      draftId: `chapter:${chapter!.id}:plotpilot-writing-spec-failure`,
+      targetType: 'chapter',
+      targetId: chapter!.id,
+      chapterId: chapter!.id,
+      nodeId: chapter!.nodeId,
+      content: 'WritingSpec 未通过：不要写剧情概要',
+      status: 'blocked',
+      source: 'plotpilot',
+      fields: [
+        { key: 'writingSpecStatus', label: 'WritingSpec 状态', value: 'failed', text: 'failed' },
+        { key: 'writingSpecFailureReport', label: 'WritingSpec 失败报告', value: { passed: false }, text: '{"passed":false}' },
+        { key: 'scriptStatus', label: '剧本状态', value: 'blocked', text: 'blocked' },
+      ],
+    }, { now: 1710000006000 })
+
+    expect(updated.drafts[0]).toMatchObject({
+      id: 'chapter:chapter:scene-1:plotpilot-writing-spec-failure',
+      targetType: 'chapter',
+      targetId: 'chapter:scene-1',
+      source: 'plotpilot',
+      status: 'blocked',
+    })
+    expect(updated.chapters[0]).toMatchObject({
+      status: 'blocked',
+      draftIds: ['chapter:chapter:scene-1:plotpilot-writing-spec-failure'],
+    })
+    expect(updated.nodes.find((node) => node.id === 'scene-1')?.fields).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'writingSpecStatus', text: 'failed' }),
+      expect.objectContaining({ key: 'scriptStatus', text: 'blocked' }),
+    ]))
+  })
+
   it('updates edge label and type immutably', () => {
     const graph = dramaGraphFromStoryletState(storyletState, { now: 1710000000000 })
     const updated = updateDramaGraphEdge(graph, {

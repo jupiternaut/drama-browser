@@ -115,7 +115,7 @@ import { createApplicationMenu } from './menu'
 import { disposeAppTray, initAppTray } from './app-tray'
 import { WindowManager } from './window-manager'
 import { loadWindowState, saveWindowState } from './window-state'
-import { getWorkspaces, getWorkspaceByNameOrId, loadStoredConfig, addWorkspace, saveConfig } from '@craft-agent/shared/config'
+import { CONFIG_DIR, getWorkspaces, getWorkspaceByNameOrId, loadStoredConfig, addWorkspace, saveConfig } from '@craft-agent/shared/config'
 import { getDefaultWorkspacesDir } from '@craft-agent/shared/workspaces'
 import { initializeDocs } from '@craft-agent/shared/docs'
 import { initializeReleaseNotes } from '@craft-agent/shared/release-notes'
@@ -132,6 +132,7 @@ import { registerThumbnailScheme, registerThumbnailHandler } from './thumbnail-p
 import log, { isDebugMode, mainLog, getLogFilePath, getMessagingGatewayLogFilePath, messagingGatewayLog } from './logger'
 import { PlotPilotRuntimeManager, resolveDefaultPlotPilotProjectRoot } from './plotpilot-runtime'
 import { DramaGraphStore } from './drama-graph-store'
+import { recordDramaProjectFile } from './drama-project-files'
 import { createEmptyDramaGraph, dramaGraphFromStoryletState } from '../shared/drama-graph'
 import {
   applyPlotPilotChapterToStoryletGraph,
@@ -157,6 +158,8 @@ import type {
   DramaGraphNodeDeleteRequest,
   DramaGraphNodeUpdateRequest,
   DramaGraphNodePositionUpdateRequest,
+  DramaProjectFileRecordRequest,
+  DramaProjectFileRecordResult,
 } from '../shared/types'
 import { setPerfEnabled, enableDebug } from '@craft-agent/shared/utils'
 import { registerPiModelResolver } from '@craft-agent/shared/config'
@@ -300,9 +303,9 @@ registerPiModelResolver((piAuthProvider) =>
   piAuthProvider ? getPiModelsForAuthProvider(piAuthProvider) : getAllPiModels()
 )
 
-// Custom URL scheme for deeplinks (e.g., craftagents://auth-complete)
-// Supports multi-instance dev: CRAFT_DEEPLINK_SCHEME env var (craftagents1, craftagents2, etc.)
-const DEEPLINK_SCHEME = process.env.CRAFT_DEEPLINK_SCHEME || 'craftagents'
+// Custom URL scheme for deeplinks (e.g., drama://auth-complete)
+// Supports multi-instance dev: CRAFT_DEEPLINK_SCHEME env var (drama1, drama2, etc.)
+const DEEPLINK_SCHEME = process.env.CRAFT_DEEPLINK_SCHEME || 'drama'
 
 let windowManager: WindowManager | null = null
 let sessionManager: SessionManager | null = null
@@ -478,7 +481,7 @@ async function writeCodexSkillRunLog(args: {
   text?: string
 }): Promise<string | undefined> {
   try {
-    const logDir = join(homedir(), '.craft-agent', 'logs', 'skill-crew-codex-runs')
+    const logDir = join(CONFIG_DIR, 'logs', 'skill-crew-codex-runs')
     await mkdir(logDir, { recursive: true })
     const safeTimestamp = args.startedAt.replace(/[:.]/g, '-')
     const logPath = join(logDir, `${safeTimestamp}-${args.runId}.json`)
@@ -4442,11 +4445,12 @@ async function importSkillToCrewFolder(args: SkillCrewImportSkillArgs): Promise<
 // Set app name early (before app.whenReady) to ensure correct macOS menu bar title
 // Supports multi-instance dev: CRAFT_APP_NAME env var (e.g., "Drama [1]")
 app.setName(process.env.CRAFT_APP_NAME || 'Drama')
+app.setPath('userData', process.env.DRAMA_USER_DATA_DIR || join(app.getPath('appData'), 'Drama'))
 if (process.platform === 'win32') {
   app.setAppUserModelId(process.env.CRAFT_APP_ID || 'com.jupiternaut.drama')
 }
 
-// Register as default protocol client for craftagents:// URLs
+// Register as default protocol client for drama:// URLs
 // This must be done before app.whenReady() on some platforms
 if (process.defaultApp) {
   // Development mode: need to pass the app path
@@ -4637,10 +4641,10 @@ app.whenReady().then(async () => {
   // Ensure default permissions file exists (copies bundled default.json on first run)
   ensureDefaultPermissions()
 
-  // Seed tool icons to ~/.craft-agent/tool-icons/ (copies bundled SVGs on first run)
+  // Seed tool icons to CONFIG_DIR/tool-icons/ (copies bundled SVGs on first run)
   ensureToolIcons()
 
-  // Seed preset themes to ~/.craft-agent/themes/ (copies bundled theme JSONs on first run)
+  // Seed preset themes to CONFIG_DIR/themes/ (copies bundled theme JSONs on first run)
   ensurePresetThemes()
 
   // Register thumbnail:// protocol handler (scheme was registered earlier, before app.whenReady)
@@ -4898,13 +4902,13 @@ app.whenReady().then(async () => {
             sessionManager: sm,
             credentialManager: getCredentialManager(),
             getMessagingDir: (wsId: string) =>
-              join(homedir(), '.craft-agent', 'workspaces', wsId, 'messaging'),
+              join(CONFIG_DIR, 'workspaces', wsId, 'messaging'),
             getLegacyMessagingDir: (wsId: string) => {
               const ws = getWorkspaces().find((w) => w.id === wsId)
               return ws ? join(ws.rootPath, 'messaging') : undefined
             },
             // Route messaging diagnostics through the dedicated messaging log
-            // at ~/.craft-agent/logs/messaging-gateway.log.
+            // at CONFIG_DIR/logs/messaging-gateway.log.
             logger: messagingGatewayLog,
             // WhatsApp worker runs under Electron's embedded Node via
             // ELECTRON_RUN_AS_NODE (WhatsAppAdapter defaults nodeBin to
@@ -5139,6 +5143,17 @@ app.whenReady().then(async () => {
         return store.listHistory(request.graphId, {
           maxBackups: request.maxBackups,
           maxEvents: request.maxEvents,
+        })
+      })
+
+      ipcMain.handle('drama:projectFile:record', async (
+        event,
+        request: DramaProjectFileRecordRequest,
+      ): Promise<DramaProjectFileRecordResult> => {
+        const workspaceRoot = resolveWorkspaceRootForEvent(event)
+        return recordDramaProjectFile({
+          workspaceRoot,
+          request,
         })
       })
 

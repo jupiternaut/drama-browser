@@ -3,11 +3,13 @@ import type { ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { basename, delimiter, join } from 'node:path'
 import { promisify } from 'node:util'
 
 export const DEFAULT_PLOTPILOT_PROJECT_ROOT = join(homedir(), 'Downloads', 'PlotPilot-plm')
 export const PLOTPILOT_PROJECT_ROOT_CANDIDATES = [
+  join(homedir(), 'Downloads', 'PlotPilot-plm-v46-read'),
+  join(homedir(), 'Downloads', 'PlotPilot-plm-v46'),
   join(homedir(), 'Downloads', 'PlotPilot-plm-v451-read'),
   DEFAULT_PLOTPILOT_PROJECT_ROOT,
 ]
@@ -18,6 +20,7 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 2_000
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5_000
 const DEFAULT_POLL_INTERVAL_MS = 100
 const DEFAULT_MAX_LOG_ENTRIES = 500
+const EMBEDDED_BOOT_MODULE = 'plotpilot_embedded_boot:app'
 
 export type PlotPilotRuntimeState = 'stopped' | 'starting' | 'running' | 'stopping' | 'error'
 export type PlotPilotLogStream = 'stdout' | 'stderr' | 'system' | 'runtime'
@@ -118,9 +121,43 @@ function resolveDefaultDataDir(): string {
   return join(homedir(), '.plotpilot', 'data')
 }
 
+function resourcesBaseCandidates(): string[] {
+  const processWithResources = process as NodeJS.Process & { resourcesPath?: string }
+  return [
+    process.env.CRAFT_RESOURCES_BASE,
+    process.env.DRAMA_RESOURCES_BASE,
+    processWithResources.resourcesPath,
+    join(__dirname, 'resources'),
+    join(__dirname, '..', 'resources'),
+    join(process.cwd(), 'apps', 'electron', 'resources'),
+  ].filter((candidate): candidate is string => Boolean(candidate))
+}
+
+function packagedPlotPilotProjectRootCandidates(): string[] {
+  const roots: string[] = []
+  for (const base of resourcesBaseCandidates()) {
+    roots.push(
+      join(base, 'plotpilot'),
+      join(base, 'plotpilot', 'source'),
+      join(base, 'sidecars', 'plotpilot'),
+      join(base, 'sidecars', 'plotpilot', 'source'),
+    )
+  }
+  return Array.from(new Set(roots))
+}
+
+function isPlotPilotProjectRoot(candidate: string): boolean {
+  return existsSync(join(candidate, 'interfaces', 'main.py'))
+}
+
 export function resolveDefaultPlotPilotProjectRoot(): string {
   if (process.env.PLOTPILOT_PROJECT_ROOT) return process.env.PLOTPILOT_PROJECT_ROOT
-  return PLOTPILOT_PROJECT_ROOT_CANDIDATES.find((candidate) => existsSync(candidate))
+  const candidates = [
+    ...packagedPlotPilotProjectRootCandidates(),
+    ...PLOTPILOT_PROJECT_ROOT_CANDIDATES,
+  ]
+  return candidates.find(isPlotPilotProjectRoot)
+    ?? candidates.find((candidate) => existsSync(candidate))
     ?? DEFAULT_PLOTPILOT_PROJECT_ROOT
 }
 
@@ -130,15 +167,66 @@ function venvPythonPath(root: string): string {
     : join(root, '.venv', 'bin', 'python')
 }
 
+function bundledUvCandidates(): string[] {
+  const uvName = process.platform === 'win32' ? 'uv.exe' : 'uv'
+  const platformArch = `${process.platform}-${process.arch}`
+  return resourcesBaseCandidates().flatMap((base) => [
+    join(base, 'bin', platformArch, uvName),
+    join(base, 'resources', 'bin', platformArch, uvName),
+    join(base, 'app', 'resources', 'bin', platformArch, uvName),
+  ])
+}
+
+function isUvExecutable(command: string): boolean {
+  const name = basename(command).toLowerCase()
+  return name === 'uv' || name === 'uv.exe'
+}
+
+function resolveEmbeddedBootPath(): string {
+  const candidates = [
+    join(__dirname, 'resources'),
+    join(__dirname, '..', 'resources'),
+    ...resourcesBaseCandidates(),
+    join(process.cwd(), 'apps', 'electron', 'resources'),
+  ]
+  return candidates.find((candidate) => existsSync(join(candidate, 'plotpilot_embedded_boot.py')))
+    ?? candidates[candidates.length - 1]
+}
+
+function prependPythonPath(pathEntry: string, current = process.env.PYTHONPATH ?? ''): string {
+  const entries = [pathEntry, ...current.split(delimiter)]
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+  return Array.from(new Set(entries)).join(delimiter)
+}
+
 export function resolveDefaultPlotPilotPythonExe(projectRoot: string): string {
   if (process.env.PLOTPILOT_PYTHON_EXE) return process.env.PLOTPILOT_PYTHON_EXE
 
-  const localVenvPython = venvPythonPath(projectRoot)
-  if (existsSync(localVenvPython)) return localVenvPython
+  const packagedPythonCandidates = [
+    venvPythonPath(projectRoot),
+    ...packagedPlotPilotProjectRootCandidates().flatMap((candidateRoot) => [
+      venvPythonPath(candidateRoot),
+      process.platform === 'win32'
+        ? join(candidateRoot, 'python', 'python.exe')
+        : join(candidateRoot, 'python', 'bin', 'python'),
+      process.platform === 'win32'
+        ? join(candidateRoot, '..', 'python', 'python.exe')
+        : join(candidateRoot, '..', 'python', 'bin', 'python'),
+    ]),
+  ]
+
+  for (const candidatePython of Array.from(new Set(packagedPythonCandidates))) {
+    if (existsSync(candidatePython)) return candidatePython
+  }
 
   for (const candidateRoot of PLOTPILOT_PROJECT_ROOT_CANDIDATES) {
     const candidatePython = venvPythonPath(candidateRoot)
     if (existsSync(candidatePython)) return candidatePython
+  }
+
+  for (const candidateUv of Array.from(new Set(bundledUvCandidates()))) {
+    if (existsSync(candidateUv)) return candidateUv
   }
 
   return 'python'
@@ -415,10 +503,10 @@ export class PlotPilotRuntimeManager {
     const logFile = join(this.dataDir, 'logs', 'plotpilot.log')
     mkdirSync(join(this.dataDir, 'logs'), { recursive: true })
 
-    const args = [
+    const pythonArgs = [
       '-m',
       'uvicorn',
-      'interfaces.main:app',
+      EMBEDDED_BOOT_MODULE,
       '--host',
       '127.0.0.1',
       '--port',
@@ -426,6 +514,17 @@ export class PlotPilotRuntimeManager {
       '--log-level',
       'info',
     ]
+    const args = isUvExecutable(this.pythonExe)
+      ? [
+          'run',
+          '--project',
+          this.projectRoot,
+          '--python',
+          '3.11',
+          'python',
+          ...pythonArgs,
+        ]
+      : pythonArgs
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       PYTHONIOENCODING: 'utf-8',
@@ -435,9 +534,11 @@ export class PlotPilotRuntimeManager {
       HF_DATASETS_OFFLINE: '1',
       PLOTPILOT_EMBEDDED_RUNTIME: '1',
       PLOTPILOT_SKIP_ORPHAN_CLEANUP: '1',
+      PLOTPILOT_SKIP_PROCESS_CLEANUP: '1',
       PLOTPILOT_PROD_DATA_DIR: this.dataDir,
       AITEXT_PROD_DATA_DIR: this.dataDir,
       LOG_FILE: logFile,
+      PYTHONPATH: prependPythonPath(resolveEmbeddedBootPath()),
     }
     const spawnOptions: PlotPilotSpawnOptions = {
       cwd: this.projectRoot,

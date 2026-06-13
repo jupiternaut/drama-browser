@@ -6,12 +6,14 @@
 import { spawn, type Subprocess } from "bun";
 import { existsSync, rmSync, cpSync, readFileSync, statSync, mkdirSync } from "fs";
 import { join, basename } from "path";
+import { homedir } from "os";
 import * as esbuild from "esbuild";
 import { downloadUv, type Platform, type Arch } from "./build/common";
 
 const ROOT_DIR = join(import.meta.dir, "..");
 const ELECTRON_DIR = join(ROOT_DIR, "apps/electron");
 const DIST_DIR = join(ELECTRON_DIR, "dist");
+const DEFAULT_DRAMA_CONFIG_DIR = join(homedir(), ".drama-agent");
 
 // Replace grammY's bundled polyfills (node-fetch@2 + abort-controller@3) with
 // native Node globals. esbuild otherwise renames the polyfill's `class
@@ -88,8 +90,8 @@ function detectInstance(): void {
     process.env.CRAFT_INSTANCE_NUMBER = instanceNum;
     process.env.CRAFT_VITE_PORT = `${instanceNum}173`;
     process.env.CRAFT_APP_NAME = `Drama [${instanceNum}]`;
-    process.env.CRAFT_CONFIG_DIR = join(process.env.HOME || "", `.craft-agent-${instanceNum}`);
-    process.env.CRAFT_DEEPLINK_SCHEME = `craftagents${instanceNum}`;
+    process.env.CRAFT_CONFIG_DIR = join(homedir(), `.drama-agent-${instanceNum}`);
+    process.env.CRAFT_DEEPLINK_SCHEME = `drama${instanceNum}`;
     console.log(`🔢 Instance ${instanceNum} detected: port=${process.env.CRAFT_VITE_PORT}, config=${process.env.CRAFT_CONFIG_DIR}`);
   }
 }
@@ -117,6 +119,11 @@ function loadEnvFile(): void {
     }
     console.log("📄 Loaded .env file");
   }
+}
+
+function ensureDramaEnvDefaults(): void {
+  process.env.CRAFT_APP_NAME ||= "Drama";
+  process.env.CRAFT_CONFIG_DIR ||= DEFAULT_DRAMA_CONFIG_DIR;
 }
 
 // Kill any process using the specified port
@@ -284,9 +291,9 @@ function getElectronEnv(): Record<string, string> {
   return {
     ...process.env as Record<string, string>,
     VITE_DEV_SERVER_URL: `http://localhost:${vitePort}`,
-    CRAFT_CONFIG_DIR: process.env.CRAFT_CONFIG_DIR || "",
+    CRAFT_CONFIG_DIR: process.env.CRAFT_CONFIG_DIR || DEFAULT_DRAMA_CONFIG_DIR,
     CRAFT_APP_NAME: process.env.CRAFT_APP_NAME || "Drama",
-    CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "craftagents",
+    CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "drama",
     CRAFT_INSTANCE_NUMBER: process.env.CRAFT_INSTANCE_NUMBER || "",
   };
 }
@@ -420,6 +427,7 @@ async function main(): Promise<void> {
   // Setup
   detectInstance();
   loadEnvFile();
+  ensureDramaEnvDefaults();
   cleanViteCache();
 
   // Ensure dist directory exists

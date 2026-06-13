@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import {
   PlotPilotRuntimeManager,
+  PLOTPILOT_PROJECT_ROOT_CANDIDATES,
   type PlotPilotRuntimeDeps,
   type PlotPilotSpawnOptions,
   resolveDefaultPlotPilotPythonExe,
@@ -58,6 +59,10 @@ describe('PlotPilotRuntimeManager', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
+  it('prefers the v4.6 PlotPilot port when resolving bundled project roots', () => {
+    expect(PLOTPILOT_PROJECT_ROOT_CANDIDATES[0]).toContain('PlotPilot-plm-v46-read')
+  })
+
   it('spawns uvicorn with the selected port and PlotPilot production env', async () => {
     const children: FakeChildProcess[] = []
     const spawnCalls: Array<{
@@ -100,7 +105,7 @@ describe('PlotPilotRuntimeManager', () => {
     expect(spawnCalls[0].args).toEqual([
       '-m',
       'uvicorn',
-      'interfaces.main:app',
+      'plotpilot_embedded_boot:app',
       '--host',
       '127.0.0.1',
       '--port',
@@ -117,6 +122,8 @@ describe('PlotPilotRuntimeManager', () => {
     expect(spawnCalls[0].options.env.HF_DATASETS_OFFLINE).toBe('1')
     expect(spawnCalls[0].options.env.PLOTPILOT_EMBEDDED_RUNTIME).toBe('1')
     expect(spawnCalls[0].options.env.PLOTPILOT_SKIP_ORPHAN_CLEANUP).toBe('1')
+    expect(spawnCalls[0].options.env.PLOTPILOT_SKIP_PROCESS_CLEANUP).toBe('1')
+    expect(spawnCalls[0].options.env.PYTHONPATH).toContain('resources')
     expect(spawnCalls[0].options.env.PLOTPILOT_PROD_DATA_DIR).toBe(dataDir)
     expect(spawnCalls[0].options.env.AITEXT_PROD_DATA_DIR).toBe(dataDir)
     expect(spawnCalls[0].options.env.LOG_FILE).toBe(join(dataDir, 'logs', 'plotpilot.log'))

@@ -423,6 +423,7 @@ client.onConnectionStateChanged((state) => {
 ;(api as ElectronAPI).loadDramaGraph = (options) => ipcRenderer.invoke('drama:graph:load', options)
 ;(api as ElectronAPI).loadDramaGraphHistory = (request) => ipcRenderer.invoke('drama:graph:history', request)
 ;(api as ElectronAPI).restoreDramaGraphBackup = (request) => ipcRenderer.invoke('drama:graph:restoreBackup', request)
+;(api as ElectronAPI).recordDramaProjectFile = (request) => ipcRenderer.invoke('drama:projectFile:record', request)
 ;(api as ElectronAPI).updateDramaGraphNodePositions = (request) => ipcRenderer.invoke('drama:graph:updateNodePositions', request)
 ;(api as ElectronAPI).createDramaGraphNode = (request) => ipcRenderer.invoke('drama:graph:createNode', request)
 ;(api as ElectronAPI).updateDramaGraphNode = (request) => ipcRenderer.invoke('drama:graph:updateNode', request)

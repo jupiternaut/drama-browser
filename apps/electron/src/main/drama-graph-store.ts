@@ -25,6 +25,7 @@ import {
   type DramaNodeUpdate,
   type DramaNodePositionUpdate,
 } from '../shared/drama-graph'
+import { recordDramaProjectFile } from './drama-project-files'
 
 export interface DramaGraphStoreOptions {
   workspaceRoot: string
@@ -127,6 +128,29 @@ export class DramaGraphStore {
       await writeFile(tempPath, `${JSON.stringify(graph, null, 2)}\n`, 'utf8')
       await rename(tempPath, graphPath)
       await this.appendEvent(graph.id, event)
+      await recordDramaProjectFile({
+        workspaceRoot: this.workspaceRoot,
+        now: this.now,
+        request: {
+          projectId: graph.id,
+          source: 'graph',
+          type: event.type,
+          title: graph.title,
+          summary: {
+            backupPath,
+            nodeCount: graph.nodes.length,
+            edgeCount: graph.edges.length,
+            sceneCount: graph.scenes.length,
+            chapterCount: graph.chapters.length,
+            draftCount: graph.drafts.length,
+            taskBindingCount: graph.taskBindings.length,
+          },
+          payload: {
+            graph,
+            event,
+          },
+        },
+      })
       return { path: graphPath, backupPath }
     } catch (error) {
       if (backupPath && existsSync(backupPath)) {

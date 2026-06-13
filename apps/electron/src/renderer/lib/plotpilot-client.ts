@@ -2,6 +2,7 @@ import type {
   BeatSheetDTO,
   BibleDTO,
   BibleStatusDTO,
+  BulkUpdateBibleRequest,
   ChapterDTO,
   ChapterChunkStats,
   ChapterMicroBeatsRequest,
@@ -15,9 +16,56 @@ import type {
   GenerateChapterRequest,
   GenerateChapterStreamEvent,
   NovelDTO,
+  PlotPilotAutopilotCircuitBreakerResponse,
+  PlotPilotAutopilotChapterStreamEvent,
+  PlotPilotAutopilotControlResponse,
+  PlotPilotAutopilotStartRequest,
+  PlotPilotAutopilotStatusResponse,
+  PlotPilotAutopilotStreamEvent,
+  PlotPilotAiTraceListResponse,
+  PlotPilotAiTraceTimelineResponse,
+  PlotPilotChurnAlertsResponse,
+  PlotPilotCodexLoginStartResponse,
+  PlotPilotCodexLogoutResponse,
+  PlotPilotCodexStatusResponse,
+  PlotPilotContinuePlanningRequest,
+  PlotPilotHumanizerSettingsRequest,
+  PlotPilotHumanizerSettingsResponse,
+  PlotPilotHostedWriteRequest,
+  PlotPilotHostedWriteStreamEvent,
+  PlotPilotInvocationAcceptRequest,
+  PlotPilotInvocationCommitRequest,
+  PlotPilotInvocationCreateRequest,
+  PlotPilotInvocationPromptDraftRequest,
+  PlotPilotInvocationPromptDraftResponse,
+  PlotPilotInvocationResponseDTO,
+  PlotPilotInvocationResumeRequest,
+  PlotPilotInvocationVariableUpdateRequest,
+  PlotPilotKnowledgeGraphResponse,
+  PlotPilotLlmControlConfig,
+  PlotPilotLlmControlPanelData,
+  PlotPilotMainPlotOptionItem,
+  PlotPilotPlanNovelRequest,
+  PlotPilotPlanNovelResponse,
+  PlotPilotPlanningStructureResponse,
+  PlotPilotSavePlotOutlineRequest,
+  PlotPilotSetupStreamEvent,
+  PlotPilotSuggestMainPlotOptionsResponse,
+  PlotPilotPlotOutlineResponse,
+  PlotPilotPromptListResponse,
+  PlotPilotPromptStatsResponse,
+  PlotPilotReaderSimulationListResponse,
+  PlotPilotReaderSimulationResponse,
+  PlotPilotReviewChapterResponse,
+  PlotPilotTraceListResponse,
+  PlotPilotTraceStatsResponse,
+  PlotPilotWritingSpecBindingRequest,
+  PlotPilotWritingSpecBindingResponse,
+  PlotPilotWritingSpecFailure,
   PlmHealth,
   StreamGeneratedBeatDTO,
   UpdateChapterContentRequest,
+  UpdateNovelRequest,
 } from '../../shared/plotpilot'
 
 export type PlotPilotFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -46,8 +94,106 @@ export interface PlotPilotClient {
   listNovels(options?: PlotPilotRequestOptions): Promise<NovelDTO[]>
   getNovel(novelId: string, options?: PlotPilotRequestOptions): Promise<NovelDTO>
   createNovel(data: CreateNovelRequest, options?: PlotPilotRequestOptions): Promise<NovelDTO>
+  updateNovel(novelId: string, data: UpdateNovelRequest, options?: PlotPilotRequestOptions): Promise<NovelDTO>
+  setNovelAutoApproveMode(novelId: string, enabled: boolean, options?: PlotPilotRequestOptions): Promise<NovelDTO>
+  getLlmControl(options?: PlotPilotRequestOptions): Promise<PlotPilotLlmControlPanelData>
+  updateLlmControl(
+    data: PlotPilotLlmControlConfig,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotLlmControlPanelData>
+  getCodexStatus(options?: PlotPilotRequestOptions): Promise<PlotPilotCodexStatusResponse>
+  startCodexLogin(options?: PlotPilotRequestOptions): Promise<PlotPilotCodexLoginStartResponse>
+  logoutCodex(options?: PlotPilotRequestOptions): Promise<PlotPilotCodexLogoutResponse>
+  getWritingSpec(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotWritingSpecBindingResponse>
+  setWritingSpec(
+    novelId: string,
+    data: PlotPilotWritingSpecBindingRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotWritingSpecBindingResponse>
+  getHumanizer(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotHumanizerSettingsResponse>
+  setHumanizer(
+    novelId: string,
+    data: PlotPilotHumanizerSettingsRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotHumanizerSettingsResponse>
+  createInvocation(
+    data: PlotPilotInvocationCreateRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotInvocationResponseDTO>
+  getInvocation(sessionId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotInvocationResponseDTO>
+  acceptInvocation(
+    sessionId: string,
+    data: PlotPilotInvocationAcceptRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotInvocationResponseDTO>
+  resumeInvocation(
+    sessionId: string,
+    data?: PlotPilotInvocationResumeRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotInvocationResponseDTO>
+  retryInvocation(
+    sessionId: string,
+    data?: PlotPilotInvocationResumeRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotInvocationResponseDTO>
+  rejectInvocation(
+    sessionId: string,
+    data: PlotPilotInvocationAcceptRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotInvocationResponseDTO>
+  commitInvocation(
+    sessionId: string,
+    data: PlotPilotInvocationCommitRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotInvocationResponseDTO>
+  previewInvocationPromptDraft(
+    sessionId: string,
+    data: PlotPilotInvocationPromptDraftRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotInvocationPromptDraftResponse>
+  saveInvocationPromptDraft(
+    sessionId: string,
+    data: PlotPilotInvocationPromptDraftRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotInvocationResponseDTO>
+  updateInvocationVariables(
+    sessionId: string,
+    data: PlotPilotInvocationVariableUpdateRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotInvocationResponseDTO>
+  getPlotOutline(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotPlotOutlineResponse>
+  savePlotOutline(
+    novelId: string,
+    data: PlotPilotSavePlotOutlineRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotPlotOutlineResponse>
+  generatePlotOutline(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotPlotOutlineResponse>
+  generatePlotOutlineStream(
+    novelId: string,
+    options?: PlotPilotRequestOptions,
+  ): AsyncGenerator<PlotPilotSetupStreamEvent, void, unknown>
+  suggestMainPlotOptions(
+    novelId: string,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotSuggestMainPlotOptionsResponse>
+  suggestMainPlotOptionsStream(
+    novelId: string,
+    options?: PlotPilotRequestOptions,
+  ): AsyncGenerator<PlotPilotSetupStreamEvent, void, unknown>
+  planNovel(
+    novelId: string,
+    data?: PlotPilotPlanNovelRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotPlanNovelResponse>
+  getPlanningStructure(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotPlanningStructureResponse>
+  continuePlanning(
+    novelId: string,
+    data: PlotPilotContinuePlanningRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<Record<string, unknown>>
   getBibleStatus(novelId: string, options?: PlotPilotRequestOptions): Promise<BibleStatusDTO>
   getBible(novelId: string, options?: PlotPilotRequestOptions): Promise<BibleDTO>
+  updateBible(novelId: string, data: BulkUpdateBibleRequest, options?: PlotPilotRequestOptions): Promise<BibleDTO>
   listChapters(novelId: string, options?: PlotPilotRequestOptions): Promise<ChapterDTO[]>
   getChapter(novelId: string, chapterNumber: number, options?: PlotPilotRequestOptions): Promise<ChapterDTO>
   ensureChapter(
@@ -79,6 +225,79 @@ export interface PlotPilotClient {
     data: GenerateChapterRequest,
     options?: PlotPilotRequestOptions,
   ): AsyncGenerator<GenerateChapterStreamEvent, void, unknown>
+  hostedWriteStream(
+    novelId: string,
+    data: PlotPilotHostedWriteRequest,
+    options?: PlotPilotRequestOptions,
+  ): AsyncGenerator<PlotPilotHostedWriteStreamEvent, void, unknown>
+  getAutopilotStatus(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotAutopilotStatusResponse>
+  startAutopilot(
+    novelId: string,
+    data: PlotPilotAutopilotStartRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotAutopilotControlResponse>
+  stopAutopilot(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotAutopilotControlResponse>
+  resumeAutopilot(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotAutopilotControlResponse>
+  getAutopilotCircuitBreaker(
+    novelId: string,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotAutopilotCircuitBreakerResponse>
+  resetAutopilotCircuitBreaker(
+    novelId: string,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotAutopilotControlResponse>
+  autopilotLogStream(
+    novelId: string,
+    afterSeq?: number,
+    options?: PlotPilotRequestOptions,
+  ): AsyncGenerator<PlotPilotAutopilotStreamEvent, void, unknown>
+  autopilotChapterStream(
+    novelId: string,
+    options?: PlotPilotRequestOptions,
+  ): AsyncGenerator<PlotPilotAutopilotChapterStreamEvent, void, unknown>
+  autopilotEventsStream(
+    novelId: string,
+    options?: PlotPilotRequestOptions,
+  ): AsyncGenerator<PlotPilotAutopilotStreamEvent, void, unknown>
+  reviewChapter(
+    novelId: string,
+    chapterNumber: number,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotReviewChapterResponse>
+  simulateReaders(
+    novelId: string,
+    chapterNumber: number,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotReaderSimulationResponse>
+  getChapterSimulation(
+    novelId: string,
+    chapterNumber: number,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotReaderSimulationResponse>
+  listReaderSimulations(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotReaderSimulationListResponse>
+  getChurnAlerts(novelId: string, threshold?: number, options?: PlotPilotRequestOptions): Promise<PlotPilotChurnAlertsResponse>
+  inferKnowledgeGraph(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotKnowledgeGraphResponse>
+  getKnowledgeGraphStatistics(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotKnowledgeGraphResponse>
+  getKnowledgeGraphTriples(
+    novelId: string,
+    params?: { source_type?: string; min_confidence?: number },
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotKnowledgeGraphResponse>
+  searchKnowledgeGraph(
+    novelId: string,
+    data: { query: string; limit?: number; min_score?: number },
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotKnowledgeGraphResponse>
+  listTraces(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotTraceListResponse>
+  getTraceStats(novelId: string, options?: PlotPilotRequestOptions): Promise<PlotPilotTraceStatsResponse>
+  listAiTraces(novelId: string, limit?: number, options?: PlotPilotRequestOptions): Promise<PlotPilotAiTraceListResponse>
+  getAiTraceTimeline(
+    novelId: string,
+    traceId: string,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotAiTraceTimelineResponse>
+  getPromptStats(options?: PlotPilotRequestOptions): Promise<PlotPilotPromptStatsResponse>
+  listPrompts(options?: PlotPilotRequestOptions): Promise<PlotPilotPromptListResponse>
 }
 
 export type PlotPilotCallOptions = PlotPilotClientOptions & PlotPilotRequestOptions
@@ -117,6 +336,34 @@ export class PlotPilotResponseParseError extends Error {
     this.url = url
     this.body = body
   }
+}
+
+function parsePlotPilotErrorBody(error: unknown): unknown | null {
+  if (!(error instanceof PlotPilotHttpError)) return null
+  const trimmed = error.body.trim()
+  if (!trimmed) return null
+  try {
+    return JSON.parse(trimmed) as unknown
+  } catch {
+    return null
+  }
+}
+
+export function extractPlotPilotWritingSpecFailure(error: unknown): PlotPilotWritingSpecFailure | null {
+  const body = parsePlotPilotErrorBody(error)
+  if (!isRecord(body)) return null
+
+  const detail = isRecord(body.detail) ? body.detail : body
+  const code = stringValue(detail.code ?? body.code)
+  if (code !== 'writing_spec_failed') return null
+
+  const message = stringValue(
+    detail.message ?? body.message,
+    'WritingSpec validation failed; chapter was not saved.',
+  )
+  const failure: PlotPilotWritingSpecFailure = { code, message }
+  if (isRecord(detail.report)) failure.report = detail.report
+  return failure
 }
 
 function trimTrailingSlash(value: string): string {
@@ -857,6 +1104,595 @@ async function* readChapterStreamEvents(
   }
 }
 
+function normalizeHostedWriteStreamEvent(
+  eventName: string | undefined,
+  raw: unknown,
+): PlotPilotHostedWriteStreamEvent | null {
+  if (raw === null || raw === undefined || raw === '[DONE]') return null
+
+  if (!isRecord(raw)) {
+    return {
+      type: 'unknown',
+      event: eventName,
+      raw,
+    }
+  }
+
+  const type = stringValue(eventName || raw.type, '').trim()
+  if (type === 'approval_required') {
+    return {
+      ...raw,
+      type: 'approval_required',
+      session_id: stringValue(raw.session_id),
+      status: optionalString(raw.status),
+      next_action: optionalString(raw.next_action),
+    }
+  }
+  if (type === 'error') {
+    return {
+      ...raw,
+      type: 'error',
+      message: stringValue(raw.message ?? raw.error, 'Stream error'),
+    }
+  }
+  if (type === 'chunk') {
+    return {
+      ...raw,
+      type: 'chunk',
+      text: optionalString(raw.text),
+      stats: isRecord(raw.stats) ? normalizeChapterChunkStats(raw.stats) : undefined,
+    }
+  }
+  if (
+    type === 'session' ||
+    type === 'chapter_start' ||
+    type === 'outline' ||
+    type === 'saved' ||
+    type === 'session_done'
+  ) {
+    return {
+      ...raw,
+      type,
+    } as PlotPilotHostedWriteStreamEvent
+  }
+
+  return {
+    type: 'unknown',
+    event: eventName,
+    raw,
+  }
+}
+
+function drainHostedWriteSseFrames(
+  bufferRef: { value: string },
+  final = false,
+): PlotPilotHostedWriteStreamEvent[] {
+  const events: PlotPilotHostedWriteStreamEvent[] = []
+  let separatorIndex = bufferRef.value.indexOf('\n\n')
+  while (separatorIndex >= 0) {
+    const block = bufferRef.value.slice(0, separatorIndex)
+    bufferRef.value = bufferRef.value.slice(separatorIndex + 2)
+    const parsed = parseSseBlock(block)
+    const event = parsed ? normalizeHostedWriteStreamEvent(parsed.eventName, parsed.payload) : null
+    if (event) events.push(event)
+    separatorIndex = bufferRef.value.indexOf('\n\n')
+  }
+
+  if (final && bufferRef.value.trim()) {
+    const parsed = parseSseBlock(bufferRef.value)
+    const event = parsed ? normalizeHostedWriteStreamEvent(parsed.eventName, parsed.payload) : null
+    if (event) events.push(event)
+    bufferRef.value = ''
+  }
+
+  return events
+}
+
+function drainHostedWriteNdjsonFrames(
+  bufferRef: { value: string },
+  final = false,
+): PlotPilotHostedWriteStreamEvent[] {
+  const events: PlotPilotHostedWriteStreamEvent[] = []
+  let newlineIndex = bufferRef.value.indexOf('\n')
+  while (newlineIndex >= 0) {
+    const line = bufferRef.value.slice(0, newlineIndex).trim()
+    bufferRef.value = bufferRef.value.slice(newlineIndex + 1)
+    if (line) {
+      const payloadText = line.startsWith('data:')
+        ? line.slice('data:'.length).trim()
+        : line
+      const payload = parseJsonPayload(payloadText)
+      const event = payload === null ? null : normalizeHostedWriteStreamEvent(undefined, payload)
+      if (event) events.push(event)
+    }
+    newlineIndex = bufferRef.value.indexOf('\n')
+  }
+
+  if (final && bufferRef.value.trim()) {
+    const payloadText = bufferRef.value.trim().startsWith('data:')
+      ? bufferRef.value.trim().slice('data:'.length).trim()
+      : bufferRef.value.trim()
+    const payload = parseJsonPayload(payloadText)
+    const event = payload === null ? null : normalizeHostedWriteStreamEvent(undefined, payload)
+    if (event) events.push(event)
+    bufferRef.value = ''
+  }
+
+  return events
+}
+
+function hasTerminalHostedWriteEvent(events: PlotPilotHostedWriteStreamEvent[]): boolean {
+  return events.some(event =>
+    event.type === 'session_done' ||
+    event.type === 'error' ||
+    event.type === 'approval_required'
+  )
+}
+
+async function* readHostedWriteStreamEvents(
+  response: Response,
+): AsyncGenerator<PlotPilotHostedWriteStreamEvent, void, unknown> {
+  if (!response.body) return
+
+  const contentType = response.headers.get('Content-Type')?.toLowerCase() ?? ''
+  let mode: 'sse' | 'ndjson' | null = contentType.includes('text/event-stream')
+    ? 'sse'
+    : contentType.includes('ndjson')
+      ? 'ndjson'
+      : null
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  const bufferRef = { value: '' }
+
+  const drain = (final = false): PlotPilotHostedWriteStreamEvent[] => {
+    bufferRef.value = bufferRef.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    if (mode === null) {
+      mode = /^\s*(event|data):/m.test(bufferRef.value) ? 'sse' : 'ndjson'
+    }
+    return mode === 'sse'
+      ? drainHostedWriteSseFrames(bufferRef, final)
+      : drainHostedWriteNdjsonFrames(bufferRef, final)
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (value) {
+      bufferRef.value += decoder.decode(value, { stream: true })
+    }
+    if (done) {
+      bufferRef.value += decoder.decode()
+    }
+
+    const events = drain(done)
+    for (const event of events) {
+      yield event
+    }
+    if (hasTerminalHostedWriteEvent(events)) return
+
+    if (done) return
+  }
+}
+
+function normalizeAutopilotStreamEvent(
+  eventName: string | undefined,
+  raw: unknown,
+): PlotPilotAutopilotStreamEvent | null {
+  if (raw === null || raw === undefined || raw === '[DONE]') return null
+
+  if (!isRecord(raw)) {
+    return {
+      type: 'unknown',
+      event: eventName,
+      raw,
+    }
+  }
+
+  return {
+    ...raw,
+    type: stringValue(eventName || raw.type, 'event').trim() || 'event',
+    message: optionalString(raw.message),
+    timestamp: optionalString(raw.timestamp),
+    metadata: isRecord(raw.metadata) ? raw.metadata : undefined,
+  }
+}
+
+function normalizeSetupStreamEvent(
+  eventName: string | undefined,
+  raw: unknown,
+): PlotPilotSetupStreamEvent | null {
+  if (raw === null || raw === undefined || raw === '[DONE]') return null
+  if (!isRecord(raw)) return { type: 'unknown', raw }
+
+  const type = stringValue(eventName || raw.type, 'event').trim() || 'event'
+  if (type === 'approval_required') {
+    return {
+      ...raw,
+      type,
+      session_id: stringValue(raw.session_id),
+      status: optionalString(raw.status),
+      next_action: optionalString(raw.next_action),
+    }
+  }
+  if (type === 'error') {
+    return {
+      ...raw,
+      type,
+      message: stringValue(raw.message ?? raw.error, 'Stream error'),
+    }
+  }
+  if (type === 'done') {
+    return {
+      ...raw,
+      type,
+      plot_options: Array.isArray(raw.plot_options)
+        ? raw.plot_options as PlotPilotMainPlotOptionItem[]
+        : undefined,
+      plot_outline: isRecord(raw.plot_outline)
+        ? raw.plot_outline
+        : raw.plot_outline === null
+          ? null
+          : undefined,
+      invocation_session_id: optionalString(raw.invocation_session_id),
+    }
+  }
+  return {
+    ...raw,
+    type,
+  }
+}
+
+function normalizeAutopilotChapterStreamEvent(
+  eventName: string | undefined,
+  raw: unknown,
+): PlotPilotAutopilotChapterStreamEvent | null {
+  if (raw === null || raw === undefined || raw === '[DONE]') return null
+  if (!isRecord(raw)) return { type: 'unknown', raw }
+
+  return {
+    ...raw,
+    type: stringValue(eventName || raw.type, 'event').trim() || 'event',
+    message: optionalString(raw.message),
+    timestamp: optionalString(raw.timestamp),
+    metadata: isRecord(raw.metadata) ? raw.metadata : undefined,
+  } as PlotPilotAutopilotChapterStreamEvent
+}
+
+function drainAutopilotSseFrames(
+  bufferRef: { value: string },
+  final = false,
+): PlotPilotAutopilotStreamEvent[] {
+  const events: PlotPilotAutopilotStreamEvent[] = []
+  let separatorIndex = bufferRef.value.indexOf('\n\n')
+  while (separatorIndex >= 0) {
+    const block = bufferRef.value.slice(0, separatorIndex)
+    bufferRef.value = bufferRef.value.slice(separatorIndex + 2)
+    const parsed = parseSseBlock(block)
+    const event = parsed ? normalizeAutopilotStreamEvent(parsed.eventName, parsed.payload) : null
+    if (event) events.push(event)
+    separatorIndex = bufferRef.value.indexOf('\n\n')
+  }
+
+  if (final && bufferRef.value.trim()) {
+    const parsed = parseSseBlock(bufferRef.value)
+    const event = parsed ? normalizeAutopilotStreamEvent(parsed.eventName, parsed.payload) : null
+    if (event) events.push(event)
+    bufferRef.value = ''
+  }
+
+  return events
+}
+
+function drainAutopilotNdjsonFrames(
+  bufferRef: { value: string },
+  final = false,
+): PlotPilotAutopilotStreamEvent[] {
+  const events: PlotPilotAutopilotStreamEvent[] = []
+  let newlineIndex = bufferRef.value.indexOf('\n')
+  while (newlineIndex >= 0) {
+    const line = bufferRef.value.slice(0, newlineIndex).trim()
+    bufferRef.value = bufferRef.value.slice(newlineIndex + 1)
+    if (line) {
+      const payloadText = line.startsWith('data:')
+        ? line.slice('data:'.length).trim()
+        : line
+      const payload = parseJsonPayload(payloadText)
+      const event = payload === null ? null : normalizeAutopilotStreamEvent(undefined, payload)
+      if (event) events.push(event)
+    }
+    newlineIndex = bufferRef.value.indexOf('\n')
+  }
+
+  if (final && bufferRef.value.trim()) {
+    const payloadText = bufferRef.value.trim().startsWith('data:')
+      ? bufferRef.value.trim().slice('data:'.length).trim()
+      : bufferRef.value.trim()
+    const payload = parseJsonPayload(payloadText)
+    const event = payload === null ? null : normalizeAutopilotStreamEvent(undefined, payload)
+    if (event) events.push(event)
+    bufferRef.value = ''
+  }
+
+  return events
+}
+
+function hasTerminalAutopilotEvent(events: PlotPilotAutopilotStreamEvent[]): boolean {
+  return events.some((event) => (
+    event.type === 'error' ||
+    event.type === 'autopilot_complete' ||
+    event.type === 'autopilot_stopped' ||
+    event.type === 'paused_for_review'
+  ))
+}
+
+async function* readAutopilotStreamEvents(
+  response: Response,
+): AsyncGenerator<PlotPilotAutopilotStreamEvent, void, unknown> {
+  if (!response.body) return
+
+  const contentType = response.headers.get('Content-Type')?.toLowerCase() ?? ''
+  let mode: 'sse' | 'ndjson' | null = contentType.includes('text/event-stream')
+    ? 'sse'
+    : contentType.includes('ndjson')
+      ? 'ndjson'
+      : null
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  const bufferRef = { value: '' }
+
+  const drain = (final = false): PlotPilotAutopilotStreamEvent[] => {
+    bufferRef.value = bufferRef.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    if (mode === null) {
+      mode = /^\s*(event|data):/m.test(bufferRef.value) ? 'sse' : 'ndjson'
+    }
+    return mode === 'sse'
+      ? drainAutopilotSseFrames(bufferRef, final)
+      : drainAutopilotNdjsonFrames(bufferRef, final)
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (value) {
+      bufferRef.value += decoder.decode(value, { stream: true })
+    }
+    if (done) {
+      bufferRef.value += decoder.decode()
+    }
+
+    const events = drain(done)
+    for (const event of events) {
+      yield event
+    }
+    if (hasTerminalAutopilotEvent(events)) return
+
+    if (done) {
+      return
+    }
+  }
+}
+
+function drainSetupSseFrames(
+  bufferRef: { value: string },
+  final = false,
+): PlotPilotSetupStreamEvent[] {
+  const events: PlotPilotSetupStreamEvent[] = []
+  let separatorIndex = bufferRef.value.indexOf('\n\n')
+  while (separatorIndex >= 0) {
+    const block = bufferRef.value.slice(0, separatorIndex)
+    bufferRef.value = bufferRef.value.slice(separatorIndex + 2)
+    const parsed = parseSseBlock(block)
+    const event = parsed ? normalizeSetupStreamEvent(parsed.eventName, parsed.payload) : null
+    if (event) events.push(event)
+    separatorIndex = bufferRef.value.indexOf('\n\n')
+  }
+
+  if (final && bufferRef.value.trim()) {
+    const parsed = parseSseBlock(bufferRef.value)
+    const event = parsed ? normalizeSetupStreamEvent(parsed.eventName, parsed.payload) : null
+    if (event) events.push(event)
+    bufferRef.value = ''
+  }
+
+  return events
+}
+
+function drainSetupNdjsonFrames(
+  bufferRef: { value: string },
+  final = false,
+): PlotPilotSetupStreamEvent[] {
+  const events: PlotPilotSetupStreamEvent[] = []
+  let newlineIndex = bufferRef.value.indexOf('\n')
+  while (newlineIndex >= 0) {
+    const line = bufferRef.value.slice(0, newlineIndex).trim()
+    bufferRef.value = bufferRef.value.slice(newlineIndex + 1)
+    if (line) {
+      const payloadText = line.startsWith('data:')
+        ? line.slice('data:'.length).trim()
+        : line
+      const payload = parseJsonPayload(payloadText)
+      const event = payload === null ? null : normalizeSetupStreamEvent(undefined, payload)
+      if (event) events.push(event)
+    }
+    newlineIndex = bufferRef.value.indexOf('\n')
+  }
+
+  if (final && bufferRef.value.trim()) {
+    const payloadText = bufferRef.value.trim().startsWith('data:')
+      ? bufferRef.value.trim().slice('data:'.length).trim()
+      : bufferRef.value.trim()
+    const payload = parseJsonPayload(payloadText)
+    const event = payload === null ? null : normalizeSetupStreamEvent(undefined, payload)
+    if (event) events.push(event)
+    bufferRef.value = ''
+  }
+
+  return events
+}
+
+function hasTerminalSetupEvent(events: PlotPilotSetupStreamEvent[]): boolean {
+  return events.some((event) => (
+    event.type === 'done' ||
+    event.type === 'error'
+  ))
+}
+
+async function* readSetupStreamEvents(
+  response: Response,
+): AsyncGenerator<PlotPilotSetupStreamEvent, void, unknown> {
+  if (!response.body) return
+
+  const contentType = response.headers.get('Content-Type')?.toLowerCase() ?? ''
+  let mode: 'sse' | 'ndjson' | null = contentType.includes('text/event-stream')
+    ? 'sse'
+    : contentType.includes('ndjson')
+      ? 'ndjson'
+      : null
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  const bufferRef = { value: '' }
+
+  const drain = (final = false): PlotPilotSetupStreamEvent[] => {
+    bufferRef.value = bufferRef.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    if (mode === null) {
+      mode = /^\s*(event|data):/m.test(bufferRef.value) ? 'sse' : 'ndjson'
+    }
+    return mode === 'sse'
+      ? drainSetupSseFrames(bufferRef, final)
+      : drainSetupNdjsonFrames(bufferRef, final)
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (value) {
+      bufferRef.value += decoder.decode(value, { stream: true })
+    }
+    if (done) {
+      bufferRef.value += decoder.decode()
+    }
+
+    const events = drain(done)
+    for (const event of events) {
+      yield event
+    }
+    if (hasTerminalSetupEvent(events)) return
+
+    if (done) return
+  }
+}
+
+function drainAutopilotChapterSseFrames(
+  bufferRef: { value: string },
+  final = false,
+): PlotPilotAutopilotChapterStreamEvent[] {
+  const events: PlotPilotAutopilotChapterStreamEvent[] = []
+  let separatorIndex = bufferRef.value.indexOf('\n\n')
+  while (separatorIndex >= 0) {
+    const block = bufferRef.value.slice(0, separatorIndex)
+    bufferRef.value = bufferRef.value.slice(separatorIndex + 2)
+    const parsed = parseSseBlock(block)
+    const event = parsed ? normalizeAutopilotChapterStreamEvent(parsed.eventName, parsed.payload) : null
+    if (event) events.push(event)
+    separatorIndex = bufferRef.value.indexOf('\n\n')
+  }
+
+  if (final && bufferRef.value.trim()) {
+    const parsed = parseSseBlock(bufferRef.value)
+    const event = parsed ? normalizeAutopilotChapterStreamEvent(parsed.eventName, parsed.payload) : null
+    if (event) events.push(event)
+    bufferRef.value = ''
+  }
+
+  return events
+}
+
+function drainAutopilotChapterNdjsonFrames(
+  bufferRef: { value: string },
+  final = false,
+): PlotPilotAutopilotChapterStreamEvent[] {
+  const events: PlotPilotAutopilotChapterStreamEvent[] = []
+  let newlineIndex = bufferRef.value.indexOf('\n')
+  while (newlineIndex >= 0) {
+    const line = bufferRef.value.slice(0, newlineIndex).trim()
+    bufferRef.value = bufferRef.value.slice(newlineIndex + 1)
+    if (line) {
+      const payloadText = line.startsWith('data:')
+        ? line.slice('data:'.length).trim()
+        : line
+      const payload = parseJsonPayload(payloadText)
+      const event = payload === null ? null : normalizeAutopilotChapterStreamEvent(undefined, payload)
+      if (event) events.push(event)
+    }
+    newlineIndex = bufferRef.value.indexOf('\n')
+  }
+
+  if (final && bufferRef.value.trim()) {
+    const payloadText = bufferRef.value.trim().startsWith('data:')
+      ? bufferRef.value.trim().slice('data:'.length).trim()
+      : bufferRef.value.trim()
+    const payload = parseJsonPayload(payloadText)
+    const event = payload === null ? null : normalizeAutopilotChapterStreamEvent(undefined, payload)
+    if (event) events.push(event)
+    bufferRef.value = ''
+  }
+
+  return events
+}
+
+function hasTerminalAutopilotChapterEvent(events: PlotPilotAutopilotChapterStreamEvent[]): boolean {
+  return events.some((event) => (
+    event.type === 'autopilot_stopped' ||
+    event.type === 'paused_for_review' ||
+    event.type === 'error'
+  ))
+}
+
+async function* readAutopilotChapterStreamEvents(
+  response: Response,
+): AsyncGenerator<PlotPilotAutopilotChapterStreamEvent, void, unknown> {
+  if (!response.body) return
+
+  const contentType = response.headers.get('Content-Type')?.toLowerCase() ?? ''
+  let mode: 'sse' | 'ndjson' | null = contentType.includes('text/event-stream')
+    ? 'sse'
+    : contentType.includes('ndjson')
+      ? 'ndjson'
+      : null
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  const bufferRef = { value: '' }
+
+  const drain = (final = false): PlotPilotAutopilotChapterStreamEvent[] => {
+    bufferRef.value = bufferRef.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    if (mode === null) {
+      mode = /^\s*(event|data):/m.test(bufferRef.value) ? 'sse' : 'ndjson'
+    }
+    return mode === 'sse'
+      ? drainAutopilotChapterSseFrames(bufferRef, final)
+      : drainAutopilotChapterNdjsonFrames(bufferRef, final)
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (value) {
+      bufferRef.value += decoder.decode(value, { stream: true })
+    }
+    if (done) {
+      bufferRef.value += decoder.decode()
+    }
+
+    const events = drain(done)
+    for (const event of events) {
+      yield event
+    }
+    if (hasTerminalAutopilotChapterEvent(events)) return
+
+    if (done) return
+  }
+}
+
 async function* generateBibleStreamFromRoots(
   fetchImpl: PlotPilotFetch,
   roots: PlotPilotRoots,
@@ -911,6 +1747,135 @@ async function* generateChapterStreamFromRoots(
   }
 
   yield* readChapterStreamEvents(response)
+}
+
+async function* hostedWriteStreamFromRoots(
+  fetchImpl: PlotPilotFetch,
+  roots: PlotPilotRoots,
+  clientHeaders: HeadersInit | undefined,
+  novelId: string,
+  data: PlotPilotHostedWriteRequest,
+  options: PlotPilotRequestOptions = {},
+): AsyncGenerator<PlotPilotHostedWriteStreamEvent, void, unknown> {
+  const url = joinUrl(roots.apiBaseUrl, `/novels/${encodeSegment(novelId)}/hosted-write-stream`)
+  const headers = mergeHeaders(clientHeaders, options.headers)
+  if (!headers.has('Accept')) headers.set('Accept', 'text/event-stream')
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+
+  const response = await fetchImpl(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data),
+    signal: options.signal,
+  })
+
+  if (!response.ok || !response.body) {
+    throw new PlotPilotHttpError(response.status, url, await readErrorBody(response))
+  }
+
+  yield* readHostedWriteStreamEvents(response)
+}
+
+async function* autopilotLogStreamFromRoots(
+  fetchImpl: PlotPilotFetch,
+  roots: PlotPilotRoots,
+  clientHeaders: HeadersInit | undefined,
+  novelId: string,
+  afterSeq?: number,
+  options: PlotPilotRequestOptions = {},
+): AsyncGenerator<PlotPilotAutopilotStreamEvent, void, unknown> {
+  const url = joinUrl(
+    roots.apiBaseUrl,
+    apiPath(`/autopilot/${encodeSegment(novelId)}/stream`, {
+      after_seq: afterSeq && afterSeq > 0 ? afterSeq : undefined,
+    }),
+  )
+  const headers = mergeHeaders(clientHeaders, options.headers)
+  if (!headers.has('Accept')) headers.set('Accept', 'text/event-stream')
+
+  const response = await fetchImpl(url, {
+    method: 'GET',
+    headers,
+    signal: options.signal,
+  })
+
+  if (!response.ok || !response.body) {
+    throw new PlotPilotHttpError(response.status, url, await readErrorBody(response))
+  }
+
+  yield* readAutopilotStreamEvents(response)
+}
+
+async function* setupStreamFromRoots(
+  fetchImpl: PlotPilotFetch,
+  roots: PlotPilotRoots,
+  clientHeaders: HeadersInit | undefined,
+  path: string,
+  options: PlotPilotRequestOptions = {},
+): AsyncGenerator<PlotPilotSetupStreamEvent, void, unknown> {
+  const url = joinUrl(roots.apiBaseUrl, path)
+  const headers = mergeHeaders(clientHeaders, options.headers)
+  if (!headers.has('Accept')) headers.set('Accept', 'text/event-stream')
+
+  const response = await fetchImpl(url, {
+    method: 'POST',
+    headers,
+    signal: options.signal,
+  })
+
+  if (!response.ok || !response.body) {
+    throw new PlotPilotHttpError(response.status, url, await readErrorBody(response))
+  }
+
+  yield* readSetupStreamEvents(response)
+}
+
+async function* autopilotChapterStreamFromRoots(
+  fetchImpl: PlotPilotFetch,
+  roots: PlotPilotRoots,
+  clientHeaders: HeadersInit | undefined,
+  novelId: string,
+  options: PlotPilotRequestOptions = {},
+): AsyncGenerator<PlotPilotAutopilotChapterStreamEvent, void, unknown> {
+  const url = joinUrl(roots.apiBaseUrl, `/autopilot/${encodeSegment(novelId)}/chapter-stream`)
+  const headers = mergeHeaders(clientHeaders, options.headers)
+  if (!headers.has('Accept')) headers.set('Accept', 'text/event-stream')
+
+  const response = await fetchImpl(url, {
+    method: 'GET',
+    headers,
+    signal: options.signal,
+  })
+
+  if (!response.ok || !response.body) {
+    throw new PlotPilotHttpError(response.status, url, await readErrorBody(response))
+  }
+
+  yield* readAutopilotChapterStreamEvents(response)
+}
+
+async function* autopilotEventsStreamFromRoots(
+  fetchImpl: PlotPilotFetch,
+  roots: PlotPilotRoots,
+  clientHeaders: HeadersInit | undefined,
+  novelId: string,
+  options: PlotPilotRequestOptions = {},
+): AsyncGenerator<PlotPilotAutopilotStreamEvent, void, unknown> {
+  const url = joinUrl(roots.apiBaseUrl, `/autopilot/${encodeSegment(novelId)}/events`)
+  const headers = mergeHeaders(clientHeaders, options.headers)
+  if (!headers.has('Accept')) headers.set('Accept', 'text/event-stream')
+
+  const response = await fetchImpl(url, {
+    method: 'GET',
+    headers,
+    signal: options.signal,
+  })
+
+  if (!response.ok || !response.body) {
+    throw new PlotPilotHttpError(response.status, url, await readErrorBody(response))
+  }
+
+  yield* readAutopilotStreamEvents(response)
 }
 
 function requestOptionsFromCallOptions(options: PlotPilotCallOptions): PlotPilotRequestOptions {
@@ -969,6 +1934,355 @@ export function createPlotPilotClient(options: PlotPilotClientOptions = {}): Plo
         requestOptions,
       )
     },
+    updateNovel(novelId, data, requestOptions) {
+      return requestJson<NovelDTO>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    setNovelAutoApproveMode(novelId, enabled, requestOptions) {
+      return requestJson<NovelDTO>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/auto-approve-mode`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ auto_approve_mode: enabled }),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getLlmControl(requestOptions) {
+      return requestJson<PlotPilotLlmControlPanelData>(
+        fetchImpl,
+        roots,
+        '/llm-control',
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    updateLlmControl(data, requestOptions) {
+      return requestJson<PlotPilotLlmControlPanelData>(
+        fetchImpl,
+        roots,
+        '/llm-control',
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getCodexStatus(requestOptions) {
+      return requestJson<PlotPilotCodexStatusResponse>(
+        fetchImpl,
+        roots,
+        '/llm-control/codex/status',
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    startCodexLogin(requestOptions) {
+      return requestJson<PlotPilotCodexLoginStartResponse>(
+        fetchImpl,
+        roots,
+        '/llm-control/codex/login/start',
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    logoutCodex(requestOptions) {
+      return requestJson<PlotPilotCodexLogoutResponse>(
+        fetchImpl,
+        roots,
+        '/llm-control/codex/logout',
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getWritingSpec(novelId, requestOptions) {
+      return requestJson<PlotPilotWritingSpecBindingResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/writing-spec`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    setWritingSpec(novelId, data, requestOptions) {
+      return requestJson<PlotPilotWritingSpecBindingResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/writing-spec`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getHumanizer(novelId, requestOptions) {
+      return requestJson<PlotPilotHumanizerSettingsResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/humanizer`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    setHumanizer(novelId, data, requestOptions) {
+      return requestJson<PlotPilotHumanizerSettingsResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/humanizer`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    createInvocation(data, requestOptions) {
+      return requestJson<PlotPilotInvocationResponseDTO>(
+        fetchImpl,
+        roots,
+        '/ai-invocations',
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getInvocation(sessionId, requestOptions) {
+      return requestJson<PlotPilotInvocationResponseDTO>(
+        fetchImpl,
+        roots,
+        `/ai-invocations/${encodeSegment(sessionId)}`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    acceptInvocation(sessionId, data, requestOptions) {
+      return requestJson<PlotPilotInvocationResponseDTO>(
+        fetchImpl,
+        roots,
+        `/ai-invocations/${encodeSegment(sessionId)}/accept`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    resumeInvocation(sessionId, data = {}, requestOptions) {
+      return requestJson<PlotPilotInvocationResponseDTO>(
+        fetchImpl,
+        roots,
+        `/ai-invocations/${encodeSegment(sessionId)}/resume`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    retryInvocation(sessionId, data = {}, requestOptions) {
+      return requestJson<PlotPilotInvocationResponseDTO>(
+        fetchImpl,
+        roots,
+        `/ai-invocations/${encodeSegment(sessionId)}/retry`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    rejectInvocation(sessionId, data, requestOptions) {
+      return requestJson<PlotPilotInvocationResponseDTO>(
+        fetchImpl,
+        roots,
+        `/ai-invocations/${encodeSegment(sessionId)}/reject`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    commitInvocation(sessionId, data, requestOptions) {
+      return requestJson<PlotPilotInvocationResponseDTO>(
+        fetchImpl,
+        roots,
+        `/ai-invocations/${encodeSegment(sessionId)}/commits`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    previewInvocationPromptDraft(sessionId, data, requestOptions) {
+      return requestJson<PlotPilotInvocationPromptDraftResponse>(
+        fetchImpl,
+        roots,
+        `/ai-invocations/${encodeSegment(sessionId)}/prompt-draft/preview`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    saveInvocationPromptDraft(sessionId, data, requestOptions) {
+      return requestJson<PlotPilotInvocationResponseDTO>(
+        fetchImpl,
+        roots,
+        `/ai-invocations/${encodeSegment(sessionId)}/prompt-draft`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    updateInvocationVariables(sessionId, data, requestOptions) {
+      return requestJson<PlotPilotInvocationResponseDTO>(
+        fetchImpl,
+        roots,
+        `/ai-invocations/${encodeSegment(sessionId)}/variables`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getPlotOutline(novelId, requestOptions) {
+      return requestJson<PlotPilotPlotOutlineResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/setup/plot-outline`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    savePlotOutline(novelId, data, requestOptions) {
+      return requestJson<PlotPilotPlotOutlineResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/setup/plot-outline`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    generatePlotOutline(novelId, requestOptions) {
+      return requestJson<PlotPilotPlotOutlineResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/setup/generate-plot-outline`,
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    generatePlotOutlineStream(novelId, requestOptions) {
+      return setupStreamFromRoots(
+        fetchImpl,
+        roots,
+        clientHeaders,
+        `/novels/${encodeSegment(novelId)}/setup/generate-plot-outline-stream`,
+        requestOptions,
+      )
+    },
+    suggestMainPlotOptions(novelId, requestOptions) {
+      return requestJson<PlotPilotSuggestMainPlotOptionsResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/setup/suggest-main-plot-options`,
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    suggestMainPlotOptionsStream(novelId, requestOptions) {
+      return setupStreamFromRoots(
+        fetchImpl,
+        roots,
+        clientHeaders,
+        `/novels/${encodeSegment(novelId)}/setup/suggest-main-plot-options-stream`,
+        requestOptions,
+      )
+    },
+    planNovel(novelId, data = {}, requestOptions) {
+      return requestJson<PlotPilotPlanNovelResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/plan`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getPlanningStructure(novelId, requestOptions) {
+      return requestJson<PlotPilotPlanningStructureResponse>(
+        fetchImpl,
+        roots,
+        `/planning/novels/${encodeSegment(novelId)}/structure`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    continuePlanning(novelId, data, requestOptions) {
+      return requestJson<Record<string, unknown>>(
+        fetchImpl,
+        roots,
+        `/planning/novels/${encodeSegment(novelId)}/continue`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
     getBibleStatus(novelId, requestOptions) {
       return requestJson<BibleStatusDTO>(
         fetchImpl,
@@ -985,6 +2299,19 @@ export function createPlotPilotClient(options: PlotPilotClientOptions = {}): Plo
         roots,
         `/bible/novels/${encodeSegment(novelId)}/bible`,
         { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    updateBible(novelId, data, requestOptions) {
+      return requestJson<BibleDTO>(
+        fetchImpl,
+        roots,
+        `/bible/novels/${encodeSegment(novelId)}/bible`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        },
         clientHeaders,
         requestOptions,
       )
@@ -1088,6 +2415,261 @@ export function createPlotPilotClient(options: PlotPilotClientOptions = {}): Plo
         novelId,
         data,
         streamOptions,
+      )
+    },
+    hostedWriteStream(novelId, data, streamOptions) {
+      return hostedWriteStreamFromRoots(
+        fetchImpl,
+        roots,
+        clientHeaders,
+        novelId,
+        data,
+        streamOptions,
+      )
+    },
+    getAutopilotStatus(novelId, requestOptions) {
+      return requestJson<PlotPilotAutopilotStatusResponse>(
+        fetchImpl,
+        roots,
+        `/autopilot/${encodeSegment(novelId)}/status`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    startAutopilot(novelId, data, requestOptions) {
+      return requestJson<PlotPilotAutopilotControlResponse>(
+        fetchImpl,
+        roots,
+        `/autopilot/${encodeSegment(novelId)}/start`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    stopAutopilot(novelId, requestOptions) {
+      return requestJson<PlotPilotAutopilotControlResponse>(
+        fetchImpl,
+        roots,
+        `/autopilot/${encodeSegment(novelId)}/stop`,
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    resumeAutopilot(novelId, requestOptions) {
+      return requestJson<PlotPilotAutopilotControlResponse>(
+        fetchImpl,
+        roots,
+        `/autopilot/${encodeSegment(novelId)}/resume`,
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getAutopilotCircuitBreaker(novelId, requestOptions) {
+      return requestJson<PlotPilotAutopilotCircuitBreakerResponse>(
+        fetchImpl,
+        roots,
+        `/autopilot/${encodeSegment(novelId)}/circuit-breaker`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    resetAutopilotCircuitBreaker(novelId, requestOptions) {
+      return requestJson<PlotPilotAutopilotControlResponse>(
+        fetchImpl,
+        roots,
+        `/autopilot/${encodeSegment(novelId)}/circuit-breaker/reset`,
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    autopilotLogStream(novelId, afterSeq, streamOptions) {
+      return autopilotLogStreamFromRoots(
+        fetchImpl,
+        roots,
+        clientHeaders,
+        novelId,
+        afterSeq,
+        streamOptions,
+      )
+    },
+    autopilotChapterStream(novelId, streamOptions) {
+      return autopilotChapterStreamFromRoots(
+        fetchImpl,
+        roots,
+        clientHeaders,
+        novelId,
+        streamOptions,
+      )
+    },
+    autopilotEventsStream(novelId, streamOptions) {
+      return autopilotEventsStreamFromRoots(
+        fetchImpl,
+        roots,
+        clientHeaders,
+        novelId,
+        streamOptions,
+      )
+    },
+    reviewChapter(novelId, chapterNumber, requestOptions) {
+      return requestJson<PlotPilotReviewChapterResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/chapters/${encodeSegment(chapterNumber)}/review`,
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    simulateReaders(novelId, chapterNumber, requestOptions) {
+      return requestJson<PlotPilotReaderSimulationResponse>(
+        fetchImpl,
+        roots,
+        `/reader/novels/${encodeSegment(novelId)}/chapters/${encodeSegment(chapterNumber)}/simulate`,
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getChapterSimulation(novelId, chapterNumber, requestOptions) {
+      return requestJson<PlotPilotReaderSimulationResponse>(
+        fetchImpl,
+        roots,
+        `/reader/novels/${encodeSegment(novelId)}/chapters/${encodeSegment(chapterNumber)}/simulation`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    listReaderSimulations(novelId, requestOptions) {
+      return requestJson<PlotPilotReaderSimulationListResponse>(
+        fetchImpl,
+        roots,
+        `/reader/novels/${encodeSegment(novelId)}/simulations`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getChurnAlerts(novelId, threshold = 60, requestOptions) {
+      return requestJson<PlotPilotChurnAlertsResponse>(
+        fetchImpl,
+        roots,
+        apiPath(`/reader/novels/${encodeSegment(novelId)}/churn-alerts`, { threshold }),
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    inferKnowledgeGraph(novelId, requestOptions) {
+      return requestJson<PlotPilotKnowledgeGraphResponse>(
+        fetchImpl,
+        roots,
+        `/knowledge-graph/novels/${encodeSegment(novelId)}/infer`,
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getKnowledgeGraphStatistics(novelId, requestOptions) {
+      return requestJson<PlotPilotKnowledgeGraphResponse>(
+        fetchImpl,
+        roots,
+        `/knowledge-graph/novels/${encodeSegment(novelId)}/statistics`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getKnowledgeGraphTriples(novelId, params = {}, requestOptions) {
+      return requestJson<PlotPilotKnowledgeGraphResponse>(
+        fetchImpl,
+        roots,
+        apiPath(`/knowledge-graph/novels/${encodeSegment(novelId)}/triples`, params),
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    searchKnowledgeGraph(novelId, data, requestOptions) {
+      return requestJson<PlotPilotKnowledgeGraphResponse>(
+        fetchImpl,
+        roots,
+        apiPath(`/knowledge-graph/novels/${encodeSegment(novelId)}/search`, {
+          query: data.query,
+          limit: data.limit ?? 10,
+          min_score: data.min_score ?? 0.5,
+        }),
+        { method: 'POST' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    listTraces(novelId, requestOptions) {
+      return requestJson<PlotPilotTraceListResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/traces`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getTraceStats(novelId, requestOptions) {
+      return requestJson<PlotPilotTraceStatsResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/traces/stats`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    listAiTraces(novelId, limit = 80, requestOptions) {
+      return requestJson<PlotPilotAiTraceListResponse>(
+        fetchImpl,
+        roots,
+        apiPath(`/novels/${encodeSegment(novelId)}/ai-traces`, { limit }),
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getAiTraceTimeline(novelId, traceId, requestOptions) {
+      return requestJson<PlotPilotAiTraceTimelineResponse>(
+        fetchImpl,
+        roots,
+        `/novels/${encodeSegment(novelId)}/traces/${encodeSegment(traceId)}/timeline`,
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    getPromptStats(requestOptions) {
+      return requestJson<PlotPilotPromptStatsResponse>(
+        fetchImpl,
+        roots,
+        '/llm-control/prompts/stats',
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    listPrompts(requestOptions) {
+      return requestJson<PlotPilotPromptListResponse>(
+        fetchImpl,
+        roots,
+        '/llm-control/prompts',
+        { method: 'GET' },
+        clientHeaders,
+        requestOptions,
       )
     },
   }

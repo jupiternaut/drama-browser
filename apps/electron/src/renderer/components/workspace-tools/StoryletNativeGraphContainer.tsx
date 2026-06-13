@@ -329,7 +329,7 @@ export function StoryletNativeGraphContainer({ tool }: StoryletNativeGraphContai
   }, [graphId, loadHistory, model?.graphId])
 
   const externalUrl = tool.externalUrl ?? tool.url
-  const canOpenExternal = externalUrl?.startsWith('http://') || externalUrl?.startsWith('https://') || externalUrl?.startsWith('craftagents://')
+  const canOpenExternal = externalUrl?.startsWith('http://') || externalUrl?.startsWith('https://') || externalUrl?.startsWith('drama://') || externalUrl?.startsWith('craftagents://')
   const openExternal = React.useCallback(() => {
     if (!canOpenExternal) return
     void window.electronAPI.openUrl(externalUrl)

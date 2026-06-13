@@ -34,6 +34,7 @@ type ApiToChannelMapKeys = Exclude<
   | 'loadDramaGraph'
   | 'loadDramaGraphHistory'
   | 'restoreDramaGraphBackup'
+  | 'recordDramaProjectFile'
   | 'updateDramaGraphNodePositions'
   | 'createDramaGraphNode'
   | 'updateDramaGraphNode'

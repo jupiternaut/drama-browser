@@ -36,7 +36,7 @@ if (process.argv.includes('--help')) {
     'Checks an existing Brave CDP ChatGPT target without opening a new tab or submitting.',
     'If the send button only appears after text input, writes and clears a temporary draft.',
     'Use --submit or --e2e to actually submit an image prompt and wait for capture.',
-    'Diagnostics are written to ~/.craft-agent/agentos/browser-worker.',
+    'Diagnostics are written to $CRAFT_CONFIG_DIR/agentos/browser-worker (defaults to ~/.drama-agent).',
   ].join('\n'))
   process.exit(0)
 }
@@ -49,7 +49,7 @@ const prompt = readFlag('prompt')
   || 'Create one original fictional image for AgentOS Browser Worker end-to-end validation. No text overlay.'
 const outputPath = readFlag('output')
   || process.env.CRAFT_AGENTOS_BROWSER_E2E_OUTPUT
-  || join(homedir(), '.craft-agent', 'agentos', 'browser-worker', `e2e-image-${Date.now()}.png`)
+  || join(process.env.CRAFT_CONFIG_DIR || join(homedir(), '.drama-agent'), 'agentos', 'browser-worker', `e2e-image-${Date.now()}.png`)
 const submitTimeoutMs = parsePositiveInt(readFlag('submit-timeout-ms') || process.env.CRAFT_AGENTOS_BROWSER_E2E_SUBMIT_TIMEOUT_MS)
 const waitForImageMs = parsePositiveInt(readFlag('wait-ms') || process.env.CRAFT_AGENTOS_BROWSER_E2E_WAIT_MS)
 

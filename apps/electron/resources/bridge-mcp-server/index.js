@@ -17918,8 +17918,11 @@ class StdioServerTransport {
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+function getConfigDir() {
+  return process.env.CRAFT_CONFIG_DIR || join(homedir(), ".drama-agent");
+}
 function getCredentialCachePath(workspaceId, sourceSlug) {
-  return join(homedir(), ".craft-agent", "workspaces", workspaceId, "sources", sourceSlug, ".credential-cache.json");
+  return join(getConfigDir(), "workspaces", workspaceId, "sources", sourceSlug, ".credential-cache.json");
 }
 function readCredential(workspaceId, sourceSlug) {
   const cachePath = getCredentialCachePath(workspaceId, sourceSlug);

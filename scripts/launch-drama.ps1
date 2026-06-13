@@ -9,6 +9,17 @@ $electronExe = Join-Path $repoRoot "node_modules\electron\dist\electron.exe"
 $electronAppArg = "apps/electron"
 $electronMainBundle = Join-Path $repoRoot "apps\electron\dist\main.cjs"
 $electronRendererIndex = Join-Path $repoRoot "apps\electron\dist\renderer\index.html"
+$defaultDramaConfigDir = Join-Path $env:USERPROFILE ".drama-agent"
+
+if (-not $env:CRAFT_CONFIG_DIR) {
+  $env:CRAFT_CONFIG_DIR = $defaultDramaConfigDir
+}
+if (-not $env:CRAFT_APP_NAME) {
+  $env:CRAFT_APP_NAME = "Drama"
+}
+if (-not $env:CRAFT_DEEPLINK_SCHEME) {
+  $env:CRAFT_DEEPLINK_SCHEME = "drama"
+}
 
 function Write-DramaLog {
   param([string]$Message)
@@ -114,7 +125,8 @@ public static class DramaLauncherFocusJobWindowTools {
 }
 
 function Remove-StaleDramaServerLock {
-  $lockPath = Join-Path $env:USERPROFILE ".craft-agent\.server.lock"
+  $configDir = if ($env:CRAFT_CONFIG_DIR) { $env:CRAFT_CONFIG_DIR } else { $defaultDramaConfigDir }
+  $lockPath = Join-Path $configDir ".server.lock"
   if (-not (Test-Path -LiteralPath $lockPath)) {
     return
   }
