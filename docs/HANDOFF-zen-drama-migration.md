@@ -9,7 +9,7 @@ Drama has been migrated from the Electron-first path toward a Zen Browser hosted
 ```text
 Zen Browser chrome
   -> Zen sidebar buttons for Drama Graph / Drama PLM / Skill Crew
-  -> Drama browser shell
+  -> bundled chrome resource chrome://browser/content/drama/app/index.html
   -> standalone Drama runtime at http://127.0.0.1:3198
   -> Graph / PLM / Crew package surfaces
 ```
@@ -46,10 +46,17 @@ Graph:
 PLM:
 
 - Opens as a Zen sidebar/panel surface.
+- Loads from `chrome://browser/content/drama/app/index.html?host=zen&runtime=...&surface=plm` in the product path; `127.0.0.1:3198/app/plm` is now a fallback/dev compatibility route.
 - Uses the new light Script Studio layout: project navigation, chapter/beat list, central paper editor, script toolbar, and right-side control rail.
 - Right rail now includes outline, relationship chain, progress, character-profile storage cards, prompt-storage cards, and a browser Web Audio music player.
+- Right rail storage cards are editable: character cards save back to the Bible, prompt cards save to Drama project files, emit graph events, and are reloaded from project files when the novel is selected again.
+- AI Invocation review now has a white Script Studio panel under Debug: session loading, resume, retry, accept, reject, commit, prompt snapshot, variable plan, output bindings, attempt output, and decision/commit status are visible without dropping into the old dark JSON panel.
+- AI Invocation actions emit graph events (`plm.invocation.loaded/resumed/retried/accepted/rejected/committed`) when the session carries a novel context.
+- The white Production mode now surfaces Hosted Write and Autopilot as first-class controls: chapter range, auto-save/outline switches, max-auto limit, auto-approve mode, progress bars, failure recovery, live chapter stream, and a unified production timeline.
+- Hosted Write stream events are retained in UI state and key lifecycle events emit graph events (`plm.hostedWrite.session/chapter_start/saved/approval_required/session_done/error`). Autopilot control actions and terminal/failure events emit graph events (`plm.autopilot.started/stopped/resumed/breakerReset/error/beat_error/paused_for_review/autopilot_complete`).
+- Debug mode now includes a white Memory graph panel: refresh/infer controls, entity chips, triple cards, Knowledge Graph search, retrieved-result cards, and `memory.search` / `memory.search.failed` graph events.
 - Runtime root `/` redirects to `/app/plm?host=zen&runtime=...`, so users no longer land on raw JSON.
-- Still needs card edit/save, prompt registry writeback, generation streaming progress, and real PlotPilot parity completion.
+- Still needs PlotPilot-native prompt registry write APIs, post-chapter memory sync visualization, and full PlotPilot parity completion.
 
 Crew:
 
@@ -77,13 +84,13 @@ Manual smoke:
 powershell -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\DramaZen\Start-Drama-Zen.ps1" -Surface plm
 ```
 
-Then open:
+Then open from the installed Zen panel. The expected panel URL is:
 
 ```text
-http://127.0.0.1:3198/
+chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm
 ```
 
-Expected result: redirect to `/app/plm?...` and render the PLM Script Studio, not a JSON `NOT_FOUND` response.
+Expected result: render the PLM Script Studio from Zen chrome resources. `http://127.0.0.1:3198/` still redirects to `/app/plm?...` only as a compatibility/dev smoke path.
 
 ## Packaging
 
@@ -96,10 +103,12 @@ dist/zen-drama-win-x64
 The package includes:
 
 - Zen browser binary tree
-- Drama browser shell build
+- Drama browser shell build copied both to `drama-browser-shell/dist` and to `zen/browser/chrome/browser/content/browser/drama/app` for the internal `chrome://browser/content/drama/app/index.html` product path
 - Standalone Drama runtime bundle
 - PlotPilot v4.6 source/runtime sidecar when available locally
 - Launch scripts and desktop shortcut installer
+- Runtime lifecycle monitor that binds to the real Zen main-window process, not the transient launcher process
+- Shutdown cleanup for the packaged Drama runtime and PlotPilot sidecar, including adopted PlotPilot listeners
 
 `dist/` is intentionally ignored by Git. Upload package zips as GitHub release assets instead of committing them.
 
@@ -108,8 +117,9 @@ The package includes:
 | Gap | Next Action |
 | --- | --- |
 | Graph editing not yet advanced-canvas grade | Continue Obsidian/AFFiNE-style editing work: box select, multi-select, edge creation/editing, keyboard shortcuts |
-| PLM storage cards are display-first | Add edit/new/save, write character cards back to Bible, write prompt cards back to prompt registry |
-| PLM generation feedback still coarse | Add streaming progress, invocation review state, retry/resume/commit UI |
+| PLM prompt cards are not PlotPilot-native writes | Project-file + graph-event persistence is implemented and reloads into the Script Studio prompt view; switch to real PlotPilot prompt registry write API when v4.6 exposes it |
+| PLM Prompt Registry still lacks PlotPilot-native writes | Project-file + graph-event persistence works; wire real prompt registry mutations when PlotPilot exposes them |
+| PLM Memory graph post-chapter sync is still shallow | Entity/triple/search UI is implemented; add per-chapter memory diff visualization after generation/save |
 | Crew runtime parity incomplete | Move remaining AgentOS execution details into package-level runtime and graph events |
 | Runtime unavailable screenshot regression missing | Add automated screenshot checks for down-runtime and workspace-missing states |
 | Package size is large | Consider a bootstrap installer that downloads Zen/PlotPilot dependencies instead of bundling everything |
@@ -140,4 +150,8 @@ Validated locally on Windows:
 - `runtime:typecheck` passed.
 - `zen:drama:package:win` passed.
 - `zen:drama:install:win` passed.
-- Browser smoke from `http://127.0.0.1:3198/` redirected to PLM and rendered Script Studio UI.
+- Dev and installed Zen panel verification passed with `currentURI = chrome://browser/content/drama/app/index.html?...&surface=plm`.
+- Installed Zen panel verification now seeds a legacy toolbar state with the stale `zen-drama-button`; the launcher/package code rewrites it to `zen-drama-graph-sidebar-button`, `zen-drama-plm-sidebar-button`, and `zen-drama-crew-sidebar-button` before focusing an existing window. This fixes the blank formal-profile window where PLM disappeared after prior runs.
+- Installed lifecycle smoke passed: launching twice focuses the existing Zen window, keeps one monitor for the active Zen PID, closing Zen makes `runtime=offline`, makes PlotPilot `8005/health` unreachable, clears the monitor process, and restarting returns `runtime=ready`.
+- Installed project-file smoke passed: `drama:projectFile:record` wrote a `plm.storageCard.prompt.saved` record and `drama:projectFile:list` read it back through the packaged runtime.
+- Installed PLM panel verification passed after adding the white AI Invocation review panel and graph-event writer for invocation actions.

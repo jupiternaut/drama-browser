@@ -74,8 +74,8 @@ Drama 的参考关系：
 
 | 页面/截图 | 宿主融合 10 | 品牌一致 10 | 信息层级 10 | 精致度 10 | 排版 10 | 专业性 10 | 画布 8 | 状态 8 | 交互 8 | 组件 6 | 可信度 5 | 性能 5 | 总分 | 结论 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Drama Graph / Zen | 9 | 8 | 8 | 7 | 7 | 8 | 7 | 7 | 5 | 5 | 5 | 4 | 80 | 已进入 Zen 原生 sidebar panel：`zen-drama-button`、Drama icon、Graph tab、runtime badge、panel browser 均通过 Marionette 验证；下一步补画布交互手感。截图：`.codex-run-logs/drama-browser-shell-graph-zen-vtb.png` |
-| Drama PLM / Zen | 9 | 8 | 9 | 8 | 8 | 8 | 6 | 8 | 6 | 7 | 7 | 5 | 89 | 已进入 Zen 原生 sidebar panel，并升级为浅色 Script Studio：左侧项目/节拍导航、中央纸张式剧本区、脚本工具栏、右侧固定控制 rail、人设/提示词存储卡、底部音乐播放器、runtime 根路径自动跳转 PLM。仍需补卡片编辑保存、生成过程细粒度反馈和截图回归固化。 |
+| Drama Graph / Zen | 9 | 8 | 8 | 7 | 7 | 8 | 7 | 7 | 5 | 5 | 5 | 4 | 80 | 已进入 Zen 原生 sidebar panel：`zen-drama-graph-sidebar-button`、Drama icon、Graph surface、runtime badge、panel browser 均通过 Marionette 验证；下一步补画布交互手感。截图：`.codex-run-logs/drama-browser-shell-graph-zen-vtb.png` |
+| Drama PLM / Zen | 9 | 8 | 9 | 8 | 8 | 8 | 6 | 8 | 6 | 7 | 7 | 5 | 89 | 已进入 Zen 原生 sidebar panel：`zen-drama-plm-sidebar-button` 可从正式 profile 恢复；并升级为浅色 Script Studio：左侧项目/节拍导航、中央纸张式剧本区、脚本工具栏、右侧固定控制 rail、人设/提示词存储卡、底部音乐播放器、runtime 根路径自动跳转 PLM。仍需补生成过程细粒度反馈和截图回归固化。 |
 | Skill Crew / Zen | 9 | 8 | 8 | 8 | 7 | 8 | 4 | 7 | 6 | 5 | 5 | 4 | 80 | 已进入 Zen 原生 sidebar panel，Crew tab 和 runtime 状态通过验证；下一步接真实 Crew API 和可折叠右栏。截图：`.codex-run-logs/drama-browser-shell-crew-zen-v2.png` |
 | Legacy Electron Graph |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | Legacy Electron Crew |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
@@ -180,8 +180,8 @@ Drama 的参考关系：
 | 优先级 | 目标 | 当前完成度 | 证据 | 剩余问题 |
 | --- | --- | ---: | --- | --- |
 | P1 UI 壳 | Zen 中第一眼像原生工作台，不裸奔 | 88% | Graph/PLM/Crew 已有 DramaWorkbenchShell；PLM 已升级为 Craft/Zen 气质的 Script Studio，包含右侧固定控制 rail、人设/提示词存储卡和音乐播放器；根路径 `/` 自动进入 PLM，避免裸 JSON | 还要继续提高 Graph 编辑手感、Crew 真实闭环和截图回归覆盖 |
-| P2 Zen 原生 panel | 从开发 URL 变成 Zen sidebar panel | 100% | `bun run zen:drama:check:win` 通过；dev build 和 installed package 的 `graph/plm/crew` panel 均通过 Marionette 验证，检查 `zen-drama-button`、Drama icon、panel 可见、surface active、runtime ready；桌面快捷方式指向安装版 `Start-Drama-Zen.ps1` | P2 已完成；后续归入 P3/P4：恢复面板、截图回归、主题细节 polish |
-| P3 稳定性与数据可信度 | 双击/关闭/重启后状态可解释 | 72% | standalone runtime、`.drama` workspace、package/install verifier、runtime health badge、`/` -> `/app/plm` redirect 已有 | 仍需 runtime unavailable 截图回归、workspace missing 面板和 Electron legacy 进程清理策略 |
+| P2 Zen 原生 panel | 从开发 URL 变成 Zen sidebar panel | 100% | `zen:drama:install:verify:panel:win` 通过；installed package 的 `plm` panel 在带旧 toolbar state 的 profile 中也能恢复 `zen-drama-graph-sidebar-button` / `zen-drama-plm-sidebar-button` / `zen-drama-crew-sidebar-button`，并验证 panel 可见、surface active、runtime ready；桌面快捷方式指向安装版 `Start-Drama-Zen.ps1` | P2 已完成；后续归入 P3/P4：恢复面板、截图回归、主题细节 polish |
+| P3 稳定性与数据可信度 | 双击/关闭/重启后状态可解释 | 76% | standalone runtime、`.drama` workspace、package/install verifier、runtime health badge、`/` -> `/app/plm` redirect、正式 profile toolbar 修复和已运行窗口聚焦已有 | 仍需 runtime unavailable 截图回归、workspace missing 面板和 Electron legacy 进程清理策略 |
 
 ## 当前发布快照（2026-06-17）
 

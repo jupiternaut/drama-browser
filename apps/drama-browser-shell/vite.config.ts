@@ -8,6 +8,7 @@ function fromRoot(path: string): string {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [react(), tailwindcss()],
   server: {
     host: '127.0.0.1',

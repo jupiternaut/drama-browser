@@ -12,7 +12,7 @@ import {
   createSkillCrewTaskBindingUpsertEvent,
 } from '@drama/crew'
 import { isDramaGraph } from '@drama/graph'
-import { DramaGraphStore, recordDramaProjectFile } from '@drama/graph/node-store'
+import { DramaGraphStore, listDramaProjectFiles, recordDramaProjectFile } from '@drama/graph/node-store'
 import type {
   DramaGraphDraftUpsertRequest,
   DramaGraphEdgeCreateRequest,
@@ -30,6 +30,7 @@ import type {
   DramaGraphRestoreBackupRequest,
   DramaGraphTaskBindingDeleteRequest,
   DramaGraphTaskBindingUpsertRequest,
+  DramaProjectFileListRequest,
   DramaProjectFileRecordRequest,
 } from '@drama/graph/ipc-contract'
 import {
@@ -595,6 +596,12 @@ async function dispatch(channel: string, payload: unknown): Promise<unknown> {
       return recordDramaProjectFile({
         workspaceRoot,
         request: payload as DramaProjectFileRecordRequest,
+      })
+
+    case 'drama:projectFile:list':
+      return listDramaProjectFiles({
+        workspaceRoot,
+        request: payload as DramaProjectFileListRequest,
       })
 
     case 'drama:graph:restoreBackup': {

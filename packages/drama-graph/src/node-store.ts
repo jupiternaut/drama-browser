@@ -36,12 +36,14 @@ import {
   updateDramaGraphNode,
   updateDramaGraphNodePositions,
 } from './index.ts'
-import { recordDramaProjectFile } from './project-files.ts'
+import { listDramaProjectFiles, recordDramaProjectFile } from './project-files.ts'
 
 export {
   DRAMA_PROJECTS_DIR_NAME,
+  listDramaProjectFiles,
   recordDramaProjectFile,
   safeDramaProjectFileStem,
+  type ListDramaProjectFilesOptions,
   type RecordDramaProjectFileOptions,
 } from './project-files.ts'
 

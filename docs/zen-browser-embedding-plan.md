@@ -350,7 +350,7 @@ Acceptance:
 
 - Zen shows a Drama button in the sidebar.
 - Clicking it opens a Zen-styled panel.
-- The panel loads `http://127.0.0.1:3198/app/graph?host=zen`.
+- The panel loads the bundled Zen chrome resource `chrome://browser/content/drama/app/index.html?host=zen&runtime=...&surface=graph`.
 - No Electron process is required.
 
 Verification:
@@ -439,7 +439,7 @@ Zen chrome verification:
 - Launch test Zen with `--marionette -remote-allow-system-access` when inspecting browser chrome through Marionette. Firefox/Zen 151 blocks chrome context access without that flag.
 - A fresh profile should show `zen-drama-button` under `zen-sidebar-foot-buttons`.
 - `zen-drama-button` should use `chrome://browser/content/zen-icons/drama.svg`, not the fallback `chrome://browser/skin/zen-icons/shapes.svg`.
-- `cmd_zenDramaToggle.doCommand()` should open `zen-drama-panel` and load `http://127.0.0.1:3198/app/graph?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198`.
+- `cmd_zenDramaToggle.doCommand()` should open `zen-drama-panel` and load `chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph`.
 - `bun run zen:drama:verify:win` runs that check end to end against a headless Zen instance and fails if the native panel, sidebar button, runtime status, or surface URL is missing.
 
 Windows short-build note:
@@ -489,6 +489,7 @@ The launcher is idempotent: if `/runtime/status` already reports `ready`, it exi
 
 - `zen\zen.exe` copied from the successful Zen build.
 - `drama-browser-shell\dist` copied from the Vite build.
+- `zen\browser\chrome\browser\content\browser\drama\app` populated from the same Vite build so Zen can load Drama as `chrome://browser/content/drama/app/index.html` without using the runtime `/app` route.
 - `runtime\drama-runtime.js` bundled with `bun build --target=bun`.
 - `resources\plotpilot_embedded_boot.py` copied from `@drama/plm/resources`.
 - `resources\plotpilot\source` copied from the local PlotPilot v4.6 project when available, including `.venv`.
@@ -544,7 +545,7 @@ Runtime endpoints currently used by the Zen/browser host:
 
 - `GET /runtime/status` reports the standalone Drama runtime, workspace root, and self-hosted app endpoint.
 - `POST /runtime/rpc` carries Graph, PLM lifecycle, Codex status/login, project-file, and Crew event operations.
-- `GET /app/graph?host=zen`, `/app/plm?host=zen`, and `/app/crew?host=zen` serve the Drama browser shell from the runtime, so Zen does not need the Vite dev server.
+- `GET /app/graph?host=zen`, `/app/plm?host=zen`, and `/app/crew?host=zen` remain compatibility routes for fallback/dev smoke tests. The product Zen panel now loads the bundled chrome resource `chrome://browser/content/drama/app/index.html?...&surface=<graph|plm|crew>`.
 - `GET/POST/PUT/... /plm/proxy/api/v1/*` proxies PlotPilot API calls through the Drama runtime. The browser shell points the PLM client at `http://127.0.0.1:3198/plm/proxy`, not at the raw PlotPilot sidecar port.
 - `GET /plm/proxy/health` proxies PlotPilot health checks.
 

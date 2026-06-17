@@ -236,6 +236,7 @@ New-Item -ItemType Directory -Force -Path $outputRoot | Out-Null
 
 $zenDest = Join-Path $outputRoot "zen"
 $shellDest = Join-Path $outputRoot "drama-browser-shell\dist"
+$internalShellDest = Join-Path $zenDest "browser\chrome\browser\content\browser\drama\app"
 $runtimeDest = Join-Path $outputRoot "runtime"
 $resourcesDest = Join-Path $outputRoot "resources"
 $binDest = Join-Path $outputRoot "bin"
@@ -243,6 +244,29 @@ $plotPilotSourceDest = Join-Path $resourcesDest "plotpilot\source"
 
 Invoke-RobocopyMirror -Source $zenBin -Destination $zenDest
 Invoke-RobocopyMirror -Source $browserShellDist -Destination $shellDest
+Invoke-RobocopyMirror -Source $browserShellDist -Destination $internalShellDest
+
+$repoZenDramaChrome = Join-Path $repoRoot "zen-drama-chrome"
+$zenDramaManagerSource = Join-Path $repoZenDramaChrome "ZenDramaManager.mjs"
+if (-not (Test-Path -LiteralPath $zenDramaManagerSource)) {
+  $zenDramaManagerSource = Join-Path $ShortZenRoot "src\zen\drama\ZenDramaManager.mjs"
+}
+$zenDramaManagerDest = Join-Path $zenDest "browser\chrome\browser\content\browser\zen-components\ZenDramaManager.mjs"
+if (Test-Path -LiteralPath $zenDramaManagerSource) {
+  Copy-Item -LiteralPath $zenDramaManagerSource -Destination $zenDramaManagerDest -Force
+}
+
+$zenDramaCssSource = Join-Path $repoZenDramaChrome "zen-drama.css"
+if (Test-Path -LiteralPath $zenDramaCssSource) {
+  Copy-Item -LiteralPath $zenDramaCssSource -Destination (Join-Path $zenDest "browser\chrome\browser\content\browser\zen-styles\zen-drama.css") -Force
+}
+
+foreach ($iconName in @("drama-graph.svg", "drama-plm.svg", "drama-crew.svg")) {
+  $iconPath = Join-Path $repoZenDramaChrome $iconName
+  if (Test-Path -LiteralPath $iconPath) {
+    Copy-Item -LiteralPath $iconPath -Destination (Join-Path $zenDest "browser\chrome\browser\content\browser\zen-icons\$iconName") -Force
+  }
+}
 
 New-Item -ItemType Directory -Force -Path $runtimeDest, $resourcesDest, $binDest | Out-Null
 
@@ -460,11 +484,155 @@ $zenExe = Join-Path $packageRoot "zen\zen.exe"
 $profileDir = Join-Path $packageRoot "profile"
 $runtimeUrl = "http://127.0.0.1:$RuntimePort"
 $runtimeLauncher = Join-Path $packageRoot "Start-Drama-Runtime.ps1"
+$logDir = Join-Path $packageRoot "logs"
 
 function ConvertTo-FirefoxPrefString {
   param([string]$Value)
 
   return $Value.Replace('\', '\\').Replace('"', '\"')
+}
+
+function ConvertFrom-FirefoxPrefString {
+  param([string]$Value)
+
+  return [System.Text.RegularExpressions.Regex]::Unescape($Value)
+}
+
+function Get-FirefoxStringPrefValue {
+  param(
+    [string[]]$Lines,
+    [string]$PrefName
+  )
+
+  $escapedName = [System.Text.RegularExpressions.Regex]::Escape($PrefName)
+  foreach ($line in $Lines) {
+    if ($line -match ('^user_pref\("' + $escapedName + '", "(.*)"\);')) {
+      return ConvertFrom-FirefoxPrefString $Matches[1]
+    }
+  }
+  return $null
+}
+
+function Set-ObjectProperty {
+  param(
+    [object]$Target,
+    [string]$Name,
+    [object]$Value
+  )
+
+  if ($Target.PSObject.Properties.Name -contains $Name) {
+    $Target.$Name = $Value
+  } else {
+    $Target | Add-Member -NotePropertyName $Name -NotePropertyValue $Value
+  }
+}
+
+function Get-ZenDramaToolbarCustomizationPrefLine {
+  $prefName = "browser.uiCustomization.state"
+  $stateJson = $null
+
+  foreach ($fileName in @("user.js", "prefs.js")) {
+    $filePath = Join-Path $profileDir $fileName
+    if (-not (Test-Path -LiteralPath $filePath)) {
+      continue
+    }
+    $lines = @(Get-Content -LiteralPath $filePath)
+    $stateJson = Get-FirefoxStringPrefValue -Lines $lines -PrefName $prefName
+    if ($stateJson) {
+      break
+    }
+  }
+
+  $state = $null
+  if ($stateJson) {
+    try {
+      $state = $stateJson | ConvertFrom-Json
+    } catch {
+      $state = $null
+    }
+  }
+
+  if (-not $state) {
+    $state = [pscustomobject]@{
+      placements = [pscustomobject]@{
+        "zen-sidebar-foot-buttons" = @("downloads-button", "zen-workspaces-button", "zen-create-new-button")
+      }
+      seen = @()
+      dirtyAreaCache = @("zen-sidebar-foot-buttons")
+      currentVersion = 24
+      newElementCount = 0
+    }
+  }
+
+  if (-not $state.placements) {
+    Set-ObjectProperty -Target $state -Name "placements" -Value ([pscustomobject]@{})
+  }
+
+  $surfaceButtons = @(
+    "zen-drama-graph-sidebar-button",
+    "zen-drama-plm-sidebar-button",
+    "zen-drama-crew-sidebar-button"
+  )
+  $staleButtons = @("zen-drama-button") + $surfaceButtons
+  $placementName = "zen-sidebar-foot-buttons"
+  $existingFoot = @()
+  if ($state.placements.PSObject.Properties.Name -contains $placementName) {
+    $existingFoot = @($state.placements.$placementName)
+  }
+  if ($existingFoot.Count -eq 0) {
+    $existingFoot = @("downloads-button", "zen-workspaces-button", "zen-create-new-button")
+  }
+
+  $foot = [System.Collections.Generic.List[string]]::new()
+  foreach ($item in $existingFoot) {
+    $text = [string]$item
+    if (-not $text -or $staleButtons -contains $text) {
+      continue
+    }
+    [void]$foot.Add($text)
+  }
+
+  $insertIndex = $foot.IndexOf("zen-create-new-button")
+  if ($insertIndex -lt 0) {
+    foreach ($button in $surfaceButtons) {
+      [void]$foot.Add($button)
+    }
+  } else {
+    for ($index = $surfaceButtons.Count - 1; $index -ge 0; $index--) {
+      $foot.Insert($insertIndex, $surfaceButtons[$index])
+    }
+  }
+
+  Set-ObjectProperty -Target $state.placements -Name $placementName -Value @($foot.ToArray())
+
+  $seen = [System.Collections.Generic.List[string]]::new()
+  foreach ($item in @($state.seen)) {
+    $text = [string]$item
+    if ($text -and -not $seen.Contains($text)) {
+      [void]$seen.Add($text)
+    }
+  }
+  foreach ($button in $surfaceButtons) {
+    if (-not $seen.Contains($button)) {
+      [void]$seen.Add($button)
+    }
+  }
+  Set-ObjectProperty -Target $state -Name "seen" -Value @($seen.ToArray())
+
+  $dirty = [System.Collections.Generic.List[string]]::new()
+  foreach ($item in @($state.dirtyAreaCache)) {
+    $text = [string]$item
+    if ($text -and -not $dirty.Contains($text)) {
+      [void]$dirty.Add($text)
+    }
+  }
+  if (-not $dirty.Contains($placementName)) {
+    [void]$dirty.Add($placementName)
+  }
+  Set-ObjectProperty -Target $state -Name "dirtyAreaCache" -Value @($dirty.ToArray())
+
+  $nextJson = $state | ConvertTo-Json -Depth 20 -Compress
+  return 'user_pref("' + $prefName + '", "' + (ConvertTo-FirefoxPrefString $nextJson) + '");'
 }
 
 function Test-DramaRuntimeReady {
@@ -489,6 +657,70 @@ function Wait-DramaRuntimeReady {
   return $false
 }
 
+function Get-DramaRuntimeStatusForPort {
+  param([int]$Port)
+
+  try {
+    return Invoke-RestMethod -Uri "http://127.0.0.1:$Port/runtime/status" -Method Get -TimeoutSec 1
+  } catch {
+    return $null
+  }
+}
+
+function Test-RuntimeOwnedByPackage {
+  param([object]$Status)
+
+  if (-not $Status -or $Status.state -ne "ready") {
+    return $false
+  }
+  $reportedRoot = [string]$Status.runtimePackageRoot
+  if (-not $reportedRoot) {
+    return $false
+  }
+  return [System.IO.Path]::GetFullPath($reportedRoot).Equals(
+    [System.IO.Path]::GetFullPath($packageRoot),
+    [System.StringComparison]::OrdinalIgnoreCase
+  )
+}
+
+function Test-TcpPortOpen {
+  param([int]$Port)
+
+  $client = [System.Net.Sockets.TcpClient]::new()
+  try {
+    $async = $client.BeginConnect("127.0.0.1", $Port, $null, $null)
+    return $async.AsyncWaitHandle.WaitOne(200) -and $client.Connected
+  } catch {
+    return $false
+  } finally {
+    $client.Dispose()
+  }
+}
+
+function Resolve-DramaRuntimePort {
+  param([int]$PreferredPort)
+
+  $preferredStatus = Get-DramaRuntimeStatusForPort -Port $PreferredPort
+  if (Test-RuntimeOwnedByPackage -Status $preferredStatus) {
+    return $PreferredPort
+  }
+  if (-not (Test-TcpPortOpen -Port $PreferredPort)) {
+    return $PreferredPort
+  }
+
+  foreach ($candidate in 3199..3298) {
+    $status = Get-DramaRuntimeStatusForPort -Port $candidate
+    if (Test-RuntimeOwnedByPackage -Status $status) {
+      return $candidate
+    }
+    if (-not (Test-TcpPortOpen -Port $candidate)) {
+      return $candidate
+    }
+  }
+
+  throw "No free Drama runtime port was found in 3198-3298."
+}
+
 function Set-ZenDramaProfilePrefs {
   New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
 
@@ -496,7 +728,8 @@ function Set-ZenDramaProfilePrefs {
   $existing = @()
   if (Test-Path -LiteralPath $userJs) {
     $existing = Get-Content -LiteralPath $userJs | Where-Object {
-      $_ -notmatch '^user_pref\("zen\.drama\.'
+      $_ -notmatch '^user_pref\("zen\.drama\.' -and
+      $_ -notmatch '^user_pref\("browser\.uiCustomization\.state"'
     }
   }
 
@@ -510,9 +743,12 @@ function Set-ZenDramaProfilePrefs {
     "$RuntimePort"
   ) -Compress
 
-  $lines = @($existing) + @(
+  $toolbarCustomizationLine = Get-ZenDramaToolbarCustomizationPrefLine
+  $lines = @($existing) + @($toolbarCustomizationLine) + @(
     'user_pref("zen.drama.base-url", "' + (ConvertTo-FirefoxPrefString "$runtimeUrl/app") + '");',
     'user_pref("zen.drama.runtime-url", "' + (ConvertTo-FirefoxPrefString $runtimeUrl) + '");',
+    'user_pref("zen.drama.internal-app.enabled", true);',
+    'user_pref("zen.drama.internal-app-url", "chrome://browser/content/drama/app/index.html");',
     'user_pref("zen.drama.open-on-startup", true);',
     'user_pref("zen.drama.start-surface", "' + (ConvertTo-FirefoxPrefString $Surface) + '");',
     'user_pref("zen.drama.runtime-launch.enabled", true);',
@@ -522,8 +758,13 @@ function Set-ZenDramaProfilePrefs {
     'user_pref("zen.drama.runtime-launch.timeout-ms", 45000);'
   )
 
-  $lines | Set-Content -LiteralPath $userJs -Encoding UTF8
-  return $userJs
+  $nextContent = ($lines -join [Environment]::NewLine) + [Environment]::NewLine
+  $previousContent = if (Test-Path -LiteralPath $userJs) { Get-Content -LiteralPath $userJs -Raw } else { "" }
+  $nextContent | Set-Content -LiteralPath $userJs -Encoding UTF8 -NoNewline
+  return [pscustomobject]@{
+    Path = $userJs
+    Changed = ($previousContent -ne $nextContent)
+  }
 }
 
 function Clear-ZenDramaChromeCaches {
@@ -566,16 +807,116 @@ public static class PackagedZenDramaWindowTools {
     [void][PackagedZenDramaWindowTools]::ShowWindow([IntPtr]$process.MainWindowHandle, 9)
     [void][PackagedZenDramaWindowTools]::SetForegroundWindow([IntPtr]$process.MainWindowHandle)
     Write-Host "Focused existing packaged Zen Drama window."
-    return $true
+    return $process.Id
   } catch {
     Write-Warning "Could not focus existing packaged Zen Drama window: $($_.Exception.Message)"
-    return $false
+    return $null
   }
+}
+
+function Stop-PackagedZenDramaProcesses {
+  $processes = @(Get-CimInstance Win32_Process -Filter "name = 'zen.exe'" -ErrorAction SilentlyContinue |
+    Where-Object {
+      $_.ExecutablePath -eq $zenExe -and
+      $_.CommandLine -like "*$profileDir*"
+    })
+
+  foreach ($process in $processes) {
+    & taskkill /F /T /PID $process.ProcessId 2>$null | Out-Null
+  }
+}
+
+function Resolve-ZenDramaMonitorProcessId {
+  param(
+    [int]$FallbackProcessId,
+    [int]$TimeoutSeconds = 12
+  )
+
+  $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  do {
+    $candidates = Get-CimInstance Win32_Process -Filter "name = 'zen.exe'" |
+      Where-Object {
+        $_.ExecutablePath -eq $zenExe -and
+        $_.CommandLine -like "*$profileDir*"
+      }
+
+    foreach ($candidate in $candidates) {
+      $candidateProcess = Get-Process -Id $candidate.ProcessId -ErrorAction SilentlyContinue
+      if ($candidateProcess -and $candidateProcess.MainWindowHandle -ne 0) {
+        return $candidateProcess.Id
+      }
+    }
+
+    $fallbackProcess = Get-Process -Id $FallbackProcessId -ErrorAction SilentlyContinue
+    if ($fallbackProcess -and $fallbackProcess.MainWindowHandle -ne 0) {
+      return $fallbackProcess.Id
+    }
+
+    Start-Sleep -Milliseconds 300
+  } while ((Get-Date) -lt $deadline)
+
+  $remaining = Get-CimInstance Win32_Process -Filter "name = 'zen.exe'" |
+    Where-Object {
+      $_.ExecutablePath -eq $zenExe -and
+      $_.CommandLine -like "*$profileDir*"
+    } |
+    Select-Object -First 1
+
+  if ($remaining) {
+    return [int]$remaining.ProcessId
+  }
+
+  return $FallbackProcessId
+}
+
+function Start-DramaRuntimeLifecycleMonitor {
+  param([int]$ZenProcessId)
+
+  New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+  $monitorLog = Join-Path $logDir "drama-runtime-monitor-$RuntimePort.log"
+  $existingMonitor = Get-CimInstance Win32_Process -Filter "name = 'powershell.exe'" |
+    Where-Object {
+      $_.CommandLine -like "*drama-runtime-monitor-$RuntimePort.log*" -and
+      $_.CommandLine -like "*Wait-Process -Id $ZenProcessId*"
+    } |
+    Select-Object -First 1
+
+  if ($existingMonitor) {
+    return
+  }
+
+  $escapedPackageRoot = $packageRoot.Replace("'", "''")
+  $escapedRuntimeUrl = $runtimeUrl.Replace("'", "''")
+  $escapedMonitorLog = $monitorLog.Replace("'", "''")
+  $monitorCommand = @"
+`$ErrorActionPreference = 'SilentlyContinue'
+try {
+  Wait-Process -Id $ZenProcessId
+  Start-Sleep -Milliseconds 600
+  `$status = Invoke-RestMethod -Uri '$escapedRuntimeUrl/runtime/status' -Method Get -TimeoutSec 2
+  `$reportedRoot = [string]`$status.runtimePackageRoot
+  if (`$reportedRoot -and [System.IO.Path]::GetFullPath(`$reportedRoot).Equals([System.IO.Path]::GetFullPath('$escapedPackageRoot'), [System.StringComparison]::OrdinalIgnoreCase)) {
+    Invoke-RestMethod -Uri '$escapedRuntimeUrl/runtime/shutdown' -Method Post -Body '{ "stopPlotPilot": true }' -ContentType 'application/json' -TimeoutSec 5 | Out-Null
+    Add-Content -LiteralPath '$escapedMonitorLog' -Encoding UTF8 -Value "[$(Get-Date -Format o)] stopped packaged Drama runtime after Zen exit"
+  }
+} catch {
+  Add-Content -LiteralPath '$escapedMonitorLog' -Encoding UTF8 -Value "[$(Get-Date -Format o)] monitor failed: `$(`$_.Exception.Message)"
+}
+"@
+
+  Start-Process `
+    -FilePath "powershell.exe" `
+    -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $monitorCommand) `
+    -WindowStyle Hidden `
+    -WorkingDirectory $packageRoot | Out-Null
 }
 
 if (-not (Test-Path -LiteralPath $zenExe)) {
   throw "Packaged Zen executable is missing: $zenExe"
 }
+
+$RuntimePort = Resolve-DramaRuntimePort -PreferredPort $RuntimePort
+$runtimeUrl = "http://127.0.0.1:$RuntimePort"
 
 if (-not $NoRuntimeLaunch) {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $runtimeLauncher -RuntimePort $RuntimePort
@@ -588,12 +929,22 @@ if (-not (Wait-DramaRuntimeReady -TimeoutSeconds 45)) {
   throw "Drama runtime did not become ready at $runtimeUrl."
 }
 
-if (Focus-ZenDramaWindow) {
-  exit 0
-}
-
-$userJsPath = Set-ZenDramaProfilePrefs
+$profilePrefs = Set-ZenDramaProfilePrefs
 Clear-ZenDramaChromeCaches
+
+$focusedZenProcessId = Focus-ZenDramaWindow
+if ($focusedZenProcessId) {
+  if ($profilePrefs.Changed) {
+    Write-Host "Drama profile changed; restarting packaged Zen Drama window."
+    Stop-PackagedZenDramaProcesses
+    Start-Sleep -Milliseconds 800
+  } else {
+    if (-not $NoRuntimeLaunch) {
+      Start-DramaRuntimeLifecycleMonitor -ZenProcessId $focusedZenProcessId
+    }
+    exit 0
+  }
+}
 
 $process = Start-Process `
   -FilePath $zenExe `
@@ -604,10 +955,15 @@ $process = Start-Process `
 Write-Host "Started packaged Zen Drama." -ForegroundColor Green
 Write-Host "Zen: $zenExe"
 Write-Host "Profile: $profileDir"
-Write-Host "Prefs: $userJsPath"
+Write-Host "Prefs: $($profilePrefs.Path)"
 Write-Host "Runtime: $runtimeUrl"
 Write-Host "Surface: $Surface"
 Write-Host "ProcessId: $($process.Id)"
+
+if (-not $NoRuntimeLaunch) {
+  $monitorProcessId = Resolve-ZenDramaMonitorProcessId -FallbackProcessId $process.Id
+  Start-DramaRuntimeLifecycleMonitor -ZenProcessId $monitorProcessId
+}
 
 if ($WaitForExit) {
   Wait-Process -Id $process.Id
@@ -649,19 +1005,107 @@ Write-Host "Installed Drama desktop shortcut." -ForegroundColor Green
 Write-Host $shortcutPath
 '@
 
+$logOpener = @'
+$ErrorActionPreference = "Stop"
+
+$packageRoot = $PSScriptRoot
+$logDir = Join-Path $packageRoot "logs"
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+Start-Process -FilePath "explorer.exe" -ArgumentList @($logDir)
+Write-Host "Opened Drama logs." -ForegroundColor Green
+Write-Host $logDir
+'@
+
+$uninstaller = @'
+param(
+  [switch]$KeepProfile,
+  [switch]$KeepLogs
+)
+
+$ErrorActionPreference = "Stop"
+
+$installRoot = $PSScriptRoot
+$shortcutPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "Drama.lnk"
+
+function Stop-InstalledDramaRuntime {
+  try {
+    $status = Invoke-RestMethod -Uri "http://127.0.0.1:3198/runtime/status" -Method Get -TimeoutSec 2
+    if (
+      $status.state -eq "ready" -and
+      [string]$status.runtimePackageRoot -and
+      [System.IO.Path]::GetFullPath([string]$status.runtimePackageRoot).Equals(
+        [System.IO.Path]::GetFullPath($installRoot),
+        [System.StringComparison]::OrdinalIgnoreCase
+      )
+    ) {
+      Invoke-RestMethod -Uri "http://127.0.0.1:3198/runtime/shutdown" -Method Post -Body "{}" -ContentType "application/json" -TimeoutSec 5 | Out-Null
+      Start-Sleep -Milliseconds 800
+    }
+  } catch {
+    # Runtime is not running or not owned by this install.
+  }
+}
+
+function Stop-InstalledZenProcesses {
+  $zenExe = Join-Path $installRoot "zen\zen.exe"
+  $processes = @(Get-CimInstance Win32_Process -Filter "name = 'zen.exe'" -ErrorAction SilentlyContinue | Where-Object {
+    $_.ExecutablePath -and [System.IO.Path]::GetFullPath($_.ExecutablePath).Equals(
+      [System.IO.Path]::GetFullPath($zenExe),
+      [System.StringComparison]::OrdinalIgnoreCase
+    )
+  })
+  $installedProcessIds = @($processes | Select-Object -ExpandProperty ProcessId)
+  $rootProcesses = @($processes | Where-Object { $installedProcessIds -notcontains $_.ParentProcessId })
+  foreach ($process in $rootProcesses) {
+    & taskkill /F /T /PID $process.ProcessId 2>$null | Out-Null
+  }
+}
+
+Stop-InstalledDramaRuntime
+Stop-InstalledZenProcesses
+Remove-Item -LiteralPath $shortcutPath -Force -ErrorAction SilentlyContinue
+
+$tempScript = Join-Path $env:TEMP ("drama-zen-uninstall-" + [guid]::NewGuid().ToString("N") + ".ps1")
+$escapedInstallRoot = $installRoot.Replace("'", "''")
+$removeProfile = if ($KeepProfile) { '$false' } else { '$true' }
+$removeLogs = if ($KeepLogs) { '$false' } else { '$true' }
+@"
+`$ErrorActionPreference = 'SilentlyContinue'
+Start-Sleep -Milliseconds 800
+if ($removeProfile -eq `$false) {
+  Get-ChildItem -LiteralPath '$escapedInstallRoot' -Force | Where-Object { `$_.Name -ne 'profile' -and `$_.Name -ne 'profile-marionette-verify' -and `$_.Name -ne 'logs' } | Remove-Item -Recurse -Force
+  if ($removeLogs -eq `$true) { Remove-Item -LiteralPath (Join-Path '$escapedInstallRoot' 'logs') -Recurse -Force }
+} elseif ($removeLogs -eq `$false) {
+  Get-ChildItem -LiteralPath '$escapedInstallRoot' -Force | Where-Object { `$_.Name -ne 'logs' } | Remove-Item -Recurse -Force
+} else {
+  Remove-Item -LiteralPath '$escapedInstallRoot' -Recurse -Force
+}
+Remove-Item -LiteralPath '$tempScript' -Force
+"@ | Set-Content -LiteralPath $tempScript -Encoding UTF8
+
+Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $tempScript) -WindowStyle Hidden
+Write-Host "DramaZen uninstall started." -ForegroundColor Green
+'@
+
 Write-TextFile -Path (Join-Path $outputRoot "Start-Drama-Runtime.ps1") -Content $runtimeLauncher
 Write-TextFile -Path (Join-Path $outputRoot "Start-Drama-Zen.ps1") -Content $zenLauncher
 Write-TextFile -Path (Join-Path $outputRoot "Install-Shortcut.ps1") -Content $shortcutInstaller
+Write-TextFile -Path (Join-Path $outputRoot "Open-Drama-Logs.ps1") -Content $logOpener
+Write-TextFile -Path (Join-Path $outputRoot "Uninstall-Drama-Zen.ps1") -Content $uninstaller
 
 $manifest = [ordered]@{
   name = "Drama Zen Browser"
-  version = "0.1.0"
+  version = "0.2.0"
   createdAt = (Get-Date).ToUniversalTime().ToString("o")
   surface = $Surface
   zenExe = "zen\zen.exe"
   runtime = "runtime\drama-runtime.js"
   browserShell = "drama-browser-shell\dist"
+  browserShellInternal = "zen\browser\chrome\browser\content\browser\drama\app"
   resources = "resources"
+  logs = "logs"
+  openLogs = "Open-Drama-Logs.ps1"
+  uninstall = "Uninstall-Drama-Zen.ps1"
   plotPilot = $plotPilotBundle
   repoRoot = $repoRoot
   notes = @(

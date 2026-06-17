@@ -21,6 +21,7 @@ import {
   type PlotPilotNativeHandlers,
   type PlotPilotNovel,
   type PlotPilotRuntimeStatus as PlotPilotUiRuntimeStatus,
+  type ScriptStudioStorageCardDraft,
   type PlotPilotWritingSpecFailureView,
 } from './PlotPilotNativePage'
 import type {
@@ -40,6 +41,7 @@ import type {
   PlotPilotHumanizerSettingsResponse,
   PlotPilotAutopilotChapterStreamEvent,
   PlotPilotAutopilotStreamEvent,
+  PlotPilotHostedWriteStreamEvent,
   PlotPilotPlotOutlineItem,
   PlotPilotSetupStreamEvent,
   PlotPilotWritingSpecBindingResponse,
@@ -48,6 +50,8 @@ import type {
 import type {
   DramaGraphLoadResult,
   DramaGraphMutationResult,
+  DramaProjectFileListRequest,
+  DramaProjectFileListResult,
   DramaProjectFileRecordRequest,
   DramaProjectFileRecordResult,
 } from '@drama/graph/ipc-contract'
@@ -95,6 +99,7 @@ export interface PlotPilotNativeApi {
   restartPlotPilotRuntime(): Promise<PlotPilotRuntimeStatus>
   openUrl(url: string): Promise<void> | void
   recordDramaProjectFile?: (request: DramaProjectFileRecordRequest) => Promise<DramaProjectFileRecordResult>
+  listDramaProjectFiles?: (request: DramaProjectFileListRequest) => Promise<DramaProjectFileListResult>
   loadDramaGraph(): Promise<DramaGraphLoadResult>
   upsertDramaGraphDraft(request: {
     graphId: string
@@ -253,6 +258,50 @@ function normalizeNovelId(title: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9\u4e00-\u9fa5]+/gi, '-')
     .replace(/^-+|-+$/g, '') || `novel-${Date.now()}`
+}
+
+function createStorageCardId(prefix: string): string {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+function storageCardTitle(card: ScriptStudioStorageCardDraft): string {
+  return card.title.trim() || (card.kind === 'character' ? '未命名人物' : '未命名提示词')
+}
+
+function storageCardBody(card: ScriptStudioStorageCardDraft): string {
+  return card.body.trim()
+}
+
+function characterRowFromStorageCard(
+  card: ScriptStudioStorageCardDraft,
+  existing?: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    ...existing,
+    id: String(existing?.id ?? card.sourceId ?? card.id ?? createStorageCardId('character')),
+    name: storageCardTitle(card),
+    role: card.subtitle.trim() || String(existing?.role ?? '角色设定'),
+    description: storageCardBody(card) || String(existing?.description ?? ''),
+    relationships: Array.isArray(existing?.relationships) ? existing.relationships : [],
+    public_profile: storageCardBody(card) || String(existing?.public_profile ?? ''),
+    background: card.meta?.trim() || String(existing?.background ?? ''),
+  }
+}
+
+function promptRecordFromStorageCard(card: ScriptStudioStorageCardDraft): Record<string, unknown> {
+  return {
+    id: String(card.sourceId ?? card.id ?? createStorageCardId('prompt')),
+    name: storageCardTitle(card),
+    scope: card.subtitle.trim() || 'drama-script-studio',
+    template: storageCardBody(card),
+    version: card.meta?.trim() || 'draft',
+    source: 'drama-script-studio',
+    updated_at: new Date().toISOString(),
+  }
+}
+
+function promptRecordKey(prompt: Record<string, unknown>): string {
+  return String(prompt.id ?? prompt.key ?? prompt.name ?? prompt.title ?? '').trim()
 }
 
 function toNovelCreateRequest(draft: PlotPilotOnboardingDraft) {
@@ -1032,6 +1081,49 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     })
   }, [])
 
+  const loadSavedPromptCards = React.useCallback(async (novelId: string) => {
+    if (typeof api.listDramaProjectFiles !== 'function') return
+    try {
+      const result = await api.listDramaProjectFiles({
+        projectId: novelId,
+        source: 'plm',
+        typePrefix: 'plm.storageCard.prompt.',
+        limit: 100,
+      })
+      const savedPrompts = result.files
+        .map((file) => asRecord(file.payload))
+        .filter((prompt) => promptRecordKey(prompt) && String(prompt.template ?? prompt.description ?? '').trim())
+      if (savedPrompts.length === 0) return
+
+      setFeatureState((current) => {
+        const seen = new Set<string>()
+        const prompts: Array<Record<string, unknown>> = []
+        for (const prompt of savedPrompts) {
+          const key = promptRecordKey(prompt)
+          if (!key || seen.has(key)) continue
+          seen.add(key)
+          prompts.push(prompt)
+        }
+        for (const prompt of current.prompts ?? []) {
+          const key = promptRecordKey(asRecord(prompt))
+          if (!key || seen.has(key)) continue
+          seen.add(key)
+          prompts.push(prompt)
+        }
+        return {
+          ...current,
+          prompts,
+          promptStats: {
+            ...(current.promptStats ?? {}),
+            dramaSavedPrompts: savedPrompts.length,
+          },
+        }
+      })
+    } catch {
+      // Saved prompt cards are an enhancement; runtime prompt APIs should still load.
+    }
+  }, [api])
+
   const bindWritingSpec = React.useCallback(async (novelId: string, writingSpecId: string) => {
     setActiveJob({
       id: `writing-spec:${novelId}`,
@@ -1163,6 +1255,154 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     setDramaGraph(result.graph)
     return result
   }, [dramaGraph, loadCurrentDramaGraph])
+
+  const recordInvocationGraphEvent = React.useCallback(async (args: {
+    novelId: string
+    type: string
+    sessionId: string
+    invocation: unknown
+    summary: string
+    status?: string
+    severity?: DramaGraphEventInput['severity']
+    details?: Record<string, unknown>
+  }) => {
+    if (!args.novelId) return null
+    return recordPlmGraphEvent({
+      type: args.type,
+      target: {
+        novelId: args.novelId,
+      },
+      status: args.status,
+      severity: args.severity,
+      summary: args.summary,
+      details: {
+        novelId: args.novelId,
+        sessionId: args.sessionId,
+        invocation: args.invocation,
+        ...args.details,
+      },
+    })
+  }, [recordPlmGraphEvent])
+
+  const saveStorageCard = React.useCallback(async (novelId: string, card: ScriptStudioStorageCardDraft) => {
+    setActiveJob({
+      id: `storage-card:${card.kind}:${novelId}`,
+      label: card.kind === 'character' ? '保存人设卡' : '保存提示词卡',
+      phase: 'storage',
+      detail: storageCardTitle(card),
+    })
+
+    try {
+      if (card.kind === 'character') {
+        const activeClient = await ensureRuntimeClient()
+        const currentBible = selectedBible ?? await activeClient.getBible(novelId)
+        const characters = [...recordArray(currentBible.characters)]
+        const indexFromSource = typeof card.sourceIndex === 'number' && card.sourceIndex >= 0
+          ? card.sourceIndex
+          : -1
+        const indexById = card.sourceId
+          ? characters.findIndex((character) => String(character.id ?? character.name ?? '') === card.sourceId)
+          : -1
+        const indexByTitle = characters.findIndex((character) => String(character.name ?? '') === card.title)
+        const updateIndex = indexFromSource >= 0
+          ? indexFromSource
+          : indexById >= 0
+            ? indexById
+            : indexByTitle
+
+        if (updateIndex >= 0 && updateIndex < characters.length) {
+          characters[updateIndex] = characterRowFromStorageCard(card, characters[updateIndex])
+        } else {
+          characters.unshift(characterRowFromStorageCard(card))
+        }
+
+        const nextBibleDraft: PlotPilotBibleEditorData = {
+          ...(currentBible as unknown as PlotPilotBibleEditorData),
+          characters,
+        }
+        const nextBible = await activeClient.updateBible(novelId, toBulkUpdateBibleRequest(nextBibleDraft))
+        setSelectedBible(nextBible)
+        await recordPlmProjectFile({
+          novelId,
+          type: 'plm.storageCard.character.saved',
+          title: storageCardTitle(card),
+          summary: {
+            cardKind: card.kind,
+            characterCount: nextBible.characters.length,
+            source: card.source ?? 'draft',
+          },
+          payload: {
+            card,
+            bible: bibleRecordSummary(nextBible),
+          },
+        })
+        await recordPlmGraphEvent({
+          type: 'plm.storageCard.character.saved',
+          target: { novelId },
+          status: 'saved',
+          summary: `${storageCardTitle(card)} 人设卡已写入 Bible`,
+          details: {
+            novelId,
+            card,
+            characterCount: nextBible.characters.length,
+          },
+        })
+        await loadNovels()
+      } else {
+        const promptRecord = promptRecordFromStorageCard(card)
+        setFeatureState((current) => {
+          const prompts = [...(current.prompts ?? [])]
+          const sourceId = String(promptRecord.id ?? '')
+          const existingIndex = prompts.findIndex((prompt) => {
+            const record = asRecord(prompt)
+            return String(record.id ?? record.key ?? record.name ?? '') === sourceId ||
+              String(record.name ?? record.title ?? '') === storageCardTitle(card)
+          })
+          if (existingIndex >= 0) prompts[existingIndex] = promptRecord
+          else prompts.unshift(promptRecord)
+          return {
+            ...current,
+            prompts,
+            promptStats: {
+              ...(current.promptStats ?? {}),
+              dramaSavedPrompts: prompts.length,
+            },
+            lastMessage: '提示词卡已写入 Drama project file。',
+          }
+        })
+        await recordPlmProjectFile({
+          novelId,
+          type: 'plm.storageCard.prompt.saved',
+          title: storageCardTitle(card),
+          summary: {
+            cardKind: card.kind,
+            promptId: promptRecord.id,
+            scope: promptRecord.scope,
+          },
+          payload: promptRecord,
+        })
+        await recordPlmGraphEvent({
+          type: 'plm.storageCard.prompt.saved',
+          target: { novelId },
+          status: 'saved',
+          summary: `${storageCardTitle(card)} 提示词卡已写入 registry`,
+          details: {
+            novelId,
+            prompt: promptRecord,
+          },
+        })
+      }
+
+      setFeatureState((current) => ({
+        ...current,
+        lastMessage: `${storageCardTitle(card)} 已保存。`,
+      }))
+    } catch (error) {
+      reportPlotPilotError(error)
+    } finally {
+      setActiveJob(null)
+    }
+  }, [ensureRuntimeClient, loadNovels, recordPlmGraphEvent, recordPlmProjectFile, selectedBible])
 
   const handleWritingSpecFailure = React.useCallback(async (
     error: unknown,
@@ -1328,6 +1568,18 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
 
     try {
       const activeClient = await ensureRuntimeClient()
+      await recordPlmGraphEvent({
+        type: 'plm.chapter.generate.requested',
+        target: {
+          novelId,
+        },
+        status: 'requested',
+        summary: `请求生成第${resolvedChapterNumber}章`,
+        details: {
+          novelId,
+          chapterNumber: resolvedChapterNumber,
+        },
+      })
       const ensuredChapter = await activeClient.ensureChapter(
         novelId,
         resolvedChapterNumber,
@@ -1519,6 +1771,23 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           writingSpecId,
         },
       })
+      await recordPlmGraphEvent({
+        type: 'plm.chapter.generated',
+        target: {
+          novelId,
+          chapterId: savedChapter.id,
+        },
+        status: 'completed',
+        summary: `${savedChapter.title || fallbackChapterTitle(savedChapter.number)} 已生成`,
+        details: {
+          novelId,
+          chapterId: savedChapter.id,
+          chapterNumber: savedChapter.number,
+          title: savedChapter.title,
+          wordCount: savedChapter.word_count ?? countDraftText(generatedContent),
+          writingSpecId,
+        },
+      })
       setActiveJob((current) => current ? {
         ...current,
         phase: 'done',
@@ -1526,16 +1795,32 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         detail: `${savedChapter.word_count ?? countDraftText(generatedContent)} words`,
       } : current)
     } catch (error) {
-      await handleWritingSpecFailure(error, {
+      const handledWritingSpecFailure = await handleWritingSpecFailure(error, {
         novelId,
         chapterNumber: resolvedChapterNumber,
         writingSpecId: activeWritingSpecId(writingSpec),
       })
+      if (!handledWritingSpecFailure) {
+        await recordPlmGraphEvent({
+          type: 'plm.chapter.generate.failed',
+          target: {
+            novelId,
+          },
+          severity: 'error',
+          status: 'failed',
+          summary: `第${resolvedChapterNumber}章生成失败`,
+          details: {
+            novelId,
+            chapterNumber: resolvedChapterNumber,
+            message: errorMessage(error),
+          },
+        })
+      }
       reportPlotPilotError(error)
     } finally {
       setActiveJob(null)
     }
-  }, [chapterEditor, dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, novels, recordPlmProjectFile, selectedNovel, writingSpec])
+  }, [chapterEditor, dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, novels, recordPlmGraphEvent, recordPlmProjectFile, selectedNovel, writingSpec])
 
   const createNovelFromOnboarding = React.useCallback(async (draft: PlotPilotOnboardingDraft) => {
     setActiveJob({
@@ -2209,6 +2494,108 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     }
   }, [chapterEditor, ensureRuntimeClient, novels, recordPlmProjectFile, selectedNovel])
 
+  const appendHostedWriteEvent = React.useCallback((
+    event: PlotPilotHostedWriteStreamEvent,
+    range: {
+      fromChapter: number
+      toChapter: number
+      autoSave: boolean
+      autoOutline: boolean
+    },
+  ) => {
+    const eventRecord = asRecord(event)
+    const type = String(eventRecord.type ?? 'unknown')
+    const chapter = Number(eventRecord.chapter_number ?? eventRecord.chapter)
+    const stats = asRecord(eventRecord.stats)
+    const text = typeof eventRecord.text === 'string' ? eventRecord.text : ''
+
+    setFeatureState((current) => {
+      const previousSummary = asRecord(current.hostedWriteSummary)
+      const previousSavedChapters = Array.isArray(previousSummary.savedChapters)
+        ? previousSummary.savedChapters.map((value) => Number(value)).filter(Number.isFinite)
+        : []
+      const savedChapters = type === 'saved' && Number.isFinite(chapter)
+        ? Array.from(new Set([...previousSavedChapters, chapter])).sort((left, right) => left - right)
+        : previousSavedChapters
+      const chunkCount = Number(previousSummary.chunkCount ?? 0) + (type === 'chunk' ? 1 : 0)
+      const charCount = Number(previousSummary.charCount ?? 0) + (type === 'chunk' ? countDraftText(text) : 0)
+      const totalChapters = Math.max(1, range.toChapter - range.fromChapter + 1)
+
+      return {
+        ...current,
+        hostedWriteSummary: {
+          ...previousSummary,
+          ...range,
+          lastType: type,
+          currentChapter: Number.isFinite(chapter) ? chapter : previousSummary.currentChapter,
+          savedChapters,
+          savedCount: savedChapters.length,
+          totalChapters,
+          chunkCount,
+          charCount: Number(stats.chars ?? charCount),
+          updatedAt: new Date().toISOString(),
+        },
+        hostedWriteEvents: [
+          {
+            ...eventRecord,
+            id: `${type}:${String(eventRecord.session_id ?? eventRecord.chapter ?? Date.now())}:${Date.now()}`,
+            timestamp: String(eventRecord.timestamp ?? new Date().toISOString()),
+          },
+          ...(current.hostedWriteEvents ?? []),
+        ].slice(0, 160),
+        lastMessage: String(eventRecord.message ?? eventRecord.type ?? current.lastMessage ?? ''),
+      }
+    })
+  }, [])
+
+  const writeHostedWriteEventToDramaGraph = React.useCallback(async (
+    novelId: string,
+    event: PlotPilotHostedWriteStreamEvent,
+    range: {
+      fromChapter: number
+      toChapter: number
+      autoSave: boolean
+      autoOutline: boolean
+    },
+  ) => {
+    const eventRecord = asRecord(event)
+    const type = String(eventRecord.type ?? 'unknown')
+    const shouldPersist = [
+      'session',
+      'chapter_start',
+      'saved',
+      'approval_required',
+      'session_done',
+      'error',
+    ].includes(type)
+    if (!shouldPersist) return null
+
+    const chapter = Number(eventRecord.chapter_number ?? eventRecord.chapter)
+    return recordPlmGraphEvent({
+      type: `plm.hostedWrite.${type}`,
+      target: {
+        novelId,
+        ...(Number.isFinite(chapter) ? { chapterNumber: chapter } : {}),
+      },
+      severity: type === 'error' ? 'error' : type === 'approval_required' ? 'warning' : 'info',
+      status: type === 'error'
+        ? 'failed'
+        : type === 'approval_required'
+          ? 'review_required'
+          : type === 'session_done'
+            ? 'completed'
+            : type,
+      summary: Number.isFinite(chapter)
+        ? `Hosted Write ${type} chapter ${chapter}`
+        : `Hosted Write ${type}`,
+      details: {
+        novelId,
+        range,
+        event: eventRecord,
+      },
+    })
+  }, [recordPlmGraphEvent])
+
   const hostedWrite = React.useCallback(async (
     novelId: string,
     fromChapter: number,
@@ -2225,7 +2612,24 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       phase: 'hosted_write',
       detail: novelId,
     })
-    setFeatureState((current) => ({ ...current, loadingKey: 'hosted-write', lastMessage: 'Hosted Write 已启动。' }))
+    setFeatureState((current) => ({
+      ...current,
+      loadingKey: 'hosted-write',
+      hostedWriteEvents: [],
+      hostedWriteSummary: {
+        fromChapter,
+        toChapter,
+        autoSave,
+        autoOutline,
+        savedChapters: [],
+        savedCount: 0,
+        totalChapters: Math.max(1, toChapter - fromChapter + 1),
+        chunkCount: 0,
+        charCount: 0,
+        lastType: 'starting',
+      },
+      lastMessage: 'Hosted Write 已启动。',
+    }))
     try {
       const activeClient = await ensureRuntimeClient()
       for await (const event of activeClient.hostedWriteStream(novelId, {
@@ -2234,6 +2638,8 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         auto_save: autoSave,
         auto_outline: autoOutline,
       }, { signal: abortController.signal })) {
+        appendHostedWriteEvent(event, { fromChapter, toChapter, autoSave, autoOutline })
+        void writeHostedWriteEventToDramaGraph(novelId, event, { fromChapter, toChapter, autoSave, autoOutline })
         if (event.type === 'error') throw new Error(event.message)
         if (event.type === 'approval_required') {
           throw new Error(`Hosted Write 进入 AI Invocation 审阅：${event.session_id}`)
@@ -2273,7 +2679,32 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       })
     } catch (error) {
       if (!isAbortError(error)) {
-        setFeatureState((current) => ({ ...current, lastMessage: errorMessage(error) }))
+        const message = errorMessage(error)
+        setFeatureState((current) => ({
+          ...current,
+          hostedWriteSummary: {
+            ...asRecord(current.hostedWriteSummary),
+            lastType: 'failed',
+            error: message,
+            updatedAt: new Date().toISOString(),
+          },
+          lastMessage: message,
+        }))
+        await recordPlmGraphEvent({
+          type: 'plm.hostedWrite.failed',
+          target: { novelId },
+          severity: 'error',
+          status: 'failed',
+          summary: `Hosted Write 第${fromChapter}-${toChapter}章失败`,
+          details: {
+            novelId,
+            fromChapter,
+            toChapter,
+            autoSave,
+            autoOutline,
+            message,
+          },
+        })
         reportPlotPilotError(error)
       }
     } finally {
@@ -2281,7 +2712,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       setFeatureState((current) => ({ ...current, loadingKey: null }))
       setActiveJob(null)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile, refreshChapters])
+  }, [appendHostedWriteEvent, ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshChapters, writeHostedWriteEventToDramaGraph])
 
   const appendAutopilotEvent = React.useCallback((event: PlotPilotAutopilotStreamEvent) => {
     const eventRecord = asRecord(event)
@@ -2374,6 +2805,24 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     ].includes(type)
     if (!shouldPersist) return
 
+    await recordPlmGraphEvent({
+      type: `plm.autopilot.${type}`,
+      target: { novelId },
+      severity: type === 'error' || type === 'beat_error' ? 'error' : type === 'paused_for_review' ? 'warning' : 'info',
+      status: type === 'error' || type === 'beat_error'
+        ? 'failed'
+        : type === 'paused_for_review'
+          ? 'review_required'
+          : type === 'autopilot_complete'
+            ? 'completed'
+            : 'updated',
+      summary: `Autopilot ${type}`,
+      details: {
+        novelId,
+        event: eventRecord,
+      },
+    }).catch(() => null)
+
     await writePlotPilotGraphDraft({
       api,
       graph: dramaGraph,
@@ -2403,7 +2852,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         },
       ],
     }).catch(() => false)
-  }, [dramaGraph, loadCurrentDramaGraph])
+  }, [dramaGraph, loadCurrentDramaGraph, recordPlmGraphEvent])
 
   const refreshAutopilot = React.useCallback(async (novelId: string) => {
     setFeatureState((current) => ({ ...current, loadingKey: 'autopilot', lastMessage: '读取 Autopilot 状态。' }))
@@ -2509,6 +2958,20 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         },
         payload: result,
       })
+      await recordPlmGraphEvent({
+        type: 'plm.autopilot.started',
+        target: { novelId },
+        status: 'running',
+        summary: 'Autopilot 自动驾驶已启动',
+        details: {
+          novelId,
+          maxAutoChapters,
+          targetChapters,
+          targetWordsPerChapter,
+          autoApproveMode,
+          result,
+        },
+      })
       setFeatureState((current) => ({
         ...current,
         autopilotStatus: result as unknown as Record<string, unknown>,
@@ -2533,7 +2996,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       setFeatureState((current) => ({ ...current, loadingKey: null }))
       setActiveJob(null)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile, refreshAutopilot, streamAutopilotChapter, streamAutopilotEvents, streamAutopilotLog])
+  }, [ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshAutopilot, streamAutopilotChapter, streamAutopilotEvents, streamAutopilotLog])
 
   const stopAutopilot = React.useCallback(async (novelId: string) => {
     autopilotStreamAbortRef.current?.abort()
@@ -2549,6 +3012,16 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           message: result.message,
         },
         payload: result,
+      })
+      await recordPlmGraphEvent({
+        type: 'plm.autopilot.stopped',
+        target: { novelId },
+        status: 'stopped',
+        summary: result.message ?? 'Autopilot 已停止',
+        details: {
+          novelId,
+          result,
+        },
       })
       setFeatureState((current) => ({
         ...current,
@@ -2567,7 +3040,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     } finally {
       setActiveJob((current) => current?.id === `autopilot:${novelId}` ? null : current)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile, refreshAutopilot])
+  }, [ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshAutopilot])
 
   const resumeAutopilot = React.useCallback(async (novelId: string) => {
     setFeatureState((current) => ({ ...current, loadingKey: 'autopilot', lastMessage: '从审阅点恢复 Autopilot。' }))
@@ -2582,6 +3055,16 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           message: result.message,
         },
         payload: result,
+      })
+      await recordPlmGraphEvent({
+        type: 'plm.autopilot.resumed',
+        target: { novelId },
+        status: 'running',
+        summary: result.message ?? 'Autopilot 已恢复',
+        details: {
+          novelId,
+          result,
+        },
       })
       setFeatureState((current) => ({
         ...current,
@@ -2598,7 +3081,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       setFeatureState((current) => ({ ...current, loadingKey: null, lastMessage: errorMessage(error) }))
       reportPlotPilotError(error)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile, refreshAutopilot])
+  }, [ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshAutopilot])
 
   const resetAutopilotBreaker = React.useCallback(async (novelId: string) => {
     setFeatureState((current) => ({ ...current, loadingKey: 'autopilot', lastMessage: '重置 Autopilot 熔断器。' }))
@@ -2613,6 +3096,16 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         },
         payload: result,
       })
+      await recordPlmGraphEvent({
+        type: 'plm.autopilot.breakerReset',
+        target: { novelId },
+        status: 'reset',
+        summary: result.message ?? 'Autopilot 熔断器已重置',
+        details: {
+          novelId,
+          result,
+        },
+      })
       setFeatureState((current) => ({
         ...current,
         loadingKey: null,
@@ -2623,7 +3116,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       setFeatureState((current) => ({ ...current, loadingKey: null, lastMessage: errorMessage(error) }))
       reportPlotPilotError(error)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile, refreshAutopilot])
+  }, [ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshAutopilot])
 
   const stopGeneration = React.useCallback((jobId: string) => {
     if (jobId.startsWith('autopilot:')) {
@@ -2663,13 +3156,42 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         },
         payload: result,
       })
+      await recordPlmGraphEvent({
+        type: 'plm.review.completed',
+        target: {
+          novelId,
+        },
+        status: 'completed',
+        summary: `第${chapterNumber}章审稿完成`,
+        details: {
+          novelId,
+          chapterNumber,
+          score: result.score,
+          result,
+        },
+      })
     } catch (error) {
-      setFeatureState((current) => ({ ...current, loadingKey: null, lastMessage: errorMessage(error) }))
+      const message = errorMessage(error)
+      setFeatureState((current) => ({ ...current, loadingKey: null, lastMessage: message }))
+      await recordPlmGraphEvent({
+        type: 'plm.review.failed',
+        target: {
+          novelId,
+        },
+        severity: 'error',
+        status: 'failed',
+        summary: `第${chapterNumber}章审稿失败`,
+        details: {
+          novelId,
+          chapterNumber,
+          message,
+        },
+      })
       reportPlotPilotError(error)
     } finally {
       setActiveJob(null)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile])
+  }, [ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile])
 
   const refreshReview = React.useCallback(async (novelId: string, chapterNumber?: number) => {
     setFeatureState((current) => ({ ...current, loadingKey: 'review', lastMessage: '读取读者模拟和劝退告警。' }))
@@ -2718,15 +3240,43 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         },
         payload: result,
       })
+      await recordPlmGraphEvent({
+        type: 'plm.readerSimulation.completed',
+        target: {
+          novelId,
+        },
+        status: 'completed',
+        summary: `第${chapterNumber}章读者模拟完成`,
+        details: {
+          novelId,
+          chapterNumber,
+          result,
+        },
+      })
       await refreshReview(novelId, chapterNumber).catch(() => undefined)
     } catch (error) {
-      setFeatureState((current) => ({ ...current, loadingKey: null, lastMessage: errorMessage(error) }))
+      const message = errorMessage(error)
+      setFeatureState((current) => ({ ...current, loadingKey: null, lastMessage: message }))
+      await recordPlmGraphEvent({
+        type: 'plm.readerSimulation.failed',
+        target: {
+          novelId,
+        },
+        severity: 'error',
+        status: 'failed',
+        summary: `第${chapterNumber}章读者模拟失败`,
+        details: {
+          novelId,
+          chapterNumber,
+          message,
+        },
+      })
       reportPlotPilotError(error)
     } finally {
       setFeatureState((current) => ({ ...current, loadingKey: null }))
       setActiveJob(null)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile, refreshReview])
+  }, [ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshReview])
 
   const refreshMemory = React.useCallback(async (novelId: string) => {
     setFeatureState((current) => ({ ...current, loadingKey: 'memory', lastMessage: '读取知识图谱。' }))
@@ -2813,6 +3363,63 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     }
   }, [ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshMemory])
 
+  const searchMemory = React.useCallback(async (novelId: string, query: string) => {
+    const trimmed = query.trim()
+    if (!trimmed) return
+    setFeatureState((current) => ({ ...current, loadingKey: 'memory', lastMessage: `检索记忆：${trimmed}` }))
+    try {
+      const activeClient = await ensureRuntimeClient()
+      const result = await activeClient.searchKnowledgeGraph(novelId, {
+        query: trimmed,
+        limit: 12,
+        min_score: 0.05,
+      })
+      const results = recordArray(result.data, ['results', 'matches', 'triples'])
+      setFeatureState((current) => ({
+        ...current,
+        loadingKey: null,
+        knowledgeSearchResults: results,
+        lastMessage: `Memory 检索完成：${results.length} 条结果。`,
+      }))
+      await recordPlmGraphEvent({
+        type: 'memory.search',
+        actor: 'drama:plm-ui',
+        source: 'memory',
+        target: {
+          novelId,
+        },
+        status: 'completed',
+        summary: `Memory search: ${trimmed}`,
+        details: {
+          novelId,
+          query: trimmed,
+          resultCount: results.length,
+          data: result.data ?? null,
+        },
+      })
+    } catch (error) {
+      const message = errorMessage(error)
+      setFeatureState((current) => ({ ...current, loadingKey: null, lastMessage: message }))
+      await recordPlmGraphEvent({
+        type: 'memory.search.failed',
+        actor: 'drama:plm-ui',
+        source: 'memory',
+        target: {
+          novelId,
+        },
+        severity: 'error',
+        status: 'failed',
+        summary: `Memory search failed: ${trimmed}`,
+        details: {
+          novelId,
+          query: trimmed,
+          message,
+        },
+      })
+      reportPlotPilotError(error)
+    }
+  }, [ensureRuntimeClient, recordPlmGraphEvent])
+
   const refreshDebug = React.useCallback(async (novelId: string) => {
     setFeatureState((current) => ({ ...current, loadingKey: 'debug', lastMessage: '读取 Prompt / Trace。' }))
     try {
@@ -2851,11 +3458,25 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         activeInvocation: invocation as unknown as Record<string, unknown>,
         lastMessage: invocation.next_action ?? invocation.session.status,
       }))
+      const novelId = String(asRecord(invocation.session.context).novel_id ?? '').trim()
+      if (novelId) {
+        await recordInvocationGraphEvent({
+          novelId,
+          type: 'plm.invocation.loaded',
+          sessionId: trimmed,
+          invocation,
+          status: invocation.session.status,
+          summary: `AI Invocation ${trimmed} 已载入`,
+          details: {
+            nextAction: invocation.next_action,
+          },
+        })
+      }
     } catch (error) {
       setFeatureState((current) => ({ ...current, loadingKey: null, lastMessage: errorMessage(error) }))
       reportPlotPilotError(error)
     }
-  }, [ensureRuntimeClient])
+  }, [ensureRuntimeClient, recordInvocationGraphEvent])
 
   const resolveActiveAttemptId = React.useCallback((): string | null => {
     const invocation = asRecord(featureState.activeInvocation)
@@ -2893,13 +3514,24 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           },
           payload: invocation,
         })
+        await recordInvocationGraphEvent({
+          novelId,
+          type: 'plm.invocation.resumed',
+          sessionId,
+          invocation,
+          status: invocation.session.status,
+          summary: `AI Invocation ${sessionId} 已恢复`,
+          details: {
+            nextAction: invocation.next_action,
+          },
+        })
       }
     } catch (error) {
       reportPlotPilotError(error)
     } finally {
       setActiveJob(null)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile])
+  }, [ensureRuntimeClient, recordInvocationGraphEvent, recordPlmProjectFile])
 
   const retryInvocation = React.useCallback(async (sessionId: string) => {
     setActiveJob({ id: `invocation:retry:${sessionId}`, label: 'Retry Invocation', phase: 'invocation', detail: sessionId })
@@ -2923,13 +3555,24 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           },
           payload: invocation,
         })
+        await recordInvocationGraphEvent({
+          novelId,
+          type: 'plm.invocation.retried',
+          sessionId,
+          invocation,
+          status: invocation.session.status,
+          summary: `AI Invocation ${sessionId} 已重试`,
+          details: {
+            nextAction: invocation.next_action,
+          },
+        })
       }
     } catch (error) {
       reportPlotPilotError(error)
     } finally {
       setActiveJob(null)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile])
+  }, [ensureRuntimeClient, recordInvocationGraphEvent, recordPlmProjectFile])
 
   const acceptInvocation = React.useCallback(async (sessionId: string) => {
     const attemptId = resolveActiveAttemptId()
@@ -2963,13 +3606,25 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           },
           payload: invocation,
         })
+        await recordInvocationGraphEvent({
+          novelId,
+          type: 'plm.invocation.accepted',
+          sessionId,
+          invocation,
+          status: invocation.session.status,
+          summary: `AI Invocation ${sessionId} 已接受 attempt`,
+          details: {
+            attemptId,
+            nextAction: invocation.next_action,
+          },
+        })
       }
     } catch (error) {
       reportPlotPilotError(error)
     } finally {
       setActiveJob(null)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile, resolveActiveAttemptId])
+  }, [ensureRuntimeClient, recordInvocationGraphEvent, recordPlmProjectFile, resolveActiveAttemptId])
 
   const rejectInvocation = React.useCallback(async (sessionId: string) => {
     const attemptId = resolveActiveAttemptId()
@@ -3002,13 +3657,25 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           },
           payload: invocation,
         })
+        await recordInvocationGraphEvent({
+          novelId,
+          type: 'plm.invocation.rejected',
+          sessionId,
+          invocation,
+          status: invocation.session.status,
+          summary: `AI Invocation ${sessionId} 已拒绝 attempt`,
+          details: {
+            attemptId,
+            nextAction: invocation.next_action,
+          },
+        })
       }
     } catch (error) {
       reportPlotPilotError(error)
     } finally {
       setActiveJob(null)
     }
-  }, [ensureRuntimeClient, recordPlmProjectFile, resolveActiveAttemptId])
+  }, [ensureRuntimeClient, recordInvocationGraphEvent, recordPlmProjectFile, resolveActiveAttemptId])
 
   const commitInvocation = React.useCallback(async (sessionId: string) => {
     const decisionId = resolveActiveDecisionId()
@@ -3038,6 +3705,18 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           },
           payload: invocation,
         })
+        await recordInvocationGraphEvent({
+          novelId,
+          type: 'plm.invocation.committed',
+          sessionId,
+          invocation,
+          status: invocation.session.status,
+          summary: `AI Invocation ${sessionId} 已提交 decision`,
+          details: {
+            decisionId,
+            nextAction: invocation.next_action,
+          },
+        })
       }
       if (novelId) {
         await Promise.all([
@@ -3051,7 +3730,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     } finally {
       setActiveJob(null)
     }
-  }, [ensureRuntimeClient, loadSelectedBible, recordPlmProjectFile, refreshPlanning, refreshSetup, resolveActiveDecisionId])
+  }, [ensureRuntimeClient, loadSelectedBible, recordInvocationGraphEvent, recordPlmProjectFile, refreshPlanning, refreshSetup, resolveActiveDecisionId])
 
   const loadTraceTimeline = React.useCallback(async (novelId: string, traceId: string) => {
     setFeatureState((current) => ({ ...current, loadingKey: 'debug', lastMessage: `读取 Trace ${traceId}` }))
@@ -3152,6 +3831,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     onRefreshReview: (novelId, chapterNumber) => void refreshReview(novelId, chapterNumber),
     onRefreshMemory: (novelId) => void refreshMemory(novelId),
     onInferKnowledgeGraph: (novelId) => void inferKnowledgeGraph(novelId),
+    onSearchMemory: (novelId, query) => void searchMemory(novelId, query),
     onRefreshDebug: (novelId) => void refreshDebug(novelId),
     onLoadInvocation: (sessionId) => void loadInvocation(sessionId),
     onResumeInvocation: (sessionId) => void resumeInvocation(sessionId),
@@ -3167,6 +3847,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     onBindWritingSpec: (novelId, writingSpecId) => void bindWritingSpec(novelId, writingSpecId),
     onClearWritingSpec: (novelId) => void clearWritingSpec(novelId),
     onUpdateHumanizer: (novelId, settings) => void updateHumanizer(novelId, settings),
+    onSaveStorageCard: (novelId, card) => void saveStorageCard(novelId, card),
     onChangeChapterDraft: (content) => setChapterEditor((current) => (
       current
         ? {
@@ -3216,6 +3897,8 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     reviewChapter,
     saveChapter,
     saveBible,
+    saveStorageCard,
+    searchMemory,
     saveNovelSetup,
     savePlotOutline,
     selectNovel,
@@ -3284,13 +3967,16 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         autopilotStatusEvents: [],
         autopilotChapterEvents: [],
         autopilotChapterSnapshot: null,
+        hostedWriteEvents: [],
+        hostedWriteSummary: null,
       }))
       return
     }
     void loadSelectedBible(selectedNovel.id)
+    void loadSavedPromptCards(selectedNovel.id)
     void loadProjectGenerationSettings(selectedNovel.id)
     void refreshAutopilot(selectedNovel.id)
-  }, [loadProjectGenerationSettings, loadSelectedBible, refreshAutopilot, selectedNovel?.id])
+  }, [loadProjectGenerationSettings, loadSavedPromptCards, loadSelectedBible, refreshAutopilot, selectedNovel?.id])
 
   React.useEffect(() => {
     const request = pendingOpenRequestRef.current

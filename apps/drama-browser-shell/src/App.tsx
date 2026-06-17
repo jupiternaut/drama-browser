@@ -12,6 +12,7 @@ import {
   Network,
   Radio,
   RefreshCw,
+  RotateCcw,
   ScrollText,
   ShieldCheck,
   TriangleAlert,
@@ -50,17 +51,34 @@ const surfaces: SurfaceDescriptor[] = [
 ]
 
 function getInitialSurface(): Surface {
+  const params = new URLSearchParams(globalThis.location?.search ?? '')
+  const surfaceParam = params.get('surface')
+  if (surfaceParam === 'plm' || surfaceParam === 'crew' || surfaceParam === 'graph') return surfaceParam
+
+  const hashSurface = globalThis.location?.hash?.replace(/^#\/?/, '').split(/[/?&]/)[0]
+  if (hashSurface === 'plm' || hashSurface === 'crew' || hashSurface === 'graph') return hashSurface
+
   const segments = globalThis.location?.pathname?.replace(/^\/+/, '').split('/').filter(Boolean) ?? []
   const path = segments[0] === 'app' ? segments[1] : segments[0]
   if (path === 'plm' || path === 'crew' || path === 'graph') return path
   return 'graph'
 }
 
+function isInternalChromeShell(): boolean {
+  return globalThis.location?.protocol === 'chrome:'
+    || globalThis.location?.pathname?.includes('/drama/app/index.html') === true
+}
+
 function getShellBasePath(): string {
+  if (isInternalChromeShell()) {
+    return globalThis.location?.pathname ?? '/content/drama/app/index.html'
+  }
   return '/app'
 }
 
 function normalizeShellLocation(surface: Surface): void {
+  if (isInternalChromeShell()) return
+
   const pathname = globalThis.location?.pathname ?? '/'
   const segments = pathname.replace(/^\/+/, '').split('/').filter(Boolean)
   const alreadyAppRoute = segments[0] === 'app'
@@ -219,6 +237,36 @@ function RuntimeChip({
   )
 }
 
+function DramaRuntimeRecoveryPanel({
+  status,
+}: {
+  status: DramaRuntimeStatus
+}) {
+  const stateLabel = status.state === 'error' ? 'error' : 'offline'
+  return (
+    <section className="drama-runtime-recovery" role="status" aria-live="polite">
+      <div className="drama-runtime-recovery-card">
+        <div className="drama-runtime-recovery-mark" aria-hidden="true">D</div>
+        <div className="drama-runtime-recovery-copy">
+          <p className="drama-runtime-recovery-kicker">Drama Runtime</p>
+          <h1>后台运行时未就绪</h1>
+          <p>
+            Drama 工作台已经作为 Zen 内部资源加载，但本地 runtime 暂时不可用。请重新加载面板，或重新双击桌面 Drama 启动完整应用。
+          </p>
+          <div className="drama-runtime-recovery-state">
+            <span>{stateLabel}</span>
+            <strong>{status.updatedAt ? new Date(status.updatedAt).toLocaleTimeString() : 'pending'}</strong>
+          </div>
+          <button type="button" className="drama-runtime-recovery-button" onClick={() => window.location.reload()}>
+            <RotateCcw className="drama-runtime-recovery-button-icon" />
+            重新加载
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function SurfaceButton({
   item,
   active,
@@ -332,7 +380,9 @@ function DramaWorkbenchShell({
         </header>
 
         <section className="drama-surface-frame" data-surface={surface}>
-          {children}
+          {runtimeStatus.state === 'offline' || runtimeStatus.state === 'error' ? (
+            <DramaRuntimeRecoveryPanel status={runtimeStatus} />
+          ) : children}
         </section>
       </main>
     </div>
@@ -395,6 +445,9 @@ export function App() {
     },
     recordDramaProjectFile(request) {
       return runtimeClient.request('drama:projectFile:record', request)
+    },
+    listDramaProjectFiles(request) {
+      return runtimeClient.request('drama:projectFile:list', request)
     },
     loadDramaGraph() {
       return runtimeClient.request('drama:graph:load', { importStoryletIfMissing: false })
@@ -546,8 +599,12 @@ export function App() {
     const params = new URLSearchParams()
     if (zenHost) params.set('host', 'zen')
     if (runtimeBaseUrl !== 'http://127.0.0.1:3198') params.set('runtime', runtimeBaseUrl)
+    if (isInternalChromeShell()) params.set('surface', next)
     const search = params.toString() ? `?${params.toString()}` : ''
-    globalThis.history?.pushState?.({}, '', `${getShellBasePath()}/${next}${search}`)
+    const nextUrl = isInternalChromeShell()
+      ? `${getShellBasePath()}${search}`
+      : `${getShellBasePath()}/${next}${search}`
+    globalThis.history?.pushState?.({}, '', nextUrl)
   }, [runtimeBaseUrl, zenHost])
 
   const writeCrewSuggestion = React.useCallback(() => {

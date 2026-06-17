@@ -227,7 +227,7 @@ try {
     response = recv_frame(sock)
 
 result = response[3].get("value") if len(response) > 3 and isinstance(response[3], dict) else None
-expected_prefix = f"{runtime_url}/app/{surface}?host=zen&runtime={quote(runtime_url, safe='')}"
+expected_prefix = f"chrome://browser/content/drama/app/index.html?host=zen&runtime={quote(runtime_url, safe='')}&surface={surface}"
 expected_icon = f"chrome://browser/content/zen-icons/drama-{surface}.svg"
 checks = {
     "manager": result and result.get("managerType") == "object",

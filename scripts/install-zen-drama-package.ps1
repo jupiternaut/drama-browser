@@ -169,6 +169,10 @@ $installManifest = [ordered]@{
   sourcePackage = $packageRoot
   surface = $Surface
   shortcut = -not $NoShortcut
+  launcher = "Start-Drama-Zen.ps1"
+  logs = "logs"
+  openLogs = "Open-Drama-Logs.ps1"
+  uninstall = "Uninstall-Drama-Zen.ps1"
 }
 ($installManifest | ConvertTo-Json -Depth 4) | Set-Content -LiteralPath $installedManifestPath -Encoding UTF8
 

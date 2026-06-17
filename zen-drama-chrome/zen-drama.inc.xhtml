@@ -1,0 +1,46 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+<vbox id="zen-drama-panel" hidden="true">
+  <hbox id="zen-drama-toolbar" class="chromeclass-toolbar" align="center">
+    <toolbarbutton
+      id="zen-drama-graph-button"
+      class="toolbarbutton-1 zen-drama-toolbar-button"
+      command="cmd_zenDramaOpenGraph"
+      label="Graph"
+      tooltiptext="Drama Graph" />
+    <toolbarbutton
+      id="zen-drama-plm-button"
+      class="toolbarbutton-1 zen-drama-toolbar-button"
+      command="cmd_zenDramaOpenPlm"
+      label="PLM"
+      tooltiptext="Drama PLM" />
+    <toolbarbutton
+      id="zen-drama-crew-button"
+      class="toolbarbutton-1 zen-drama-toolbar-button"
+      command="cmd_zenDramaOpenCrew"
+      label="Crew"
+      tooltiptext="Skill Crew" />
+    <spacer flex="1" />
+    <label id="zen-drama-runtime-status" value="Drama" />
+    <toolbarbutton
+      id="zen-drama-open-tab-button"
+      class="toolbarbutton-1 zen-drama-icon-button"
+      command="cmd_zenDramaOpenInTab"
+      tooltiptext="Open Drama in a tab" />
+    <toolbarbutton
+      id="zen-drama-close-button"
+      class="toolbarbutton-1 zen-drama-icon-button"
+      command="cmd_zenDramaToggle"
+      tooltiptext="Close Drama" />
+  </hbox>
+  <browser
+    id="zen-drama-browser"
+    type="content"
+    remote="true"
+    flex="1"
+    maychangeremoteness="true"
+    disableglobalhistory="true" />
+</vbox>
+

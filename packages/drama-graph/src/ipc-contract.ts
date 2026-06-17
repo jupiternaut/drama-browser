@@ -145,3 +145,27 @@ export interface DramaProjectFileRecordResult {
   projectDir: string
   filePath: string
 }
+
+export interface DramaProjectFileListRequest {
+  projectId: string
+  source?: DramaProjectFileSource
+  typePrefix?: string
+  limit?: number
+}
+
+export interface DramaProjectFileRecord {
+  filePath: string
+  schema: 'drama.project_file_event.v1'
+  projectId: string
+  source?: DramaProjectFileSource
+  type?: string
+  title?: string
+  createdAt?: number
+  summary?: Record<string, unknown>
+  payload?: unknown
+}
+
+export interface DramaProjectFileListResult {
+  projectDir: string
+  files: DramaProjectFileRecord[]
+}

@@ -1175,6 +1175,120 @@
   font-size: 12px;
 }
 
+.drama-runtime-recovery {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  padding: var(--drama-space-5);
+  background:
+    radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--drama-accent) 13%, transparent), transparent 36%),
+    var(--drama-bg);
+}
+
+.drama-runtime-recovery-card {
+  display: grid;
+  width: min(520px, 100%);
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: var(--drama-space-3);
+  border: 1px solid var(--drama-border);
+  border-radius: var(--drama-radius-lg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035)), var(--drama-surface);
+  box-shadow: var(--drama-shadow-panel);
+  padding: var(--drama-space-4);
+}
+
+.drama-runtime-recovery-mark {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--drama-border);
+  border-radius: var(--drama-radius-md);
+  background: color-mix(in srgb, var(--drama-accent) 13%, transparent);
+  color: var(--drama-text);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.drama-runtime-recovery-copy {
+  min-width: 0;
+}
+
+.drama-runtime-recovery-kicker {
+  margin: 0;
+  color: var(--drama-text-subtle);
+  font: 700 10px/1.4 "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.drama-runtime-recovery h1 {
+  margin: 4px 0 0;
+  color: var(--drama-text);
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.drama-runtime-recovery p:not(.drama-runtime-recovery-kicker) {
+  margin: 8px 0 0;
+  color: var(--drama-text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.drama-runtime-recovery-state {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  margin-top: var(--drama-space-3);
+  border: 1px solid var(--drama-border);
+  border-radius: var(--drama-radius-sm);
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--drama-text-muted);
+  padding: 5px 8px;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+}
+
+.drama-runtime-recovery-state span {
+  color: var(--drama-danger);
+  font-weight: 750;
+}
+
+.drama-runtime-recovery-state strong {
+  color: var(--drama-text-subtle);
+  font-weight: 600;
+}
+
+.drama-runtime-recovery-button {
+  display: inline-flex;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: var(--drama-space-3);
+  border: 1px solid color-mix(in srgb, var(--drama-accent) 32%, transparent);
+  border-radius: var(--drama-radius-sm);
+  background: color-mix(in srgb, var(--drama-accent) 14%, transparent);
+  color: var(--drama-text);
+  cursor: pointer;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.drama-runtime-recovery-button:hover,
+.drama-runtime-recovery-button:focus-visible {
+  background: color-mix(in srgb, var(--drama-accent) 22%, transparent);
+  outline: none;
+}
+
+.drama-runtime-recovery-button-icon {
+  width: 14px;
+  height: 14px;
+}
+
 .drama-crew-panel-code {
   display: flex;
   min-height: 0;

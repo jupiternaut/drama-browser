@@ -398,10 +398,17 @@ export class PlotPilotRuntimeManager {
     const child = this.child
     if (!child || this.hasExited(child)) {
       if (this.adopted && options.forceAdopted && this.port) {
+        const adoptedPort = this.port
         try {
-          await this.requestShutdown(this.port)
+          await this.requestShutdown(adoptedPort)
         } catch (error) {
           this.appendLog('system', `Adopted PlotPilot shutdown failed: ${normalizeError(error)}`)
+        }
+
+        const adoptedShutdownTimeoutMs = Math.min(options.timeoutMs ?? this.shutdownTimeoutMs, 1_000)
+        const stopped = await this.waitForPortToStop(adoptedPort, adoptedShutdownTimeoutMs)
+        if (!stopped) {
+          await this.forceKillPort(adoptedPort)
         }
       }
       this.markStopped()
@@ -734,6 +741,42 @@ export class PlotPilotRuntimeManager {
 
   private hasExited(child: PlotPilotChildProcess): boolean {
     return child.exitCode !== null && child.exitCode !== undefined
+  }
+
+  private async waitForPortToStop(port: number, timeoutMs: number): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+      const healthy = await this.refreshHealth(port)
+      if (!healthy) {
+        return true
+      }
+      await delay(this.pollIntervalMs)
+    }
+
+    return false
+  }
+
+  private async forceKillPort(port: number): Promise<void> {
+    if (this.deps.platform !== 'win32') {
+      this.appendLog('system', `PlotPilot port ${port} remained active after shutdown request`)
+      return
+    }
+
+    const command = [
+      `$owners = Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique`,
+      'foreach ($ownerProcessId in $owners) {',
+      '  if ($ownerProcessId) {',
+      '    Stop-Process -Id $ownerProcessId -Force -ErrorAction SilentlyContinue',
+      '  }',
+      '}',
+    ].join('; ')
+
+    try {
+      await this.deps.execFile('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command])
+      this.appendLog('system', `Forced cleanup for PlotPilot listener on port ${port}`)
+    } catch (error) {
+      this.appendLog('system', `Forced cleanup failed for PlotPilot port ${port}: ${normalizeError(error)}`)
+    }
   }
 
   private markStopped(): void {

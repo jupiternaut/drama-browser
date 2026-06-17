@@ -3,7 +3,7 @@ import { mkdtemp, readFile, readdir, rm } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
-import { recordDramaProjectFile } from '../project-files.ts'
+import { listDramaProjectFiles, recordDramaProjectFile } from '../project-files.ts'
 
 const tempRoots: string[] = []
 
@@ -79,5 +79,63 @@ describe('recordDramaProjectFile', () => {
 
     expect(result.projectDir).toBe(join(workspaceRoot, 'drama-projects', '..-bad-project'))
     expect(result.filePath.startsWith(join(result.projectDir, '..-graph'))).toBe(true)
+  })
+
+  it('lists project files newest first with source, type prefix, and limit filters', async () => {
+    const workspaceRoot = await tempWorkspace()
+
+    await recordDramaProjectFile({
+      workspaceRoot,
+      now: () => 2100,
+      request: {
+        projectId: 'Novel One',
+        source: 'plm',
+        type: 'plm.storageCard.prompt.saved',
+        title: 'Prompt A',
+        payload: { id: 'prompt-a', template: 'A' },
+      },
+    })
+    await recordDramaProjectFile({
+      workspaceRoot,
+      now: () => 2200,
+      request: {
+        projectId: 'Novel One',
+        source: 'plm',
+        type: 'plm.storageCard.prompt.saved',
+        title: 'Prompt B',
+        payload: { id: 'prompt-b', template: 'B' },
+      },
+    })
+    await recordDramaProjectFile({
+      workspaceRoot,
+      now: () => 2300,
+      request: {
+        projectId: 'Novel One',
+        source: 'plm',
+        type: 'plm.chapter.generated',
+        title: 'Chapter',
+        payload: { id: 'chapter-1' },
+      },
+    })
+
+    const result = await listDramaProjectFiles({
+      workspaceRoot,
+      request: {
+        projectId: 'Novel One',
+        source: 'plm',
+        typePrefix: 'plm.storageCard.prompt.',
+        limit: 1,
+      },
+    })
+
+    expect(result.projectDir).toBe(join(workspaceRoot, 'drama-projects', 'Novel-One'))
+    expect(result.files).toHaveLength(1)
+    expect(result.files[0]).toMatchObject({
+      projectId: 'Novel One',
+      source: 'plm',
+      type: 'plm.storageCard.prompt.saved',
+      title: 'Prompt B',
+      payload: { id: 'prompt-b', template: 'B' },
+    })
   })
 })

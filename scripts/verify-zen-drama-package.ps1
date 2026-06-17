@@ -45,9 +45,12 @@ $manifestPath = Join-Path $packageRoot "manifest.json"
 $runtimeLauncher = Join-Path $packageRoot "Start-Drama-Runtime.ps1"
 $zenLauncher = Join-Path $packageRoot "Start-Drama-Zen.ps1"
 $shortcutInstaller = Join-Path $packageRoot "Install-Shortcut.ps1"
+$logOpener = Join-Path $packageRoot "Open-Drama-Logs.ps1"
+$uninstaller = Join-Path $packageRoot "Uninstall-Drama-Zen.ps1"
 $runtimeScript = Join-Path $packageRoot "runtime\drama-runtime.js"
 $zenExe = Join-Path $packageRoot "zen\zen.exe"
 $browserShellIndex = Join-Path $packageRoot "drama-browser-shell\dist\index.html"
+$browserShellInternalIndex = Join-Path $packageRoot "zen\browser\chrome\browser\content\browser\drama\app\index.html"
 $bootShim = Join-Path $packageRoot "resources\plotpilot_embedded_boot.py"
 $plotPilotRoot = Join-Path $packageRoot "resources\plotpilot\source"
 $plotPilotMain = Join-Path $plotPilotRoot "interfaces\main.py"
@@ -58,9 +61,12 @@ Test-RequiredPath -Path $manifestPath -Label "Package manifest"
 Test-RequiredPath -Path $runtimeLauncher -Label "Runtime launcher"
 Test-RequiredPath -Path $zenLauncher -Label "Zen launcher"
 Test-RequiredPath -Path $shortcutInstaller -Label "Shortcut installer"
+Test-RequiredPath -Path $logOpener -Label "Log opener"
+Test-RequiredPath -Path $uninstaller -Label "Uninstaller"
 Test-RequiredPath -Path $runtimeScript -Label "Runtime bundle"
 Test-RequiredPath -Path $zenExe -Label "Zen executable"
 Test-RequiredPath -Path $browserShellIndex -Label "Browser shell"
+Test-RequiredPath -Path $browserShellInternalIndex -Label "Zen internal browser shell"
 Test-RequiredPath -Path $bootShim -Label "PlotPilot embedded boot shim"
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -76,6 +82,8 @@ if ($plotPilotBundled) {
 Test-PowerShellSyntax -Path $runtimeLauncher
 Test-PowerShellSyntax -Path $zenLauncher
 Test-PowerShellSyntax -Path $shortcutInstaller
+Test-PowerShellSyntax -Path $logOpener
+Test-PowerShellSyntax -Path $uninstaller
 
 $result = [ordered]@{
   packageRoot = $packageRoot

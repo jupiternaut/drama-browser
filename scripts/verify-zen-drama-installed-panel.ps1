@@ -145,9 +145,27 @@ function Set-InstalledZenDramaProfilePrefs {
     $runtimeLauncher
   ) -Compress
 
+  $legacyToolbarState = [ordered]@{
+    placements = [ordered]@{
+      "zen-sidebar-foot-buttons" = @(
+        "downloads-button",
+        "zen-workspaces-button",
+        "zen-drama-button",
+        "zen-create-new-button"
+      )
+    }
+    seen = @()
+    dirtyAreaCache = @("zen-sidebar-foot-buttons")
+    currentVersion = 24
+    newElementCount = 1
+  } | ConvertTo-Json -Depth 10 -Compress
+
   $lines = @(
+    'user_pref("browser.uiCustomization.state", "' + (ConvertTo-FirefoxPrefString $legacyToolbarState) + '");',
     'user_pref("zen.drama.base-url", "' + (ConvertTo-FirefoxPrefString "$runtimeBase/app") + '");',
     'user_pref("zen.drama.runtime-url", "' + (ConvertTo-FirefoxPrefString $runtimeBase) + '");',
+    'user_pref("zen.drama.internal-app.enabled", true);',
+    'user_pref("zen.drama.internal-app-url", "chrome://browser/content/drama/app/index.html");',
     'user_pref("zen.drama.open-on-startup", true);',
     'user_pref("zen.drama.start-surface", "' + (ConvertTo-FirefoxPrefString $InitialSurface) + '");',
     'user_pref("zen.drama.runtime-launch.enabled", true);',
@@ -335,7 +353,7 @@ try {
     response = recv_frame(sock)
 
 result = response[3].get("value") if len(response) > 3 and isinstance(response[3], dict) else None
-expected_prefix = f"{runtime_url}/app/{surface}?host=zen&runtime={quote(runtime_url, safe='')}"
+expected_prefix = f"chrome://browser/content/drama/app/index.html?host=zen&runtime={quote(runtime_url, safe='')}&surface={surface}"
 expected_icon = f"chrome://browser/content/zen-icons/drama-{surface}.svg"
 checks = {
     "manager": result and result.get("managerType") == "object",

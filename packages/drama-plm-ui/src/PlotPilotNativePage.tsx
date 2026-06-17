@@ -52,7 +52,7 @@ import {
   Volume2,
   WandSparkles,
 } from 'lucide-react'
-import { Button, PanelHeader, StatusBadge, cn, type StatusTone } from '@drama/ui'
+import { Button, LiquidEther, PanelHeader, StatusBadge, cn, type StatusTone } from '@drama/ui'
 
 export type PlotPilotRuntimeState = 'offline' | 'starting' | 'ready' | 'error'
 export type PlotPilotWorkspaceSurface =
@@ -301,6 +301,7 @@ export interface PlotPilotNativeFeatureState {
   reviewResult?: Record<string, unknown> | null
   knowledgeStats?: Record<string, unknown> | null
   knowledgeTriples?: Array<Record<string, unknown>>
+  knowledgeSearchResults?: Array<Record<string, unknown>>
   aiTraces?: Array<Record<string, unknown>>
   traceTimeline?: Record<string, unknown> | null
   traceStats?: Record<string, unknown> | null
@@ -313,6 +314,8 @@ export interface PlotPilotNativeFeatureState {
   autopilotStatusEvents?: Array<Record<string, unknown>>
   autopilotChapterEvents?: Array<Record<string, unknown>>
   autopilotChapterSnapshot?: Record<string, unknown> | null
+  hostedWriteEvents?: Array<Record<string, unknown>>
+  hostedWriteSummary?: Record<string, unknown> | null
 }
 
 export interface PlotPilotNativeHandlers {
@@ -353,6 +356,7 @@ export interface PlotPilotNativeHandlers {
   onRefreshReview?: (novelId: string, chapterNumber?: number) => void
   onRefreshMemory?: (novelId: string) => void
   onInferKnowledgeGraph?: (novelId: string) => void
+  onSearchMemory?: (novelId: string, query: string) => void
   onRefreshDebug?: (novelId: string) => void
   onLoadInvocation?: (sessionId: string) => void
   onResumeInvocation?: (sessionId: string) => void
@@ -369,6 +373,7 @@ export interface PlotPilotNativeHandlers {
   onBindWritingSpec?: (novelId: string, writingSpecId: string) => void
   onClearWritingSpec?: (novelId: string) => void
   onUpdateHumanizer?: (novelId: string, settings: PlotPilotHumanizerSettingsDraft) => void
+  onSaveStorageCard?: (novelId: string, card: ScriptStudioStorageCardDraft) => void
   onOpenBible?: (novelId: string) => void
   onOpenBeat?: (novelId: string, beatId: string) => void
   onOpenChapter?: (novelId: string, chapterNumber: number) => void
@@ -495,6 +500,13 @@ export function PlotPilotNativePage({
 }
 
 type ScriptStudioMode = 'script' | 'beats' | 'outline'
+type ScriptStudioWorkspaceMode =
+  | 'creation'
+  | 'setup'
+  | 'planning'
+  | 'production'
+  | 'review'
+  | 'debug'
 type ScriptStudioNavId =
   | 'script'
   | 'beats'
@@ -527,6 +539,23 @@ interface ScriptStudioStorageCardView {
   meta: string
   initials: string
   tone: 'sage' | 'ink' | 'gold'
+  sourceIndex?: number
+  sourceId?: string
+  source?: 'bible' | 'summary' | 'prompt-registry' | 'fallback' | 'draft'
+}
+
+export interface ScriptStudioStorageCardDraft {
+  id?: string
+  kind: 'character' | 'prompt'
+  title: string
+  subtitle: string
+  body: string
+  badge?: string
+  meta?: string
+  tone?: 'sage' | 'ink' | 'gold'
+  sourceIndex?: number
+  sourceId?: string
+  source?: 'bible' | 'summary' | 'prompt-registry' | 'fallback' | 'draft'
 }
 
 const scriptStudioNavItems: Array<{
@@ -586,6 +615,45 @@ const scriptStudioChapterColors = [
   'bg-[#4c9fc3]',
 ]
 
+const scriptStudioWorkspaceModes: Array<{
+  id: ScriptStudioWorkspaceMode
+  label: string
+  detail: string
+  icon: React.ComponentType<{ className?: string }>
+}> = [
+  { id: 'creation', label: '创作', detail: '剧本 / 节拍 / 大纲', icon: PenLine },
+  { id: 'setup', label: '设定', detail: 'Onboarding / Bible', icon: BookOpen },
+  { id: 'planning', label: '规划', detail: '主线 / 宏观 / 连续规划', icon: GitBranch },
+  { id: 'production', label: '生产', detail: 'Autopilot / 连写', icon: Gauge },
+  { id: 'review', label: '审阅', detail: '审稿 / 读者模拟', icon: ShieldCheck },
+  { id: 'debug', label: '调试', detail: 'Trace / Prompt / Memory', icon: Bug },
+]
+
+type ScriptStudioAdvancedAction = {
+  label: string
+  icon?: React.ComponentType<{ className?: string }>
+  onClick?: () => void
+  disabled?: boolean
+  primary?: boolean
+}
+
+type ScriptStudioAdvancedMetric = {
+  label: string
+  value: string
+}
+
+type ScriptStudioAdvancedCardView = {
+  id: string
+  title: string
+  eyebrow: string
+  body: string
+  icon: React.ComponentType<{ className?: string }>
+  tone?: 'sage' | 'ink' | 'gold' | 'rose'
+  status?: string
+  metrics?: ScriptStudioAdvancedMetric[]
+  actions?: ScriptStudioAdvancedAction[]
+}
+
 function ScriptStudioPlmSurface({
   runtimeStatus,
   novels,
@@ -618,6 +686,7 @@ function ScriptStudioPlmSurface({
   className?: string
 }) {
   const [mode, setMode] = React.useState<ScriptStudioMode>('script')
+  const [workspaceMode, setWorkspaceMode] = React.useState<ScriptStudioWorkspaceMode>('creation')
   const [activeNav, setActiveNav] = React.useState<ScriptStudioNavId>('script')
   const [draft, setDraft] = React.useState(chapterEditor?.content ?? '')
   const chapters = React.useMemo(
@@ -654,6 +723,7 @@ function ScriptStudioPlmSurface({
   }, [chapterEditor?.chapterId, chapterEditor?.chapterNumber, chapterEditor?.content])
 
   const selectNav = (nav: ScriptStudioNavId) => {
+    setWorkspaceMode('creation')
     setActiveNav(nav)
     if (nav === 'script') setMode('script')
     if (nav === 'beats') setMode('beats')
@@ -675,12 +745,24 @@ function ScriptStudioPlmSurface({
   return (
     <div
       className={cn(
-        'flex h-full min-h-0 flex-1 overflow-hidden bg-[#f2f1ec] text-[#22241f]',
+        'relative isolate flex h-full min-h-0 flex-1 overflow-hidden bg-[#f2f1ec] text-[#22241f]',
         'font-sans antialiased',
         className,
       )}
     >
-      <aside className="hidden min-h-0 w-[214px] shrink-0 flex-col border-r border-[#dedbd2] bg-[#f8f7f2] text-[#22241f] shadow-[inset_-1px_0_0_rgba(255,255,255,0.7)] md:flex">
+      <LiquidEther
+        className="absolute inset-0 z-0"
+        mouseForce={15}
+        cursorSize={120}
+        resolution={0.4}
+        autoDemo
+        autoSpeed={0.3}
+        autoIntensity={1.8}
+        autoResumeDelay={2000}
+        opacity={1}
+      />
+
+      <aside className="relative z-10 hidden min-h-0 w-[214px] shrink-0 flex-col border-r border-[#dedbd2] bg-[#f8f7f2]/90 text-[#22241f] shadow-[inset_-1px_0_0_rgba(255,255,255,0.7)] backdrop-blur-[2px] md:flex">
         <div className="border-b border-[#e3e0d7] px-3 py-3">
           <button
             type="button"
@@ -692,10 +774,37 @@ function ScriptStudioPlmSurface({
           </button>
         </div>
 
-        <nav className="space-y-0.5 px-3 py-3" aria-label="PLM 创作模块">
+        <nav className="space-y-1 px-3 py-3" aria-label="PLM 工作模式">
+          <div className="mb-2 text-xs font-semibold text-[#68645d]">工作模式</div>
+          {scriptStudioWorkspaceModes.map((item) => {
+            const Icon = item.icon
+            const active = workspaceMode === item.id
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setWorkspaceMode(item.id)}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-[6px] px-2 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                  active ? 'bg-[#e8e7e1] text-[#111411]' : 'text-[#3f433d] hover:bg-[#efeee8]',
+                )}
+              >
+                <Icon className="size-3.5 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-semibold">{item.label}</span>
+                  <span className="mt-0.5 block truncate text-[10px] text-[#817c73]">{item.detail}</span>
+                </span>
+              </button>
+            )
+          })}
+        </nav>
+
+        <nav className="space-y-0.5 border-t border-[#e2ded4] px-3 py-3" aria-label="PLM 创作模块">
+          <div className="mb-2 text-xs font-semibold text-[#68645d]">创作模块</div>
           {scriptStudioNavItems.map((item) => {
             const Icon = item.icon
-            const active = activeNav === item.id
+            const active = workspaceMode === 'creation' && activeNav === item.id
             return (
               <button
                 key={item.id}
@@ -751,16 +860,42 @@ function ScriptStudioPlmSurface({
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex h-12 shrink-0 items-center justify-between border-b border-[#e0ddd4] bg-[#fbfaf6]/96 px-4">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="text-sm font-semibold text-[#2a2d27]">节拍</div>
+            <div className="text-sm font-semibold text-[#2a2d27]">
+              {scriptStudioWorkspaceModes.find((item) => item.id === workspaceMode)?.label ?? '创作'}
+            </div>
             <div className="rounded-[5px] bg-[#f0eee7] px-2 py-1 font-mono text-xs text-[#4f514b]">
               {novel?.chapterCount ?? chapters.length}
             </div>
           </div>
 
-          <div className="hidden items-center gap-1 rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] sm:flex">
+          <div className="hidden max-w-[680px] items-center gap-1 overflow-x-auto rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] sm:flex">
+            {scriptStudioWorkspaceModes.map((item) => {
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setWorkspaceMode(item.id)}
+                  aria-pressed={workspaceMode === item.id}
+                  className={cn(
+                    'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                    workspaceMode === item.id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  {item.label}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className={cn(
+            'hidden items-center gap-1 rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] lg:flex',
+            workspaceMode !== 'creation' && 'opacity-50',
+          )}>
             {([
               ['script', '编辑', PenLine],
               ['beats', '节拍', ListChecks],
@@ -769,11 +904,14 @@ function ScriptStudioPlmSurface({
               <button
                 key={id}
                 type="button"
-                onClick={() => setMode(id)}
-                aria-pressed={mode === id}
+                onClick={() => {
+                  setWorkspaceMode('creation')
+                  setMode(id)
+                }}
+                aria-pressed={workspaceMode === 'creation' && mode === id}
                 className={cn(
                   'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
-                  mode === id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
+                  workspaceMode === 'creation' && mode === id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
                 )}
               >
                 <Icon className="size-3.5" />
@@ -796,8 +934,9 @@ function ScriptStudioPlmSurface({
           </div>
         </header>
 
-        <section className="min-h-0 flex-1 overflow-auto bg-[#f2f1ec] px-3 py-4 lg:px-5">
-          <div className="grid min-h-full w-full min-w-[720px] grid-cols-[minmax(0,1fr)_264px] gap-4">
+        <section className="min-h-0 flex-1 overflow-auto bg-transparent px-3 py-4 lg:px-5">
+          {workspaceMode === 'creation' ? (
+            <div className="grid min-h-full w-full min-w-[720px] grid-cols-[minmax(0,1fr)_264px] gap-4">
             <div className="min-w-0">
               {mode === 'script' ? (
                 <ScriptStudioPaper
@@ -865,11 +1004,2671 @@ function ScriptStudioPlmSurface({
               codexStatus={codexStatus}
               projectGuardStatus={projectGuardStatus}
               lastWritingSpecFailure={lastWritingSpecFailure}
+              handlers={handlers}
             />
           </div>
+          ) : (
+            <ScriptStudioAdvancedWorkspace
+              workspaceMode={workspaceMode}
+              runtimeStatus={runtimeStatus}
+              logs={logs}
+              novels={novels}
+              novel={novel}
+              chapterEditor={chapterEditor}
+              selectedBibleData={selectedBibleData}
+              featureState={featureState}
+              handlers={handlers}
+              ready={ready}
+              busy={busy}
+              codexStatus={codexStatus}
+              projectGuardStatus={projectGuardStatus}
+              lastWritingSpecFailure={lastWritingSpecFailure}
+            />
+          )}
         </section>
       </main>
     </div>
+  )
+}
+
+function ScriptStudioAdvancedWorkspace({
+  workspaceMode,
+  runtimeStatus,
+  logs,
+  novels,
+  novel,
+  chapterEditor,
+  selectedBibleData,
+  featureState,
+  handlers,
+  ready,
+  busy,
+  codexStatus,
+  projectGuardStatus,
+  lastWritingSpecFailure,
+}: {
+  workspaceMode: Exclude<ScriptStudioWorkspaceMode, 'creation'>
+  runtimeStatus: PlotPilotRuntimeStatus
+  logs: PlotPilotLogEntry[]
+  novels: PlotPilotNovel[]
+  novel: PlotPilotNovel | null
+  chapterEditor?: PlotPilotChapterEditor | null
+  selectedBibleData?: PlotPilotBibleEditorData | null
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+  codexStatus?: PlotPilotCodexStatus | null
+  projectGuardStatus?: PlotPilotProjectGuardStatus | null
+  lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+}) {
+  const currentSurface: PlotPilotWorkspaceSurface =
+    workspaceMode === 'setup'
+      ? 'setup'
+      : workspaceMode === 'planning'
+        ? 'planning'
+        : workspaceMode === 'production'
+          ? 'autopilot'
+          : workspaceMode === 'review'
+            ? 'review'
+            : 'debug'
+  const title = scriptStudioWorkspaceModes.find((item) => item.id === workspaceMode)?.label ?? 'PLM'
+  const detail = scriptStudioWorkspaceModes.find((item) => item.id === workspaceMode)?.detail ?? ''
+  const cards = createScriptStudioAdvancedCards({
+    workspaceMode,
+    runtimeStatus,
+    logs,
+    novels,
+    novel,
+    chapterEditor,
+    selectedBibleData,
+    featureState,
+    handlers,
+    ready,
+    busy,
+    codexStatus,
+    projectGuardStatus,
+    lastWritingSpecFailure,
+  })
+
+  return (
+    <div className="min-h-full min-w-[960px]">
+      <div className="mb-4 rounded-[12px] border border-[#dedbd2] bg-[#fffefd]/94 shadow-[0_18px_44px_rgba(43,38,27,0.10)] backdrop-blur-[2px]">
+        <div className="flex min-h-14 items-center justify-between gap-3 border-b border-[#e7e2d7] px-4 py-3">
+          <div className="min-w-0">
+            <div className="text-base font-semibold text-[#252822]">{title}</div>
+            <div className="mt-0.5 truncate text-xs text-[#817c73]">{detail}</div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <RuntimeBadge state={runtimeStatus.state} />
+            <span className="rounded-[6px] border border-[#e4e0d6] bg-[#f7f6f1] px-2 py-1 font-mono text-[10px] text-[#68645d]">
+              {novels.length} novels
+            </span>
+          </div>
+        </div>
+        <div className="space-y-4 bg-[#f8f7f2] p-4">
+          <ScriptStudioAdvancedOverview cards={cards} />
+          <ScriptStudioAdvancedDetail
+            workspaceMode={workspaceMode}
+            runtimeStatus={runtimeStatus}
+            logs={logs}
+            novel={novel}
+            chapterEditor={chapterEditor}
+            selectedBibleData={selectedBibleData}
+            featureState={featureState}
+            handlers={handlers}
+            ready={ready}
+            busy={busy}
+            projectGuardStatus={projectGuardStatus}
+            lastWritingSpecFailure={lastWritingSpecFailure}
+          />
+
+          <details className="group overflow-hidden rounded-[10px] border border-[#d9d4c8] bg-[#fffefd] shadow-[0_10px_28px_rgba(43,38,27,0.08)]">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left outline-none transition hover:bg-[#faf9f4] focus-visible:ring-2 focus-visible:ring-[#174a38]/20">
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-[#282b25]">兼容控制台</span>
+                <span className="mt-0.5 block truncate text-xs text-[#817c73]">
+                  旧 PlotPilot 深色工作区暂时保留，未迁完的细表单和 trace 操作都能从这里进入。
+                </span>
+              </span>
+              <ChevronDown className="size-4 shrink-0 text-[#817c73] transition group-open:rotate-180" />
+            </summary>
+            <div className="bg-[#08090d] p-3 text-white">
+              <WorkspaceHeader
+                novel={novel}
+                surface={currentSurface}
+                projectGuardStatus={projectGuardStatus}
+                onSurfaceChange={() => undefined}
+              />
+              <div className="min-h-[640px] bg-[#0a0b10] p-3">
+                {workspaceMode === 'setup' ? (
+                  <div className="space-y-3">
+                    <SetupWorkspace
+                      novel={novel}
+                      featureState={featureState}
+                      handlers={handlers}
+                      ready={ready}
+                      busy={busy}
+                    />
+                    <BibleWorkspace
+                      novel={novel}
+                      bibleData={selectedBibleData}
+                      handlers={handlers}
+                      ready={ready}
+                      busy={busy}
+                    />
+                  </div>
+                ) : null}
+
+                {workspaceMode === 'planning' ? (
+                  <div className="space-y-3">
+                    <PlanningWorkspace
+                      novel={novel}
+                      chapterEditor={chapterEditor}
+                      featureState={featureState}
+                      handlers={handlers}
+                      ready={ready}
+                      busy={busy}
+                    />
+                    <BeatWorkspace
+                      novel={novel}
+                      featureState={featureState}
+                      handlers={handlers}
+                      ready={ready}
+                      busy={busy}
+                    />
+                  </div>
+                ) : null}
+
+                {workspaceMode === 'production' ? (
+                  <div className="space-y-3">
+                    <AutopilotWorkspace
+                      novel={novel}
+                      featureState={featureState}
+                      handlers={handlers}
+                      ready={ready}
+                      busy={busy}
+                    />
+                    <ChapterWorkspace
+                      novel={novel}
+                      chapterEditor={chapterEditor}
+                      handlers={handlers}
+                      ready={ready}
+                      busy={busy}
+                    />
+                  </div>
+                ) : null}
+
+                {workspaceMode === 'review' ? (
+                  <ReviewWorkspace
+                    novel={novel}
+                    chapterEditor={chapterEditor}
+                    featureState={featureState}
+                    handlers={handlers}
+                    ready={ready}
+                    busy={busy}
+                  />
+                ) : null}
+
+                {workspaceMode === 'debug' ? (
+                  <div className="space-y-3">
+                    <DebugWorkspace
+                      novel={novel}
+                      featureState={featureState}
+                      handlers={handlers}
+                      ready={ready}
+                      busy={busy}
+                    />
+                    <MemoryWorkspace
+                      novel={novel}
+                      featureState={featureState}
+                      handlers={handlers}
+                      ready={ready}
+                      busy={busy}
+                    />
+                    <GenerationPanel
+                      status={runtimeStatus}
+                      novel={novel}
+                      projectGuardStatus={projectGuardStatus}
+                      lastWritingSpecFailure={lastWritingSpecFailure}
+                      logs={logs}
+                      handlers={handlers}
+                    />
+                    <RuntimeCard
+                      status={runtimeStatus}
+                      meta={runtimeMeta[runtimeStatus.state]}
+                      codexStatus={codexStatus}
+                      onStartCodexLogin={handlers?.onStartCodexLogin}
+                      busy={busy}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function createScriptStudioAdvancedCards({
+  workspaceMode,
+  runtimeStatus,
+  logs,
+  novels,
+  novel,
+  chapterEditor,
+  selectedBibleData,
+  featureState,
+  handlers,
+  ready,
+  busy,
+  codexStatus,
+  projectGuardStatus,
+  lastWritingSpecFailure,
+}: {
+  workspaceMode: Exclude<ScriptStudioWorkspaceMode, 'creation'>
+  runtimeStatus: PlotPilotRuntimeStatus
+  logs: PlotPilotLogEntry[]
+  novels: PlotPilotNovel[]
+  novel: PlotPilotNovel | null
+  chapterEditor?: PlotPilotChapterEditor | null
+  selectedBibleData?: PlotPilotBibleEditorData | null
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+  codexStatus?: PlotPilotCodexStatus | null
+  projectGuardStatus?: PlotPilotProjectGuardStatus | null
+  lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+}): ScriptStudioAdvancedCardView[] {
+  const hasNovel = Boolean(novel)
+  const activeChapter = chapterEditor?.chapterNumber ?? novel?.chapters?.[0]?.number ?? 1
+  const runtimeReady = ready && runtimeStatus.state === 'ready'
+  const disabled = !hasNovel || !runtimeReady || busy
+  const novelId = novel?.id ?? ''
+  const activeInvocation = asUiRecord(featureState.activeInvocation)
+  const invocationSessionId = readUiString(activeInvocation, ['sessionId', 'session_id', 'id'])
+  const totalChapters = novel?.targetChapters ?? novel?.chapterCount ?? 0
+  const writtenChapters = (novel?.chapters ?? []).filter((chapter) => (chapter.wordCount ?? 0) > 0).length
+  const bibleCharacterCount = selectedBibleData?.characters?.length ?? novel?.bible?.characters?.length ?? 0
+  const bibleLocationCount = selectedBibleData?.locations?.length ?? 0
+  const worldCount = selectedBibleData?.world_settings?.length ?? (novel?.bible?.world ? 1 : 0)
+  const autoStatus = readUiString(asUiRecord(featureState.autopilotStatus), ['state', 'status', 'phase'])
+  const breakerStatus = readUiString(asUiRecord(featureState.autopilotCircuitBreaker), ['state', 'status'])
+
+  if (workspaceMode === 'setup') {
+    return [
+      {
+        id: 'setup-onboarding',
+        title: '书籍向导',
+        eyebrow: 'Onboarding',
+        body: '恢复 PlotPilot 的类型、世界观、结构、节奏和文风入口。当前白色层先承载创建、刷新和设定确认。',
+        icon: WandSparkles,
+        tone: 'sage',
+        status: novel ? (novel.status ?? '已选择') : '未创建',
+        metrics: [
+          { label: '书目', value: novels.length.toLocaleString() },
+          { label: '目标章节', value: String(totalChapters || 0) },
+        ],
+        actions: [
+          { label: novel ? '刷新设定' : '新建书目', icon: novel ? RotateCw : Plus, onClick: novel ? () => handlers?.onRefreshSetup?.(novel.id) : handlers?.onCreateNovel, disabled: novel ? disabled || !handlers?.onRefreshSetup : !runtimeReady || busy || !handlers?.onCreateNovel, primary: true },
+          { label: '导入 Storylet', icon: GitBranch, onClick: handlers?.onImportStorylet, disabled: !runtimeReady || busy || !handlers?.onImportStorylet },
+        ],
+      },
+      {
+        id: 'setup-bible',
+        title: 'Bible 全量编辑',
+        eyebrow: 'World / Character / Location',
+        body: '把角色卡、地点、世界观、时间线、风格规范归入设定模式；深色兼容区仍保留完整表单。',
+        icon: BookOpen,
+        tone: 'ink',
+        status: selectedBibleData ? '已载入' : '待生成',
+        metrics: [
+          { label: '人物', value: String(bibleCharacterCount) },
+          { label: '地点', value: String(bibleLocationCount) },
+          { label: '世界观', value: String(worldCount) },
+          { label: '风格', value: selectedBibleData?.style ? '已写入' : '未写入' },
+        ],
+        actions: [
+          { label: '生成 Bible', icon: Sparkles, onClick: novel ? () => handlers?.onGenerateBible?.(novel.id) : undefined, disabled: disabled || !handlers?.onGenerateBible, primary: true },
+          { label: '打开 Bible', icon: BookOpen, onClick: novel ? () => handlers?.onOpenBible?.(novel.id) : undefined, disabled: disabled || !handlers?.onOpenBible },
+        ],
+      },
+      {
+        id: 'setup-guard',
+        title: 'WritingSpec 与 Humanizer',
+        eyebrow: 'Quality Guard',
+        body: '绑定写作规范、Humanizer 策略和失败报告，后续生成失败会继续写入 Graph event。',
+        icon: ShieldCheck,
+        tone: 'gold',
+        status: projectGuardStatus?.writingSpecId ? '已绑定' : '未绑定',
+        metrics: [
+          { label: 'Codex', value: codexStatus?.authenticated ? '已登录' : '未登录' },
+          { label: 'Humanizer', value: projectGuardStatus?.humanizerEnabled ? (projectGuardStatus.humanizerPolicy ?? 'on') : 'off' },
+        ],
+        actions: [
+          { label: 'Codex 登录', icon: LogIn, onClick: handlers?.onStartCodexLogin, disabled: busy || !handlers?.onStartCodexLogin },
+          { label: '清除规范', icon: Trash2, onClick: novel ? () => handlers?.onClearWritingSpec?.(novel.id) : undefined, disabled: disabled || !projectGuardStatus?.writingSpecId || !handlers?.onClearWritingSpec },
+        ],
+      },
+    ]
+  }
+
+  if (workspaceMode === 'planning') {
+    return [
+      {
+        id: 'planning-main-plot',
+        title: '主线候选',
+        eyebrow: 'Main Plot Options',
+        body: '恢复 PlotPilot 的主线候选生成与选择入口，先把候选数和生成动作放进新白色层。',
+        icon: GitBranch,
+        tone: 'sage',
+        status: featureState.mainPlotOptions?.length ? '已有候选' : '待生成',
+        metrics: [
+          { label: '候选', value: String(featureState.mainPlotOptions?.length ?? 0) },
+          { label: 'Auto approve', value: novel?.autoApproveMode ? 'on' : 'off' },
+        ],
+        actions: [
+          { label: '生成候选', icon: Sparkles, onClick: novel ? () => handlers?.onSuggestMainPlotOptions?.(novel.id) : undefined, disabled: disabled || !handlers?.onSuggestMainPlotOptions, primary: true },
+          { label: novel?.autoApproveMode ? '关闭自动确认' : '开启自动确认', icon: CheckCircle2, onClick: novel ? () => handlers?.onSetAutoApproveMode?.(novel.id, !novel.autoApproveMode) : undefined, disabled: disabled || !handlers?.onSetAutoApproveMode },
+        ],
+      },
+      {
+        id: 'planning-outline',
+        title: 'Plot Outline',
+        eyebrow: 'Outline Stream / Save',
+        body: '把 plot-outline 流式生成、保存和回退继续向白色大纲面板迁移；兼容区保留原始 JSON。',
+        icon: ListChecks,
+        tone: 'ink',
+        status: featureState.plotOutline ? '已生成' : '空',
+        metrics: [
+          { label: '阶段', value: featureState.planningStructure ? '已有结构' : '未载入' },
+          { label: '事件', value: String(featureState.setupEvents?.length ?? 0) },
+        ],
+        actions: [
+          { label: '生成大纲', icon: Sparkles, onClick: novel ? () => handlers?.onGeneratePlotOutline?.(novel.id) : undefined, disabled: disabled || !handlers?.onGeneratePlotOutline, primary: true },
+          { label: '刷新规划', icon: RotateCw, onClick: novel ? () => handlers?.onRefreshPlanning?.(novel.id) : undefined, disabled: disabled || !handlers?.onRefreshPlanning },
+        ],
+      },
+      {
+        id: 'planning-macro',
+        title: '宏观与连续规划',
+        eyebrow: 'Macro / Continuous',
+        body: '承载幕、卷、章节结构规划，支持从当前章节继续规划下一段。',
+        icon: Network,
+        tone: 'gold',
+        status: featureState.planningResult ? '有结果' : '待规划',
+        metrics: [
+          { label: '当前章', value: String(activeChapter) },
+          { label: '节拍', value: String(novel?.beatCount ?? 0) },
+        ],
+        actions: [
+          { label: '生成宏观规划', icon: Layers, onClick: novel ? () => handlers?.onGenerateMacroPlan?.(novel.id) : undefined, disabled: disabled || !handlers?.onGenerateMacroPlan, primary: true },
+          { label: '继续规划', icon: Repeat2, onClick: novel ? () => handlers?.onContinuePlanning?.(novel.id, activeChapter) : undefined, disabled: disabled || !handlers?.onContinuePlanning },
+          { label: '生成 Beat', icon: ListChecks, onClick: novel ? () => handlers?.onGenerateBeat?.(novel.id) : undefined, disabled: disabled || !handlers?.onGenerateBeat },
+        ],
+      },
+    ]
+  }
+
+  if (workspaceMode === 'production') {
+    return [
+      {
+        id: 'production-chapter',
+        title: '章节生成与回写',
+        eyebrow: 'Chapter Runtime',
+        body: '章节正文、保存、回写 Graph 的主入口；确保生成结果不再停留在旧深色面板。',
+        icon: FileText,
+        tone: 'sage',
+        status: chapterEditor?.dirty ? '未保存' : (chapterEditor?.status ?? 'ready'),
+        metrics: [
+          { label: '当前章', value: String(activeChapter) },
+          { label: '字数', value: formatCount(chapterEditor?.wordCount, 'words') },
+        ],
+        actions: [
+          { label: '生成章节', icon: Sparkles, onClick: novel ? () => handlers?.onGenerateChapter?.(novel.id, activeChapter) : undefined, disabled: disabled || !handlers?.onGenerateChapter, primary: true },
+          { label: '保存正文', icon: Save, onClick: novel && chapterEditor ? () => handlers?.onSaveChapter?.(novel.id, activeChapter, chapterEditor.content) : undefined, disabled: disabled || !chapterEditor || !handlers?.onSaveChapter },
+          { label: '回写 Graph', icon: GitBranch, onClick: novel ? () => handlers?.onWriteBackChapter?.(novel.id, activeChapter) : undefined, disabled: disabled || !handlers?.onWriteBackChapter },
+        ],
+      },
+      {
+        id: 'production-autopilot',
+        title: 'Autopilot 连写',
+        eyebrow: 'Hosted Write / Batch',
+        body: '多章连写、暂停、恢复、失败恢复从右侧控制器迁到生产模式。',
+        icon: Gauge,
+        tone: 'ink',
+        status: autoStatus || 'idle',
+        metrics: [
+          { label: '完成章节', value: `${writtenChapters}/${totalChapters || 0}` },
+          { label: 'Breaker', value: breakerStatus || 'normal' },
+        ],
+        actions: [
+          { label: '启动', icon: Play, onClick: novel ? () => handlers?.onStartAutopilot?.(novel.id, 3, novel.targetChapters ?? 3, novel.targetWordsPerChapter ?? 2500, novel.autoApproveMode) : undefined, disabled: disabled || !handlers?.onStartAutopilot, primary: true },
+          { label: '暂停', icon: Pause, onClick: novel ? () => handlers?.onStopAutopilot?.(novel.id) : undefined, disabled: !hasNovel || !runtimeReady || !handlers?.onStopAutopilot },
+          { label: '恢复', icon: Repeat2, onClick: novel ? () => handlers?.onResumeAutopilot?.(novel.id) : undefined, disabled: disabled || !handlers?.onResumeAutopilot },
+          { label: '重置失败', icon: RotateCw, onClick: novel ? () => handlers?.onResetAutopilotBreaker?.(novel.id) : undefined, disabled: disabled || !handlers?.onResetAutopilotBreaker },
+        ],
+      },
+      {
+        id: 'production-hosted-write',
+        title: 'Hosted Write',
+        eyebrow: 'Range Generation',
+        body: '批量章节保存与失败恢复先做成可见入口，后续会补每章流式进度。',
+        icon: Clapperboard,
+        tone: 'gold',
+        status: runtimeStatus.activeJob?.label ?? '待命',
+        metrics: [
+          { label: 'Runtime', value: runtimeMeta[runtimeStatus.state].label },
+          { label: '进度', value: `${Math.round(runtimeStatus.activeJob?.progress ?? 0)}%` },
+        ],
+        actions: [
+          { label: '连写 3 章', icon: Play, onClick: novel ? () => handlers?.onHostedWrite?.(novel.id, activeChapter, activeChapter + 2, true, true) : undefined, disabled: disabled || !handlers?.onHostedWrite, primary: true },
+          { label: '刷新状态', icon: RotateCw, onClick: novel ? () => handlers?.onRefreshAutopilot?.(novel.id) : undefined, disabled: disabled || !handlers?.onRefreshAutopilot },
+        ],
+      },
+    ]
+  }
+
+  if (workspaceMode === 'review') {
+    return [
+      {
+        id: 'review-writing-spec',
+        title: 'WritingSpec 报告',
+        eyebrow: 'Quality Report',
+        body: lastWritingSpecFailure?.message || '审阅模式会集中显示写作规范、失败报告和生成阻断原因。',
+        icon: ShieldCheck,
+        tone: 'rose',
+        status: lastWritingSpecFailure ? '有失败报告' : '正常',
+        metrics: [
+          { label: 'Spec', value: projectGuardStatus?.writingSpecTitle ?? projectGuardStatus?.writingSpecId ?? '未绑定' },
+          { label: '章节', value: String(activeChapter) },
+        ],
+        actions: [
+          { label: '审阅章节', icon: ShieldCheck, onClick: novel ? () => handlers?.onReviewChapter?.(novel.id, activeChapter) : undefined, disabled: disabled || !handlers?.onReviewChapter, primary: true },
+          { label: '刷新审阅', icon: RotateCw, onClick: novel ? () => handlers?.onRefreshReview?.(novel.id, activeChapter) : undefined, disabled: disabled || !handlers?.onRefreshReview },
+        ],
+      },
+      {
+        id: 'review-readers',
+        title: '读者模拟',
+        eyebrow: 'Reader Simulation',
+        body: '把读者模拟、反 AI、俗套扫描、人设 OOC 统一收进审阅模式。',
+        icon: Users,
+        tone: 'sage',
+        status: featureState.readerReport || featureState.readerSimulations?.length ? '已有反馈' : '待模拟',
+        metrics: [
+          { label: '模拟读者', value: String(featureState.readerSimulations?.length ?? 0) },
+          { label: '俗套警报', value: String(featureState.churnAlerts?.length ?? 0) },
+        ],
+        actions: [
+          { label: '模拟读者', icon: Users, onClick: novel ? () => handlers?.onSimulateReaders?.(novel.id, activeChapter) : undefined, disabled: disabled || !handlers?.onSimulateReaders, primary: true },
+        ],
+      },
+      {
+        id: 'review-humanizer',
+        title: '反 AI 与声线',
+        eyebrow: 'Humanizer / Voice',
+        body: 'Humanizer、角色声线、OOC 检查会继续写入 Graph event，避免审阅结果散落。',
+        icon: Palette,
+        tone: 'gold',
+        status: projectGuardStatus?.humanizerEnabled ? 'Humanizer on' : 'Humanizer off',
+        metrics: [
+          { label: '审阅结果', value: featureState.reviewResult ? '已生成' : '无' },
+          { label: '失败事件', value: String(logs.filter((entry) => entry.level === 'error').length) },
+        ],
+        actions: [
+          { label: '打开报告', icon: FileText, onClick: novel ? () => handlers?.onRefreshReview?.(novel.id, activeChapter) : undefined, disabled: disabled || !handlers?.onRefreshReview },
+        ],
+      },
+    ]
+  }
+
+  return [
+    {
+      id: 'debug-prompts',
+      title: 'Prompt Registry',
+      eyebrow: 'Prompt / Trace',
+      body: '提示词注册表、变量、输出绑定和调用记录进入开发者抽屉。',
+      icon: Terminal,
+      tone: 'ink',
+      status: featureState.promptStats ? '已载入' : '待刷新',
+      metrics: [
+        { label: 'Prompts', value: String(featureState.prompts?.length ?? 0) },
+        { label: 'AI traces', value: String(featureState.aiTraces?.length ?? 0) },
+      ],
+      actions: [
+        { label: '刷新 Debug', icon: RotateCw, onClick: novel ? () => handlers?.onRefreshDebug?.(novel.id) : undefined, disabled: disabled || !handlers?.onRefreshDebug, primary: true },
+        { label: '加载 Timeline', icon: Clock3, onClick: novel ? () => handlers?.onLoadTraceTimeline?.(novel.id, readUiString(asUiRecord(featureState.traceTimeline), ['traceId', 'trace_id', 'id']) || 'latest') : undefined, disabled: disabled || !handlers?.onLoadTraceTimeline },
+      ],
+    },
+    {
+      id: 'debug-invocation',
+      title: 'Invocation 审阅流',
+      eyebrow: 'Accept / Retry / Commit',
+      body: '生成前后审阅、accept、retry、resume、commit 不再只藏在 trace JSON 里。',
+      icon: Activity,
+      tone: 'rose',
+      status: invocationSessionId ? 'active' : 'none',
+      metrics: [
+        { label: 'Session', value: invocationSessionId || '-' },
+        { label: 'Trace stats', value: featureState.traceStats ? '有' : '无' },
+      ],
+      actions: [
+        { label: '加载', icon: Search, onClick: invocationSessionId ? () => handlers?.onLoadInvocation?.(invocationSessionId) : undefined, disabled: !invocationSessionId || busy || !handlers?.onLoadInvocation },
+        { label: '接受', icon: CheckCircle2, onClick: invocationSessionId ? () => handlers?.onAcceptInvocation?.(invocationSessionId) : undefined, disabled: !invocationSessionId || busy || !handlers?.onAcceptInvocation, primary: true },
+        { label: '重试', icon: RotateCw, onClick: invocationSessionId ? () => handlers?.onRetryInvocation?.(invocationSessionId) : undefined, disabled: !invocationSessionId || busy || !handlers?.onRetryInvocation },
+        { label: '提交', icon: Save, onClick: invocationSessionId ? () => handlers?.onCommitInvocation?.(invocationSessionId) : undefined, disabled: !invocationSessionId || busy || !handlers?.onCommitInvocation },
+      ],
+    },
+    {
+      id: 'debug-memory',
+      title: 'Memory Graph',
+      eyebrow: 'Knowledge / RAG',
+      body: '实体、三元组、伏笔和章节后置同步结果会在这里可视化，作为 Graph 与 PLM 的记忆桥。',
+      icon: Brain,
+      tone: 'sage',
+      status: featureState.knowledgeStats ? '已索引' : '未索引',
+      metrics: [
+        { label: 'Triples', value: String(featureState.knowledgeTriples?.length ?? 0) },
+        { label: 'Logs', value: String(logs.length) },
+      ],
+      actions: [
+        { label: '刷新记忆', icon: RotateCw, onClick: novel ? () => handlers?.onRefreshMemory?.(novel.id) : undefined, disabled: disabled || !handlers?.onRefreshMemory, primary: true },
+        { label: '推断图谱', icon: Network, onClick: novel ? () => handlers?.onInferKnowledgeGraph?.(novel.id) : undefined, disabled: disabled || !handlers?.onInferKnowledgeGraph },
+      ],
+    },
+  ]
+}
+
+function ScriptStudioAdvancedDetail({
+  workspaceMode,
+  runtimeStatus,
+  logs,
+  novel,
+  chapterEditor,
+  selectedBibleData,
+  featureState,
+  handlers,
+  ready,
+  busy,
+  projectGuardStatus,
+  lastWritingSpecFailure,
+}: {
+  workspaceMode: Exclude<ScriptStudioWorkspaceMode, 'creation'>
+  runtimeStatus: PlotPilotRuntimeStatus
+  logs: PlotPilotLogEntry[]
+  novel: PlotPilotNovel | null
+  chapterEditor?: PlotPilotChapterEditor | null
+  selectedBibleData?: PlotPilotBibleEditorData | null
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+  projectGuardStatus?: PlotPilotProjectGuardStatus | null
+  lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+}) {
+  if (workspaceMode === 'setup') {
+    return (
+      <ScriptStudioSetupDetail
+        novel={novel}
+        selectedBibleData={selectedBibleData}
+        featureState={featureState}
+        handlers={handlers}
+        ready={ready}
+        busy={busy}
+        projectGuardStatus={projectGuardStatus}
+      />
+    )
+  }
+
+  if (workspaceMode === 'planning') {
+    return (
+      <ScriptStudioPlanningDetail
+        novel={novel}
+        chapterEditor={chapterEditor}
+        featureState={featureState}
+        handlers={handlers}
+        ready={ready}
+        busy={busy}
+      />
+    )
+  }
+
+  if (workspaceMode === 'production') {
+    return (
+      <ScriptStudioProductionDetail
+        runtimeStatus={runtimeStatus}
+        novel={novel}
+        chapterEditor={chapterEditor}
+        featureState={featureState}
+        handlers={handlers}
+        ready={ready}
+        busy={busy}
+      />
+    )
+  }
+
+  if (workspaceMode === 'review') {
+    return (
+      <ScriptStudioReviewDetail
+        logs={logs}
+        novel={novel}
+        chapterEditor={chapterEditor}
+        featureState={featureState}
+        handlers={handlers}
+        ready={ready}
+        busy={busy}
+        projectGuardStatus={projectGuardStatus}
+        lastWritingSpecFailure={lastWritingSpecFailure}
+      />
+    )
+  }
+
+  if (workspaceMode === 'debug') {
+    return (
+      <ScriptStudioDebugDetail
+        logs={logs}
+        novel={novel}
+        featureState={featureState}
+        handlers={handlers}
+        ready={ready}
+        busy={busy}
+      />
+    )
+  }
+
+  return (
+    <ScriptStudioModeMapDetail
+      workspaceMode={workspaceMode}
+      novel={novel}
+      featureState={featureState}
+      handlers={handlers}
+      ready={ready}
+      busy={busy}
+    />
+  )
+}
+
+function ScriptStudioSetupDetail({
+  novel,
+  selectedBibleData,
+  featureState,
+  handlers,
+  ready,
+  busy,
+  projectGuardStatus,
+}: {
+  novel: PlotPilotNovel | null
+  selectedBibleData?: PlotPilotBibleEditorData | null
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+  projectGuardStatus?: PlotPilotProjectGuardStatus | null
+}) {
+  const [draft, setDraft] = React.useState<PlotPilotOnboardingDraft>(() => onboardingDraftFromNovel(novel))
+  const [bibleDraft, setBibleDraft] = React.useState<PlotPilotBibleEditorData | null>(selectedBibleData ?? null)
+  const [writingSpecId, setWritingSpecId] = React.useState(projectGuardStatus?.writingSpecId ?? '')
+
+  React.useEffect(() => {
+    setDraft(onboardingDraftFromNovel(novel))
+  }, [novel?.id])
+
+  React.useEffect(() => {
+    setBibleDraft(selectedBibleData ?? null)
+  }, [selectedBibleData])
+
+  React.useEffect(() => {
+    setWritingSpecId(projectGuardStatus?.writingSpecId ?? '')
+  }, [projectGuardStatus?.writingSpecId])
+
+  const updateDraft = (patch: Partial<PlotPilotOnboardingDraft>) => {
+    setDraft((current) => ({ ...current, ...patch }))
+  }
+  const canCreate = Boolean(!novel && ready && !busy && draft.title.trim() && handlers?.onCreateNovelFromOnboarding)
+  const canSave = Boolean(novel && ready && !busy && draft.title.trim() && handlers?.onSaveNovelSetup)
+  const canSaveBible = Boolean(novel && ready && !busy && bibleDraft && handlers?.onSaveBible)
+
+  return (
+    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_380px]">
+      <ScriptStudioLightPanel
+        icon={WandSparkles}
+        title="书籍向导"
+        detail="类型、世界观、结构、节奏和文风"
+        action={
+          <div className="flex flex-wrap gap-2">
+            {!novel ? (
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onCreateNovelFromOnboarding?.(draft)}
+                disabled={!canCreate}
+                primary
+              >
+                <Plus className="size-3.5" />
+                创建书目
+              </ScriptStudioLightAction>
+            ) : (
+              <>
+                <ScriptStudioLightAction
+                  onClick={() => handlers?.onSaveNovelSetup?.(novel.id, draft)}
+                  disabled={!canSave}
+                  primary
+                >
+                  <Save className="size-3.5" />
+                  保存设定
+                </ScriptStudioLightAction>
+                <ScriptStudioLightAction
+                  onClick={() => handlers?.onRefreshSetup?.(novel.id)}
+                  disabled={!ready || busy || !handlers?.onRefreshSetup}
+                >
+                  <RotateCw className="size-3.5" />
+                  刷新
+                </ScriptStudioLightAction>
+              </>
+            )}
+            <ScriptStudioLightAction
+              onClick={handlers?.onImportStorylet}
+              disabled={!ready || busy || !handlers?.onImportStorylet}
+            >
+              <GitBranch className="size-3.5" />
+              导入 Storylet
+            </ScriptStudioLightAction>
+          </div>
+        }
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ScriptStudioLightTextInput label="书名" value={draft.title} onChange={(title) => updateDraft({ title })} />
+          <ScriptStudioLightTextInput label="作者" value={draft.author} onChange={(author) => updateDraft({ author })} />
+          <ScriptStudioLightTextarea
+            className="lg:col-span-2"
+            label="Premise"
+            value={draft.premise}
+            onChange={(premise) => updateDraft({ premise })}
+            placeholder="核心人物、冲突、世界规则和主要承诺。"
+            minRows={5}
+          />
+          <ScriptStudioLightTextInput label="类型" value={draft.genre} onChange={(genre) => updateDraft({ genre })} placeholder="悬疑 / 科幻 / 都市 / 奇幻" />
+          <ScriptStudioLightTextInput label="世界观预设" value={draft.worldPreset} onChange={(worldPreset) => updateDraft({ worldPreset })} />
+          <ScriptStudioLightTextInput label="故事结构" value={draft.storyStructure} onChange={(storyStructure) => updateDraft({ storyStructure })} />
+          <ScriptStudioLightTextInput label="节奏控制" value={draft.pacingControl} onChange={(pacingControl) => updateDraft({ pacingControl })} />
+          <ScriptStudioLightSelect
+            label="篇幅"
+            value={draft.lengthTier}
+            onChange={(lengthTier) => updateDraft({ lengthTier: lengthTier as PlotPilotOnboardingDraft['lengthTier'] })}
+            options={[
+              ['', '自定义'],
+              ['short', '短篇'],
+              ['standard', '标准长篇'],
+              ['epic', '史诗长篇'],
+            ]}
+          />
+          <ScriptStudioLightNumberInput label="目标章节" value={draft.targetChapters} min={1} onChange={(targetChapters) => updateDraft({ targetChapters })} />
+          <ScriptStudioLightNumberInput label="单章字数" value={draft.targetWordsPerChapter} min={300} onChange={(targetWordsPerChapter) => updateDraft({ targetWordsPerChapter })} />
+          <ScriptStudioLightTextarea
+            className="lg:col-span-2"
+            label="文风"
+            value={draft.writingStyle}
+            onChange={(writingStyle) => updateDraft({ writingStyle })}
+            minRows={3}
+          />
+          <ScriptStudioLightTextarea
+            className="lg:col-span-2"
+            label="特殊要求"
+            value={draft.specialRequirements}
+            onChange={(specialRequirements) => updateDraft({ specialRequirements })}
+            minRows={3}
+          />
+        </div>
+      </ScriptStudioLightPanel>
+
+      <div className="space-y-4">
+        <ScriptStudioLightPanel
+          icon={BookOpen}
+          title="Bible 原生编辑"
+          detail="人物、世界观、地点、时间线、风格"
+          action={
+            novel ? (
+              <div className="flex flex-wrap gap-2">
+                <ScriptStudioLightAction
+                  onClick={() => handlers?.onGenerateBible?.(novel.id)}
+                  disabled={!ready || busy || !handlers?.onGenerateBible}
+                  primary
+                >
+                  <Sparkles className="size-3.5" />
+                  生成
+                </ScriptStudioLightAction>
+                <ScriptStudioLightAction
+                  onClick={() => bibleDraft && handlers?.onSaveBible?.(novel.id, bibleDraft)}
+                  disabled={!canSaveBible}
+                >
+                  <Save className="size-3.5" />
+                  保存
+                </ScriptStudioLightAction>
+              </div>
+            ) : null
+          }
+        >
+          {bibleDraft ? (
+            <div className="space-y-3">
+              <ScriptStudioLightMetricGrid
+                metrics={[
+                  { label: '人物', value: String(bibleDraft.characters.length) },
+                  { label: '世界观', value: String(bibleDraft.world_settings.length) },
+                  { label: '地点', value: String(bibleDraft.locations.length) },
+                  { label: '文风', value: String(bibleDraft.style_notes.length) },
+                ]}
+              />
+              <ScriptStudioLightBibleRows
+                title="人物卡"
+                rows={bibleDraft.characters}
+                fields={[
+                  ['name', '姓名'],
+                  ['role', '角色'],
+                  ['description', '描述'],
+                ]}
+                onRowsChange={(characters) => setBibleDraft((current) => current ? { ...current, characters } : current)}
+                createRow={() => ({ id: createDraftId('character'), name: '新角色', role: '', description: '' })}
+              />
+              <ScriptStudioLightBibleRows
+                title="世界观"
+                rows={bibleDraft.world_settings}
+                fields={[
+                  ['name', '名称'],
+                  ['setting_type', '类型'],
+                  ['description', '描述'],
+                ]}
+                onRowsChange={(world_settings) => setBibleDraft((current) => current ? { ...current, world_settings } : current)}
+                createRow={() => ({ id: createDraftId('world'), name: '新设定', setting_type: 'rule', description: '' })}
+              />
+              <ScriptStudioLightBibleRows
+                title="地点"
+                rows={bibleDraft.locations}
+                fields={[
+                  ['name', '名称'],
+                  ['location_type', '类型'],
+                  ['description', '描述'],
+                ]}
+                onRowsChange={(locations) => setBibleDraft((current) => current ? { ...current, locations } : current)}
+                createRow={() => ({ id: createDraftId('location'), name: '新地点', location_type: 'place', description: '' })}
+              />
+            </div>
+          ) : (
+            <ScriptStudioLightEmpty
+              compact
+              icon={BookOpen}
+              title="Bible 尚未载入"
+              body="生成或打开 Bible 后，可以在白色工作台内编辑主要设定。完整字段仍保留在兼容控制台。"
+            />
+          )}
+        </ScriptStudioLightPanel>
+
+        <ScriptStudioLightPanel icon={ShieldCheck} title="写作守门" detail="Codex / WritingSpec / Humanizer">
+          <div className="space-y-3">
+            <ScriptStudioLightStatusBlock label="WritingSpec" value={projectGuardStatus?.writingSpecTitle ?? projectGuardStatus?.writingSpecId ?? '未绑定'} />
+            <ScriptStudioLightStatusBlock label="Humanizer" value={projectGuardStatus?.humanizerEnabled ? (projectGuardStatus.humanizerPolicy ?? 'on') : 'off'} />
+            <ScriptStudioLightTextInput
+              label="WritingSpec ID"
+              value={writingSpecId}
+              onChange={setWritingSpecId}
+              placeholder="输入 writing spec id"
+            />
+            <div className="flex flex-wrap gap-2">
+              <ScriptStudioLightAction
+                onClick={() => novel && handlers?.onBindWritingSpec?.(novel.id, writingSpecId.trim())}
+                disabled={!novel || !ready || busy || !writingSpecId.trim() || !handlers?.onBindWritingSpec}
+                primary
+              >
+                <ShieldCheck className="size-3.5" />
+                绑定
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => novel && handlers?.onClearWritingSpec?.(novel.id)}
+                disabled={!novel || !ready || busy || !projectGuardStatus?.writingSpecId || !handlers?.onClearWritingSpec}
+              >
+                <Trash2 className="size-3.5" />
+                清除
+              </ScriptStudioLightAction>
+            </div>
+          </div>
+        </ScriptStudioLightPanel>
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioPlanningDetail({
+  novel,
+  chapterEditor,
+  featureState,
+  handlers,
+  ready,
+  busy,
+}: {
+  novel: PlotPilotNovel | null
+  chapterEditor?: PlotPilotChapterEditor | null
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+}) {
+  const [outlineDraft, setOutlineDraft] = React.useState<PlotPilotOutlineDraft>(() => outlineDraftFromValue(featureState.plotOutline))
+
+  React.useEffect(() => {
+    setOutlineDraft(outlineDraftFromValue(featureState.plotOutline))
+  }, [featureState.plotOutline])
+
+  if (!novel) {
+    return (
+      <ScriptStudioLightEmpty
+        icon={GitBranch}
+        title="还没有可规划的书目"
+        body="先完成设定或导入 Storylet，再生成主线候选、Plot Outline 和连续规划。"
+      />
+    )
+  }
+
+  const currentChapter = chapterEditor?.novelId === novel.id
+    ? chapterEditor.chapterNumber
+    : novel.chapters?.[0]?.number ?? 1
+  const loading = featureState.loadingKey === 'planning' || featureState.loadingKey === 'setup'
+  const mainPlotOptions = featureState.mainPlotOptions ?? []
+  const beatScenes = Array.isArray(featureState.beatSheet?.scenes)
+    ? featureState.beatSheet.scenes as Array<Record<string, unknown>>
+    : []
+
+  return (
+    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_380px]">
+      <ScriptStudioLightPanel
+        icon={GitBranch}
+        title="Plot Outline"
+        detail="主线、冲突、结局和阶段规划"
+        action={
+          <div className="flex flex-wrap gap-2">
+            <ScriptStudioLightAction
+              onClick={() => handlers?.onSuggestMainPlotOptions?.(novel.id)}
+              disabled={!ready || busy || loading || !handlers?.onSuggestMainPlotOptions}
+            >
+              <GitBranch className="size-3.5" />
+              主线候选
+            </ScriptStudioLightAction>
+            <ScriptStudioLightAction
+              onClick={() => handlers?.onGeneratePlotOutline?.(novel.id)}
+              disabled={!ready || busy || loading || !handlers?.onGeneratePlotOutline}
+              primary
+            >
+              {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+              生成大纲
+            </ScriptStudioLightAction>
+            <ScriptStudioLightAction
+              onClick={() => handlers?.onSavePlotOutline?.(novel.id, outlineDraftToPayload(outlineDraft))}
+              disabled={!ready || busy || !handlers?.onSavePlotOutline}
+            >
+              <Save className="size-3.5" />
+              保存
+            </ScriptStudioLightAction>
+          </div>
+        }
+      >
+        <ScriptStudioLightOutlineEditor draft={outlineDraft} onChange={setOutlineDraft} />
+      </ScriptStudioLightPanel>
+
+      <div className="space-y-4">
+        <ScriptStudioLightPanel icon={ListChecks} title="主线候选" detail={`${mainPlotOptions.length} options`}>
+          {mainPlotOptions.length ? (
+            <div className="space-y-2">
+              {mainPlotOptions.slice(0, 5).map((option, index) => (
+                <div key={String(option.id ?? index)} className="rounded-[9px] border border-[#e2ddd2] bg-[#faf9f4] p-3">
+                  <div className="text-xs font-semibold text-[#242821]">{String(option.title ?? `候选 ${index + 1}`)}</div>
+                  <div className="mt-1 line-clamp-3 text-xs leading-5 text-[#666b62]">
+                    {String(option.logline ?? option.core_conflict ?? option.summary ?? '暂无摘要')}
+                  </div>
+                  <div className="mt-2 font-mono text-[10px] text-[#8b8579]">{String(option.type ?? 'main_plot')}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <ScriptStudioLightEmpty compact icon={GitBranch} title="暂无候选" body="点击“主线候选”生成多个可选主线方向。" />
+          )}
+        </ScriptStudioLightPanel>
+
+        <ScriptStudioLightPanel icon={Network} title="宏观 / 连续规划" detail={`当前断点 第${currentChapter}章`}>
+          <div className="space-y-3">
+            <ScriptStudioLightMetricGrid
+              metrics={[
+                { label: '章节', value: String(novel.chapterCount ?? 0) },
+                { label: 'Beat', value: String(novel.beatCount ?? beatScenes.length) },
+                { label: '结构', value: featureState.planningStructure ? 'loaded' : 'pending' },
+                { label: '结果', value: featureState.planningResult ? 'ready' : 'empty' },
+              ]}
+            />
+            <div className="flex flex-wrap gap-2">
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onGenerateMacroPlan?.(novel.id)}
+                disabled={!ready || busy || !handlers?.onGenerateMacroPlan}
+                primary
+              >
+                <Network className="size-3.5" />
+                宏观规划
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onContinuePlanning?.(novel.id, currentChapter)}
+                disabled={!ready || busy || !handlers?.onContinuePlanning}
+              >
+                <Repeat2 className="size-3.5" />
+                继续规划
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onGenerateBeat?.(novel.id)}
+                disabled={!ready || busy || !handlers?.onGenerateBeat}
+              >
+                <ListChecks className="size-3.5" />
+                生成 Beat
+              </ScriptStudioLightAction>
+            </div>
+            <ScriptStudioLightJson value={featureState.planningResult ?? featureState.planningStructure ?? '暂无规划结果。'} />
+          </div>
+        </ScriptStudioLightPanel>
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioProductionDetail({
+  runtimeStatus,
+  novel,
+  chapterEditor,
+  featureState,
+  handlers,
+  ready,
+  busy,
+}: {
+  runtimeStatus: PlotPilotRuntimeStatus
+  novel: PlotPilotNovel | null
+  chapterEditor?: PlotPilotChapterEditor | null
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+}) {
+  const chapters = novel?.chapters ?? []
+  const activeChapterNumber = chapterEditor?.chapterNumber ?? chapters[0]?.number ?? 1
+  const activeChapter = chapters.find((chapter) => chapter.number === activeChapterNumber) ?? chapters[0] ?? null
+  const [hostedFrom, setHostedFrom] = React.useState(activeChapterNumber)
+  const [hostedTo, setHostedTo] = React.useState(activeChapterNumber + 2)
+  const [hostedAutoSave, setHostedAutoSave] = React.useState(true)
+  const [hostedAutoOutline, setHostedAutoOutline] = React.useState(true)
+  const [maxAutoChapters, setMaxAutoChapters] = React.useState(3)
+  const [autoApprove, setAutoApprove] = React.useState(Boolean(novel?.autoApproveMode))
+
+  React.useEffect(() => {
+    if (!novel) return
+    const nextStart = chapterEditor?.chapterNumber ?? Math.max(1, (novel.chapters?.length ?? 0) + 1)
+    setHostedFrom(nextStart)
+    setHostedTo(Math.max(nextStart, nextStart + 2))
+    setMaxAutoChapters(3)
+    setAutoApprove(Boolean(novel.autoApproveMode))
+  }, [chapterEditor?.chapterNumber, novel?.autoApproveMode, novel?.chapters?.length, novel?.id])
+
+  if (!novel) {
+    return (
+      <ScriptStudioLightEmpty
+        icon={FileText}
+        title="还没有可生产的书目"
+        body="先从设定模式创建书目或导入 Storylet，再进入章节生成、连写和 Graph 回写。"
+      />
+    )
+  }
+
+  const editorContentSize = countDraftText(chapterEditor?.content)
+  const canGenerate = Boolean(ready && !busy && handlers?.onGenerateChapter)
+  const canSave = Boolean(ready && !busy && chapterEditor && handlers?.onSaveChapter && (chapterEditor.dirty || editorContentSize > 0))
+  const canWriteBack = Boolean(ready && !busy && handlers?.onWriteBackChapter && !chapterEditor?.dirty && (editorContentSize > 0 || (activeChapter?.wordCount ?? 0) > 0))
+  const autoStatus = asUiRecord(featureState.autopilotStatus)
+  const breakerStatus = asUiRecord(featureState.autopilotCircuitBreaker)
+  const autopilotEvents = featureState.autopilotEvents ?? []
+  const autopilotStatusEvents = featureState.autopilotStatusEvents ?? []
+  const autopilotChapterEvents = featureState.autopilotChapterEvents ?? []
+  const autopilotChapterSnapshot = asUiRecord(featureState.autopilotChapterSnapshot)
+  const hostedWriteEvents = featureState.hostedWriteEvents ?? []
+  const hostedWriteSummary = asUiRecord(featureState.hostedWriteSummary)
+  const activeJobProgress = Number(runtimeStatus.activeJob?.progress ?? 0)
+  const progress = Math.round(activeJobProgress > 0 && activeJobProgress <= 1 ? activeJobProgress * 100 : activeJobProgress)
+  const autoProgress = normalizeProgressPercent(Number(autoStatus.progress_pct ?? progress))
+  const hostedTotal = Number(hostedWriteSummary.totalChapters ?? Math.max(1, hostedTo - hostedFrom + 1))
+  const hostedSaved = Number(hostedWriteSummary.savedCount ?? 0)
+  const hostedProgress = hostedTotal > 0 ? Math.round((hostedSaved / hostedTotal) * 100) : 0
+  const autopilotState = readUiString(autoStatus, ['autopilot_status', 'state', 'status', 'phase']) || 'idle'
+  const currentStage = readUiString(autoStatus, ['current_stage', 'last_stable_stage', 'stage']) || 'unknown'
+  const breakerState = readUiString(breakerStatus, ['state', 'status']) || 'normal'
+  const breakerErrorCount = Number(breakerStatus.error_count ?? breakerStatus.errorCount ?? 0)
+  const needsReview = Boolean(autoStatus.needs_review || autoStatus.requires_ai_review || autoStatus.has_active_invocation)
+  const activeInvocationId = readUiString(autoStatus, ['invocation_session_id', 'active_invocation_session_id', 'session_id'])
+    || readUiString(asUiRecord(featureState.activeInvocation), ['sessionId', 'session_id', 'id'])
+  const canHostedWrite = Boolean(ready && !busy && handlers?.onHostedWrite && hostedFrom > 0 && hostedTo >= hostedFrom)
+  const canStartAutopilot = Boolean(
+    ready
+    && !busy
+    && handlers?.onStartAutopilot
+    && maxAutoChapters > 0
+    && (novel.targetChapters ?? 0) > 0
+    && (novel.targetWordsPerChapter ?? 0) > 0,
+  )
+  const productionEvents = buildProductionTimelineEvents({
+    autopilotEvents,
+    autopilotStatusEvents,
+    autopilotChapterEvents,
+    hostedWriteEvents,
+  })
+
+  return (
+    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
+      <ScriptStudioLightPanel
+        icon={FileText}
+        title="章节生产台"
+        detail="生成、编辑、保存和回写 Graph 的白色原生入口"
+        action={
+          <div className="flex flex-wrap gap-2">
+            {chapters.length === 0 ? (
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onPrepareFirstChapter?.(novel.id)}
+                disabled={!ready || busy || !handlers?.onPrepareFirstChapter}
+                primary
+              >
+                <Plus className="size-3.5" />
+                准备第1章
+              </ScriptStudioLightAction>
+            ) : null}
+            <ScriptStudioLightAction
+              onClick={() => handlers?.onGenerateChapter?.(novel.id, activeChapterNumber)}
+              disabled={!canGenerate}
+              primary
+            >
+              <Sparkles className="size-3.5" />
+              生成第{activeChapterNumber}章
+            </ScriptStudioLightAction>
+            <ScriptStudioLightAction
+              onClick={() => chapterEditor && handlers?.onSaveChapter?.(novel.id, chapterEditor.chapterNumber, chapterEditor.content)}
+              disabled={!canSave}
+            >
+              <Save className="size-3.5" />
+              保存正文
+            </ScriptStudioLightAction>
+            <ScriptStudioLightAction
+              onClick={() => handlers?.onWriteBackChapter?.(novel.id, activeChapterNumber)}
+              disabled={!canWriteBack}
+              title={chapterEditor?.dirty ? '先保存正文再回写 Graph' : undefined}
+            >
+              <GitBranch className="size-3.5" />
+              回写 Graph
+            </ScriptStudioLightAction>
+          </div>
+        }
+      >
+        <div className="grid min-h-[520px] gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="min-h-0 rounded-[10px] border border-[#e2ddd2] bg-[#faf9f4] p-2">
+            <div className="flex items-center justify-between px-2 py-1.5">
+              <div className="text-xs font-semibold text-[#4d534a]">章节目录</div>
+              <div className="font-mono text-[10px] text-[#8b8579]">{chapters.length} chapters</div>
+            </div>
+            <div className="max-h-[612px] space-y-1 overflow-y-auto pr-1">
+              {chapters.length ? chapters.map((chapter) => {
+                const active = chapter.number === activeChapterNumber
+                return (
+                  <button
+                    key={chapter.id}
+                    type="button"
+                    disabled={!handlers?.onOpenChapter || chapter.number === undefined}
+                    onClick={() => chapter.number !== undefined && handlers?.onOpenChapter?.(novel.id, chapter.number)}
+                    className={cn(
+                      'w-full rounded-[8px] border px-3 py-2.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20 disabled:cursor-default',
+                      active
+                        ? 'border-[#174a38]/35 bg-white text-[#20251f] shadow-[0_4px_12px_rgba(43,38,27,0.08)]'
+                        : 'border-transparent bg-transparent text-[#565b52] hover:border-[#e2ddd2] hover:bg-white',
+                    )}
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-full border border-[#ded9cd] bg-[#f5f3ec] font-mono text-[10px] text-[#5f655a]">
+                        {chapter.number ?? '-'}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold">{chapter.title}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5 font-mono text-[10px] text-[#8b8579]">
+                      <span>{chapter.status ?? 'draft'}</span>
+                      <span>{formatCount(chapter.wordCount, 'words')}</span>
+                    </div>
+                  </button>
+                )
+              }) : (
+                <div className="rounded-[8px] border border-dashed border-[#ded9cd] bg-white px-3 py-8 text-center text-xs text-[#8b8579]">
+                  尚未建立章节。
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex min-h-0 flex-col rounded-[10px] border border-[#e2ddd2] bg-white">
+            <div className="flex shrink-0 flex-col gap-3 border-b border-[#e8e3d8] px-4 py-3 md:flex-row md:items-center md:justify-between">
+              <div className="min-w-0">
+                <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#969085]">Chapter editor</div>
+                <h3 className="mt-1 truncate text-sm font-semibold text-[#22271f]">
+                  第{activeChapterNumber}章 · {chapterEditor?.title ?? activeChapter?.title ?? '未载入正文'}
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-1.5 font-mono text-[10px] text-[#7d796f]">
+                <span className="rounded-full border border-[#e0dbd0] bg-[#f8f7f2] px-2 py-1">{chapterEditor?.status ?? activeChapter?.status ?? 'draft'}</span>
+                <span className="rounded-full border border-[#e0dbd0] bg-[#f8f7f2] px-2 py-1">{editorContentSize.toLocaleString()} chars</span>
+                {chapterEditor?.dirty ? <span className="rounded-full border border-[#e5c978] bg-[#fff6d5] px-2 py-1 text-[#7a5b00]">未保存</span> : null}
+              </div>
+            </div>
+
+            {chapterEditor?.generationHint ? (
+              <div className="border-b border-[#eee9dd] bg-[#fbfaf6] px-4 py-3">
+                <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#969085]">生成提示</div>
+                <div className="mt-1 line-clamp-3 text-xs leading-5 text-[#666b62]">{chapterEditor.generationHint}</div>
+              </div>
+            ) : null}
+
+            {chapterEditor?.lastWritingSpecFailure ? (
+              <div className="border-b border-[#eee9dd] bg-[#fff8ed] px-4 py-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[#9a6b00]" />
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-[#5b3f00]">WritingSpec 阻断</div>
+                    <div className="mt-1 text-xs leading-5 text-[#745a23]">{chapterEditor.lastWritingSpecFailure.message}</div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="min-h-0 flex-1 p-4">
+              <textarea
+                value={chapterEditor?.content ?? ''}
+                onChange={(event) => handlers?.onChangeChapterDraft?.(event.currentTarget.value)}
+                disabled={!chapterEditor || chapterEditor.loading || busy || !handlers?.onChangeChapterDraft}
+                placeholder="章节正文会出现在这里。可以生成、手写、保存，再回写 Drama Graph。"
+                className="min-h-[390px] w-full resize-none rounded-[9px] border border-[#ded9cd] bg-[#fdfcf8] px-4 py-3 text-sm leading-7 text-[#2c3029] outline-none placeholder:text-[#aaa398] focus:border-[#174a38]/45 focus:ring-2 focus:ring-[#174a38]/10 disabled:opacity-60"
+              />
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#817c73]">
+                <span>保存后写入 PlotPilot runtime；回写后同步到 Drama Graph draft/script 字段。</span>
+                <span className="font-mono">{chapterEditor?.chapterId ?? activeChapter?.id ?? 'no-chapter-id'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ScriptStudioLightPanel>
+
+      <div className="space-y-4">
+        <ScriptStudioLightPanel icon={Gauge} title="Autopilot 控制器" detail={`${autopilotState} / ${currentStage}`}>
+          <div className="space-y-3">
+            <ScriptStudioLightMetricGrid
+              metrics={[
+                { label: '状态', value: autopilotState },
+                { label: '阶段', value: currentStage },
+                { label: '当前章', value: String(autoStatus.current_chapter_number ?? autoStatus.current_chapter_in_act ?? '-') },
+                { label: '进度', value: `${autoProgress}%` },
+              ]}
+            />
+            <ScriptStudioLightProgressBar value={autoProgress} tone={needsReview ? 'warning' : 'green'} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ScriptStudioLightNumberInput
+                label="保护上限"
+                min={1}
+                value={maxAutoChapters}
+                onChange={setMaxAutoChapters}
+              />
+              <ScriptStudioLightStatusBlock label="当前任务" value={runtimeStatus.activeJob?.label ?? 'none'} />
+            </div>
+            <ScriptStudioLightToggle
+              label="全自动跳过审阅"
+              checked={autoApprove}
+              onCheckedChange={(checked) => {
+                setAutoApprove(checked)
+                handlers?.onSetAutoApproveMode?.(novel.id, checked)
+              }}
+              disabled={!ready || busy || !handlers?.onSetAutoApproveMode}
+            />
+            <div className="flex flex-wrap gap-2">
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onStartAutopilot?.(
+                  novel.id,
+                  maxAutoChapters,
+                  novel.targetChapters ?? 3,
+                  novel.targetWordsPerChapter ?? 2500,
+                  autoApprove,
+                )}
+                disabled={!canStartAutopilot}
+                primary
+              >
+                <Play className="size-3.5" />
+                启动
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onStopAutopilot?.(novel.id)}
+                disabled={!ready || !handlers?.onStopAutopilot}
+              >
+                <Pause className="size-3.5" />
+                暂停
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onResumeAutopilot?.(novel.id)}
+                disabled={!ready || busy || !handlers?.onResumeAutopilot}
+              >
+                <Repeat2 className="size-3.5" />
+                恢复
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onRefreshAutopilot?.(novel.id)}
+                disabled={!ready || busy || !handlers?.onRefreshAutopilot}
+              >
+                <RotateCw className="size-3.5" />
+                刷新
+              </ScriptStudioLightAction>
+            </div>
+          </div>
+        </ScriptStudioLightPanel>
+
+        <ScriptStudioLightPanel icon={Film} title="Hosted Write" detail="多章批量生成 / 保存确认">
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <ScriptStudioLightNumberInput label="From" min={1} value={hostedFrom} onChange={setHostedFrom} />
+              <ScriptStudioLightNumberInput label="To" min={hostedFrom} value={hostedTo} onChange={setHostedTo} />
+            </div>
+            <div className="grid gap-2">
+              <ScriptStudioLightToggle label="自动保存" checked={hostedAutoSave} onCheckedChange={setHostedAutoSave} />
+              <ScriptStudioLightToggle label="自动大纲" checked={hostedAutoOutline} onCheckedChange={setHostedAutoOutline} />
+            </div>
+            <ScriptStudioLightProgressBar value={hostedProgress} tone={hostedProgress >= 100 ? 'green' : 'neutral'} />
+            <ScriptStudioLightMetricGrid
+              metrics={[
+                { label: '保存章节', value: `${hostedSaved}/${hostedTotal}` },
+                { label: '流式块', value: String(hostedWriteSummary.chunkCount ?? 0) },
+                { label: '字符', value: String(hostedWriteSummary.charCount ?? 0) },
+                { label: '状态', value: String(hostedWriteSummary.lastType ?? 'idle') },
+              ]}
+            />
+            <ScriptStudioLightAction
+              onClick={() => handlers?.onHostedWrite?.(novel.id, hostedFrom, hostedTo, hostedAutoSave, hostedAutoOutline)}
+              disabled={!canHostedWrite}
+              primary
+            >
+              <Play className="size-3.5" />
+              连写 {hostedFrom}-{hostedTo}
+            </ScriptStudioLightAction>
+          </div>
+        </ScriptStudioLightPanel>
+
+        <ScriptStudioLightPanel icon={ShieldCheck} title="失败恢复" detail={`${breakerState} / ${breakerErrorCount} errors`}>
+          <div className="space-y-3">
+            <div className="rounded-[10px] border border-[#e2ddd2] bg-[#faf9f4] p-3">
+              <div className="flex items-start gap-2">
+                {breakerErrorCount > 0 || needsReview ? (
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[#9a6b00]" />
+                ) : (
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#2f6b46]" />
+                )}
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-[#2f352f]">
+                    {needsReview ? '等待 AI Invocation 审阅' : breakerErrorCount > 0 ? '存在失败，可重置后恢复' : '暂无阻断'}
+                  </div>
+                  <div className="mt-1 text-[11px] leading-5 text-[#6f6a60]">
+                    {activeInvocationId
+                      ? `Session ${activeInvocationId}`
+                      : String(breakerStatus.last_error ?? breakerStatus.message ?? '生产链路可继续。')}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onResumeAutopilot?.(novel.id)}
+                disabled={!ready || busy || !handlers?.onResumeAutopilot}
+              >
+                <Repeat2 className="size-3.5" />
+                恢复
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onResetAutopilotBreaker?.(novel.id)}
+                disabled={!ready || busy || !handlers?.onResetAutopilotBreaker}
+              >
+                <RotateCw className="size-3.5" />
+                重置失败
+              </ScriptStudioLightAction>
+              {activeInvocationId ? (
+                <ScriptStudioLightAction
+                  onClick={() => handlers?.onLoadInvocation?.(activeInvocationId)}
+                  disabled={!ready || busy || !handlers?.onLoadInvocation}
+                >
+                  <Search className="size-3.5" />
+                  打开审阅
+                </ScriptStudioLightAction>
+              ) : null}
+            </div>
+          </div>
+        </ScriptStudioLightPanel>
+
+        <ScriptStudioLightPanel
+          icon={FileText}
+          title="章节流"
+          detail={`chapter ${String(autopilotChapterSnapshot.chapterNumber ?? autoStatus.current_chapter_number ?? '-')}`}
+        >
+          <div className="space-y-3">
+            <ScriptStudioLightMetricGrid
+              metrics={[
+                { label: '章节', value: String(autopilotChapterSnapshot.chapterNumber ?? '-') },
+                { label: 'Beat', value: String(autopilotChapterSnapshot.beatIndex ?? '-') },
+                { label: '字数', value: String(autopilotChapterSnapshot.wordCount ?? '-') },
+                { label: '事件', value: String(autopilotChapterEvents.length) },
+              ]}
+            />
+            <div className="max-h-52 overflow-auto rounded-[10px] border border-[#e2ddd2] bg-[#fbfaf6] p-3 text-xs leading-6 text-[#565b52]">
+              {String(autopilotChapterSnapshot.content ?? autopilotChapterSnapshot.chunk ?? '等待章节正文流。')}
+            </div>
+          </div>
+        </ScriptStudioLightPanel>
+
+        <ScriptStudioLightPanel icon={Activity} title="生产事件" detail={`${productionEvents.length} events`}>
+          <ScriptStudioProductionTimeline events={productionEvents} />
+        </ScriptStudioLightPanel>
+
+        <ScriptStudioLightPanel icon={GitBranch} title="Graph event 闭环" detail="生产动作必须成为可追踪事件">
+          <ScriptStudioGraphEventNotice
+            items={[
+              'plm.hostedWrite.session/chapter_start/saved/session_done',
+              'plm.autopilot.started/stopped/resumed/breakerReset',
+              'plm.autopilot.error/beat_error/paused_for_review',
+              'plm.chapter.writeback.completed -> graph event',
+            ]}
+          />
+        </ScriptStudioLightPanel>
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioReviewDetail({
+  logs,
+  novel,
+  chapterEditor,
+  featureState,
+  handlers,
+  ready,
+  busy,
+  projectGuardStatus,
+  lastWritingSpecFailure,
+}: {
+  logs: PlotPilotLogEntry[]
+  novel: PlotPilotNovel | null
+  chapterEditor?: PlotPilotChapterEditor | null
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+  projectGuardStatus?: PlotPilotProjectGuardStatus | null
+  lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+}) {
+  const chapterNumber = chapterEditor?.chapterNumber ?? novel?.chapters?.[0]?.number ?? 1
+  const failure = lastWritingSpecFailure ?? chapterEditor?.lastWritingSpecFailure ?? null
+
+  return (
+    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
+      <ScriptStudioLightPanel
+        icon={ShieldCheck}
+        title="审阅工作台"
+        detail="WritingSpec、读者模拟、反 AI、人设 OOC 的统一入口"
+        action={
+          novel ? (
+            <div className="flex flex-wrap gap-2">
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onReviewChapter?.(novel.id, chapterNumber)}
+                disabled={!ready || busy || !handlers?.onReviewChapter}
+                primary
+              >
+                <ShieldCheck className="size-3.5" />
+                审阅第{chapterNumber}章
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onSimulateReaders?.(novel.id, chapterNumber)}
+                disabled={!ready || busy || !handlers?.onSimulateReaders}
+              >
+                <Users className="size-3.5" />
+                读者模拟
+              </ScriptStudioLightAction>
+            </div>
+          ) : null
+        }
+      >
+        <div className="grid gap-3 md:grid-cols-3">
+          <ScriptStudioLightStatusBlock label="WritingSpec" value={projectGuardStatus?.writingSpecTitle ?? projectGuardStatus?.writingSpecId ?? '未绑定'} />
+          <ScriptStudioLightStatusBlock label="Humanizer" value={projectGuardStatus?.humanizerEnabled ? (projectGuardStatus.humanizerPolicy ?? 'on') : 'off'} />
+          <ScriptStudioLightStatusBlock label="读者模拟" value={`${featureState.readerSimulations?.length ?? 0} reports`} />
+        </div>
+
+        {failure ? (
+          <div className="mt-4 rounded-[10px] border border-[#ead7a0] bg-[#fff9e8] p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[#8a6400]" />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-[#5c4404]">最近失败报告</div>
+                <div className="mt-1 text-xs leading-5 text-[#705a23]">{failure.message}</div>
+                <div className="mt-2 flex flex-wrap gap-2 font-mono text-[10px] text-[#8a784d]">
+                  <span>{failure.code}</span>
+                  <span>chapter {failure.chapterNumber}</span>
+                  <span>{failure.findingCount} findings</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <ScriptStudioLightEmpty
+            compact
+            icon={CheckCircle2}
+            title="没有阻断报告"
+            body="审阅结果、读者反馈、反 AI 和 OOC 检查会显示在这里。"
+          />
+        )}
+
+        <ScriptStudioLightJson value={featureState.reviewResult ?? featureState.readerReport ?? '暂无审阅 JSON。'} />
+      </ScriptStudioLightPanel>
+
+      <ScriptStudioLightPanel icon={GitBranch} title="审阅事件流" detail="审阅结果写回 Graph event">
+        <ScriptStudioGraphEventNotice
+          items={[
+            'plm.review.requested -> chapter',
+            'plm.review.completed -> report',
+            'plm.readerSimulation.completed -> reader report',
+            'plm.writingSpec.failed -> graph event',
+          ]}
+        />
+        <div className="mt-4 space-y-2">
+          {logs.slice(0, 5).map((entry) => (
+            <ScriptStudioLightLog key={entry.id} entry={entry} />
+          ))}
+        </div>
+      </ScriptStudioLightPanel>
+    </div>
+  )
+}
+
+function ScriptStudioDebugDetail({
+  logs,
+  novel,
+  featureState,
+  handlers,
+  ready,
+  busy,
+}: {
+  logs: PlotPilotLogEntry[]
+  novel: PlotPilotNovel | null
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+}) {
+  const activeInvocation = asUiRecord(featureState.activeInvocation)
+  const invocationSessionId = readUiString(activeInvocation, ['sessionId', 'session_id', 'id'])
+
+  return (
+    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
+      <ScriptStudioLightPanel
+        icon={Terminal}
+        title="开发者抽屉"
+        detail="Prompt registry、Invocation trace、Memory graph"
+        action={
+          novel ? (
+            <div className="flex flex-wrap gap-2">
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onRefreshDebug?.(novel.id)}
+                disabled={!ready || busy || !handlers?.onRefreshDebug}
+                primary
+              >
+                <RotateCw className="size-3.5" />
+                刷新 Debug
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onRefreshMemory?.(novel.id)}
+                disabled={!ready || busy || !handlers?.onRefreshMemory}
+              >
+                <Brain className="size-3.5" />
+                刷新记忆
+              </ScriptStudioLightAction>
+            </div>
+          ) : null
+        }
+      >
+        <div className="grid gap-3 md:grid-cols-4">
+          <ScriptStudioLightStatusBlock label="Prompts" value={String(featureState.prompts?.length ?? 0)} />
+          <ScriptStudioLightStatusBlock label="AI traces" value={String(featureState.aiTraces?.length ?? 0)} />
+          <ScriptStudioLightStatusBlock label="Triples" value={String(featureState.knowledgeTriples?.length ?? 0)} />
+          <ScriptStudioLightStatusBlock label="Invocation" value={invocationSessionId || 'none'} />
+        </div>
+        <div className="mt-4 grid gap-3 xl:grid-cols-2">
+          <ScriptStudioLightJson title="Trace timeline" value={featureState.traceTimeline ?? featureState.traceStats ?? '暂无 trace timeline。'} />
+          <ScriptStudioLightMemoryGraphPanel
+            novel={novel}
+            featureState={featureState}
+            handlers={handlers}
+            ready={ready}
+            busy={busy}
+          />
+        </div>
+      </ScriptStudioLightPanel>
+
+      <ScriptStudioLightInvocationReview
+        featureState={featureState}
+        handlers={handlers}
+        ready={ready}
+        busy={busy}
+        logs={logs}
+      />
+    </div>
+  )
+}
+
+function ScriptStudioLightInvocationReview({
+  featureState,
+  handlers,
+  ready,
+  busy,
+  logs,
+}: {
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+  logs: PlotPilotLogEntry[]
+}) {
+  const invocation = asUiRecord(featureState.activeInvocation)
+  const session = asUiRecord(invocation.session)
+  const attempt = asUiRecord(invocation.attempt)
+  const decision = asUiRecord(invocation.decision)
+  const commit = asUiRecord(invocation.commit)
+  const promptParts = resolvePromptParts(session)
+  const variablePlan = asUiRecord(session.variable_plan ?? invocation.variable_plan)
+  const variableBindings = asUiRecordArray(variablePlan.bindings ?? session.variable_bindings)
+  const outputBindings = asUiRecordArray(session.output_bindings ?? invocation.output_bindings)
+  const [sessionId, setSessionId] = React.useState(readInvocationSessionId(invocation, session))
+  const resolvedSessionId = readInvocationSessionId(invocation, session) || sessionId.trim()
+  const attemptId = readUiString(attempt, ['id', 'attempt_id'])
+  const decisionId = readUiString(decision, ['id', 'decision_id'])
+  const canOperate = Boolean(ready && !busy && resolvedSessionId)
+
+  React.useEffect(() => {
+    const nextSessionId = readInvocationSessionId(invocation, session)
+    if (nextSessionId && nextSessionId !== sessionId) setSessionId(nextSessionId)
+  }, [invocation, session, sessionId])
+
+  return (
+    <ScriptStudioLightPanel
+      icon={Activity}
+      title="Invocation 审阅"
+      detail={readUiString(session, ['status']) || readUiString(invocation, ['next_action']) || 'accept / retry / resume / commit'}
+      action={
+        <ScriptStudioLightAction
+          onClick={() => handlers?.onLoadInvocation?.(sessionId.trim())}
+          disabled={!ready || busy || !sessionId.trim() || !handlers?.onLoadInvocation}
+        >
+          <Search className="size-3.5" />
+          读取
+        </ScriptStudioLightAction>
+      }
+    >
+      <div className="grid gap-4">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_240px]">
+          <div className="space-y-3">
+            <label className="block">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b8579]">Session ID</span>
+              <input
+                value={sessionId}
+                onChange={(event) => setSessionId(event.currentTarget.value)}
+                placeholder="ai invocation session id"
+                className="mt-1 h-9 w-full rounded-[8px] border border-[#ded8ca] bg-[#fffdf8] px-3 font-mono text-xs text-[#32362f] outline-none placeholder:text-[#aaa498] focus:border-[#174a38]"
+              />
+            </label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <ScriptStudioLightStatusBlock label="operation" value={readUiString(session, ['operation']) || '-'} />
+              <ScriptStudioLightStatusBlock label="node" value={readUiString(session, ['node_key', 'nodeKey']) || '-'} />
+              <ScriptStudioLightStatusBlock label="policy" value={readUiString(session, ['policy']) || '-'} />
+              <ScriptStudioLightStatusBlock label="next" value={readUiString(invocation, ['next_action', 'nextAction']) || '-'} />
+            </div>
+          </div>
+          <div className="rounded-[10px] border border-[#e2ddd2] bg-[#faf9f4] p-3">
+            <div className="text-xs font-semibold text-[#33372f]">审阅动作</div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onResumeInvocation?.(resolvedSessionId)}
+                disabled={!canOperate || !handlers?.onResumeInvocation}
+              >
+                <Repeat2 className="size-3.5" />
+                Resume
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onRetryInvocation?.(resolvedSessionId)}
+                disabled={!canOperate || !handlers?.onRetryInvocation}
+              >
+                <RotateCw className="size-3.5" />
+                Retry
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onAcceptInvocation?.(resolvedSessionId)}
+                disabled={!canOperate || !attemptId || !handlers?.onAcceptInvocation}
+                primary
+              >
+                <CheckCircle2 className="size-3.5" />
+                Accept
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                onClick={() => handlers?.onRejectInvocation?.(resolvedSessionId)}
+                disabled={!canOperate || !attemptId || !handlers?.onRejectInvocation}
+              >
+                <Square className="size-3.5" />
+                Reject
+              </ScriptStudioLightAction>
+              <ScriptStudioLightAction
+                className="col-span-2 justify-center"
+                onClick={() => handlers?.onCommitInvocation?.(resolvedSessionId)}
+                disabled={!canOperate || !decisionId || !handlers?.onCommitInvocation}
+              >
+                <Save className="size-3.5" />
+                Commit decision
+              </ScriptStudioLightAction>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 xl:grid-cols-2">
+          <ScriptStudioLightContentBlock title="System Prompt" value={promptParts.system} fallback="当前 session 没有 system prompt snapshot。" />
+          <ScriptStudioLightContentBlock title="User Prompt" value={promptParts.user} fallback="当前 session 没有 user prompt snapshot。" />
+        </div>
+
+        <div className="grid gap-3 xl:grid-cols-2">
+          <ScriptStudioLightBindingList
+            title="Variable Plan"
+            detail={`${variableBindings.length} bindings`}
+            bindings={variableBindings}
+            fallback="暂无变量绑定计划。"
+          />
+          <ScriptStudioLightBindingList
+            title="Output Bindings"
+            detail={`${outputBindings.length} outputs`}
+            bindings={outputBindings}
+            fallback="暂无输出绑定。"
+          />
+        </div>
+
+        <div className="grid gap-3 xl:grid-cols-2">
+          <ScriptStudioLightContentBlock
+            title="Attempt Output"
+            value={String(attempt.content ?? attempt.error ?? '')}
+            fallback="当前 session 还没有模型输出。"
+          />
+          <ScriptStudioLightJson
+            title="Decision / Commit"
+            value={{
+              attempt: pickRecord(attempt, ['id', 'status', 'error']),
+              decision: pickRecord(decision, ['id', 'decision', 'status']),
+              commit: pickRecord(commit, ['id', 'status', 'error']),
+            }}
+          />
+        </div>
+
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
+          <ScriptStudioLightJson title="Raw Invocation" value={featureState.activeInvocation ?? '暂无 active invocation。'} className="max-h-[420px]" />
+          <div className="space-y-2">
+            {logs.slice(0, 6).map((entry) => (
+              <ScriptStudioLightLog key={entry.id} entry={entry} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </ScriptStudioLightPanel>
+  )
+}
+
+function ScriptStudioModeMapDetail({
+  workspaceMode,
+  novel,
+  featureState,
+  handlers,
+  ready,
+  busy,
+}: {
+  workspaceMode: 'setup' | 'planning'
+  novel: PlotPilotNovel | null
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+}) {
+  const isSetup = workspaceMode === 'setup'
+  return (
+    <ScriptStudioLightPanel
+      icon={isSetup ? BookOpen : GitBranch}
+      title={isSetup ? '设定模式映射' : '规划模式映射'}
+      detail={isSetup ? 'Onboarding / Bible / WritingSpec' : 'Main plot / Macro plan / Continuous planning'}
+      action={
+        novel ? (
+          <div className="flex flex-wrap gap-2">
+            {isSetup ? (
+              <>
+                <ScriptStudioLightAction onClick={() => handlers?.onGenerateBible?.(novel.id)} disabled={!ready || busy || !handlers?.onGenerateBible} primary>
+                  <Sparkles className="size-3.5" />
+                  生成 Bible
+                </ScriptStudioLightAction>
+                <ScriptStudioLightAction onClick={() => handlers?.onRefreshSetup?.(novel.id)} disabled={!ready || busy || !handlers?.onRefreshSetup}>
+                  <RotateCw className="size-3.5" />
+                  刷新设定
+                </ScriptStudioLightAction>
+              </>
+            ) : (
+              <>
+                <ScriptStudioLightAction onClick={() => handlers?.onGeneratePlotOutline?.(novel.id)} disabled={!ready || busy || !handlers?.onGeneratePlotOutline} primary>
+                  <Sparkles className="size-3.5" />
+                  生成大纲
+                </ScriptStudioLightAction>
+                <ScriptStudioLightAction onClick={() => handlers?.onGenerateMacroPlan?.(novel.id)} disabled={!ready || busy || !handlers?.onGenerateMacroPlan}>
+                  <Network className="size-3.5" />
+                  宏观规划
+                </ScriptStudioLightAction>
+              </>
+            )}
+          </div>
+        ) : null
+      }
+    >
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ScriptStudioLightJson
+          title={isSetup ? 'Onboarding / Bible 状态' : 'Plot outline'}
+          value={isSetup ? (novel?.bible ?? featureState.setupEvents ?? '暂无设定数据。') : (featureState.plotOutline ?? '暂无大纲。')}
+        />
+        <ScriptStudioLightJson
+          title={isSetup ? 'Setup events' : 'Planning result'}
+          value={isSetup ? (featureState.setupEvents ?? '暂无 setup events。') : (featureState.planningResult ?? featureState.planningStructure ?? '暂无规划结果。')}
+        />
+      </div>
+    </ScriptStudioLightPanel>
+  )
+}
+
+function ScriptStudioAdvancedOverview({ cards }: { cards: ScriptStudioAdvancedCardView[] }) {
+  return (
+    <div className="grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+      {cards.map((card) => (
+        <ScriptStudioAdvancedCard key={card.id} card={card} />
+      ))}
+    </div>
+  )
+}
+
+function ScriptStudioLightPanel({
+  icon: Icon,
+  title,
+  detail,
+  action,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  detail?: string
+  action?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-[12px] border border-[#ddd8cd] bg-[#fffefd]/96 shadow-[0_16px_38px_rgba(43,38,27,0.10)]">
+      <div className="flex flex-col gap-3 border-b border-[#e8e3d8] px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-[9px] border border-[#e0dbd0] bg-[#f7f5ee] text-[#2f493d]">
+            <Icon className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold text-[#242821]">{title}</h3>
+            {detail ? <div className="mt-0.5 truncate text-xs text-[#817c73]">{detail}</div> : null}
+          </div>
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      <div className="p-4">{children}</div>
+    </section>
+  )
+}
+
+function ScriptStudioLightAction({
+  className,
+  primary,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean }) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'inline-flex h-8 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20 disabled:cursor-not-allowed disabled:opacity-45',
+        primary
+          ? 'border-[#174a38] bg-[#174a38] text-white hover:bg-[#1f5b46]'
+          : 'border-[#ded9cd] bg-[#f8f7f2] text-[#343831] hover:bg-white',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+function ScriptStudioLightToggle({
+  label,
+  checked,
+  onCheckedChange,
+  disabled,
+}: {
+  label: string
+  checked: boolean
+  onCheckedChange: (checked: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <label className={cn(
+      'flex items-center justify-between gap-3 rounded-[9px] border border-[#e2ddd2] bg-[#faf9f4] px-3 py-2.5',
+      disabled ? 'opacity-55' : '',
+    )}>
+      <span className="text-xs font-semibold text-[#343831]">{label}</span>
+      <Switch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        disabled={disabled}
+        className="data-[state=checked]:bg-[#174a38]"
+      />
+    </label>
+  )
+}
+
+function ScriptStudioLightTextInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  className?: string
+}) {
+  return (
+    <label className={cn('block', className)}>
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b8579]">{label}</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        placeholder={placeholder}
+        className="mt-1 h-9 w-full rounded-[8px] border border-[#ded9cd] bg-[#fdfcf8] px-3 text-sm text-[#2c3029] outline-none placeholder:text-[#aaa398] focus:border-[#174a38]/45 focus:ring-2 focus:ring-[#174a38]/10"
+      />
+    </label>
+  )
+}
+
+function ScriptStudioLightNumberInput({
+  label,
+  value,
+  min,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  onChange: (value: number) => void
+}) {
+  return (
+    <label className="block">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b8579]">{label}</span>
+      <input
+        type="number"
+        min={min}
+        step={1}
+        value={String(value)}
+        onChange={(event) => {
+          const next = Number(event.currentTarget.value)
+          if (Number.isFinite(next)) onChange(next)
+        }}
+        className="mt-1 h-9 w-full rounded-[8px] border border-[#ded9cd] bg-[#fdfcf8] px-3 text-sm text-[#2c3029] outline-none focus:border-[#174a38]/45 focus:ring-2 focus:ring-[#174a38]/10"
+      />
+    </label>
+  )
+}
+
+function ScriptStudioLightSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: Array<[string, string]>
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="block">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b8579]">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        className="mt-1 h-9 w-full rounded-[8px] border border-[#ded9cd] bg-[#fdfcf8] px-3 text-sm text-[#2c3029] outline-none focus:border-[#174a38]/45 focus:ring-2 focus:ring-[#174a38]/10"
+      >
+        {options.map(([optionValue, labelText]) => (
+          <option key={optionValue || 'empty'} value={optionValue}>{labelText}</option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function ScriptStudioLightTextarea({
+  label,
+  value,
+  onChange,
+  placeholder,
+  minRows = 4,
+  className,
+  mono,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  minRows?: number
+  className?: string
+  mono?: boolean
+}) {
+  return (
+    <label className={cn('block', className)}>
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b8579]">{label}</span>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        placeholder={placeholder}
+        rows={minRows}
+        className={cn(
+          'mt-1 w-full resize-y rounded-[8px] border border-[#ded9cd] bg-[#fdfcf8] px-3 py-2 text-sm leading-6 text-[#2c3029] outline-none placeholder:text-[#aaa398] focus:border-[#174a38]/45 focus:ring-2 focus:ring-[#174a38]/10',
+          mono && 'font-mono text-[11px] leading-5',
+        )}
+      />
+    </label>
+  )
+}
+
+function ScriptStudioLightBibleRows({
+  title,
+  rows,
+  fields,
+  onRowsChange,
+  createRow,
+}: {
+  title: string
+  rows: Array<Record<string, unknown>>
+  fields: Array<[string, string]>
+  onRowsChange: (rows: Array<Record<string, unknown>>) => void
+  createRow: () => Record<string, unknown>
+}) {
+  const updateRow = (index: number, key: string, value: string) => {
+    onRowsChange(rows.map((row, rowIndex) => (
+      rowIndex === index ? { ...row, [key]: value } : row
+    )))
+  }
+
+  return (
+    <div className="rounded-[10px] border border-[#e2ddd2] bg-[#faf9f4] p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs font-semibold text-[#343831]">{title}</div>
+        <button
+          type="button"
+          onClick={() => onRowsChange([...rows, createRow()])}
+          className="inline-flex h-7 items-center gap-1.5 rounded-[7px] border border-[#ded9cd] bg-white px-2 text-[11px] font-semibold text-[#343831] outline-none transition hover:bg-[#fdfcf8] focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
+        >
+          <Plus className="size-3" />
+          新增
+        </button>
+      </div>
+      <div className="mt-3 space-y-2">
+        {rows.slice(0, 5).map((row, index) => (
+          <div key={String(row.id ?? index)} className="rounded-[8px] border border-[#e6e1d6] bg-white p-2.5">
+            <div className="grid gap-2">
+              {fields.map(([key, label]) => {
+                const value = formatDraftFieldValue(row[key])
+                const multiline = key.includes('description') || key.includes('profile')
+                return multiline ? (
+                  <ScriptStudioLightTextarea
+                    key={key}
+                    label={label}
+                    value={value}
+                    onChange={(next) => updateRow(index, key, next)}
+                    minRows={2}
+                  />
+                ) : (
+                  <ScriptStudioLightTextInput
+                    key={key}
+                    label={label}
+                    value={value}
+                    onChange={(next) => updateRow(index, key, next)}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        ))}
+        {rows.length > 5 ? (
+          <div className="rounded-[8px] border border-dashed border-[#ded9cd] bg-[#fdfcf8] px-3 py-2 text-xs text-[#817c73]">
+            还有 {rows.length - 5} 条在完整兼容控制台中编辑。
+          </div>
+        ) : null}
+        {rows.length === 0 ? (
+          <div className="rounded-[8px] border border-dashed border-[#ded9cd] bg-white px-3 py-6 text-center text-xs text-[#8b8579]">
+            暂无条目。
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioLightOutlineEditor({
+  draft,
+  onChange,
+}: {
+  draft: PlotPilotOutlineDraft
+  onChange: (draft: PlotPilotOutlineDraft) => void
+}) {
+  const update = (patch: Partial<PlotPilotOutlineDraft>) => onChange({ ...draft, ...patch })
+  return (
+    <div className="grid gap-4">
+      <ScriptStudioLightTextarea
+        label="主线概述"
+        value={draft.mainStoryOverview}
+        onChange={(mainStoryOverview) => update({ mainStoryOverview })}
+        minRows={5}
+      />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ScriptStudioLightTextarea
+          label="核心冲突"
+          value={draft.coreConflict}
+          onChange={(coreConflict) => update({ coreConflict })}
+          minRows={4}
+        />
+        <ScriptStudioLightTextarea
+          label="预期结局"
+          value={draft.expectedEnding}
+          onChange={(expectedEnding) => update({ expectedEnding })}
+          minRows={4}
+        />
+      </div>
+      <ScriptStudioLightTextarea
+        label="阶段规划 JSON"
+        value={draft.stagePlanJson}
+        onChange={(stagePlanJson) => update({ stagePlanJson })}
+        minRows={8}
+        mono
+      />
+    </div>
+  )
+}
+
+function ScriptStudioLightMetricGrid({ metrics }: { metrics: ScriptStudioAdvancedMetric[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {metrics.map((metric) => (
+        <ScriptStudioLightStatusBlock key={metric.label} label={metric.label} value={metric.value} />
+      ))}
+    </div>
+  )
+}
+
+function ScriptStudioLightStatusBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[9px] border border-[#e2ddd2] bg-[#faf9f4] px-3 py-2.5">
+      <div className="text-[10px] font-semibold text-[#8b8579]">{label}</div>
+      <div className="mt-1 truncate text-xs font-semibold text-[#2c3029]">{value}</div>
+    </div>
+  )
+}
+
+function ScriptStudioLightProgressBar({
+  value,
+  tone = 'green',
+}: {
+  value: number
+  tone?: 'green' | 'warning' | 'neutral'
+}) {
+  const color = tone === 'warning'
+    ? 'bg-[#b88719]'
+    : tone === 'neutral'
+      ? 'bg-[#8a9488]'
+      : 'bg-[#174a38]'
+  return (
+    <div className="h-1.5 overflow-hidden rounded-full bg-[#e5e1d7]">
+      <div className={cn('h-full rounded-full transition-[width] duration-300', color)} style={{ width: `${clampProgress(value)}%` }} />
+    </div>
+  )
+}
+
+interface ScriptStudioProductionTimelineEvent {
+  id: string
+  source: string
+  type: string
+  message: string
+  timestamp: string
+  sortKey: string
+  tone: 'info' | 'success' | 'warning' | 'error'
+}
+
+function ScriptStudioProductionTimeline({ events }: { events: ScriptStudioProductionTimelineEvent[] }) {
+  if (events.length === 0) {
+    return (
+      <div className="rounded-[10px] border border-dashed border-[#ddd7ca] bg-[#faf9f4] px-3 py-6 text-center text-xs leading-5 text-[#817c73]">
+        暂无生产事件。启动 Hosted Write 或 Autopilot 后会在这里显示章节流、保存确认和失败恢复点。
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+      {events.slice(0, 36).map((event) => (
+        <div key={event.id} className="rounded-[9px] border border-[#e2ddd2] bg-[#faf9f4] px-3 py-2.5">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className={cn(
+                  'size-1.5 shrink-0 rounded-full',
+                  event.tone === 'success' && 'bg-[#2f6b46]',
+                  event.tone === 'warning' && 'bg-[#b88719]',
+                  event.tone === 'error' && 'bg-[#b64c43]',
+                  event.tone === 'info' && 'bg-[#7d8b79]',
+                )}
+              />
+              <div className="truncate font-mono text-[10px] uppercase tracking-[0.08em] text-[#5f655a]">
+                {event.source} / {event.type}
+              </div>
+            </div>
+            <div className="shrink-0 font-mono text-[10px] text-[#9a9488]">{event.timestamp}</div>
+          </div>
+          <div className="mt-1 line-clamp-2 text-xs leading-5 text-[#3f453d]">{event.message}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ScriptStudioLightJson({
+  title,
+  value,
+  className,
+}: {
+  title?: string
+  value: unknown
+  className?: string
+}) {
+  const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+
+  return (
+    <div className={cn('rounded-[10px] border border-[#e2ddd2] bg-[#faf9f4]', className)}>
+      {title ? (
+        <div className="border-b border-[#e6e1d6] px-3 py-2 text-xs font-semibold text-[#3f453d]">{title}</div>
+      ) : null}
+      <pre className="max-h-[360px] overflow-auto p-3 font-mono text-[10px] leading-5 text-[#5f655a]">
+        {text || 'empty'}
+      </pre>
+    </div>
+  )
+}
+
+function ScriptStudioLightContentBlock({
+  title,
+  value,
+  fallback,
+}: {
+  title: string
+  value?: string
+  fallback: string
+}) {
+  return (
+    <div className="rounded-[10px] border border-[#e2ddd2] bg-[#faf9f4]">
+      <div className="border-b border-[#e6e1d6] px-3 py-2 text-xs font-semibold text-[#3f453d]">{title}</div>
+      <div className="max-h-[300px] overflow-auto whitespace-pre-wrap break-words p-3 text-xs leading-6 text-[#555b50]">
+        {value?.trim() || fallback}
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioLightBindingList({
+  title,
+  detail,
+  bindings,
+  fallback,
+}: {
+  title: string
+  detail: string
+  bindings: Array<Record<string, unknown>>
+  fallback: string
+}) {
+  return (
+    <div className="rounded-[10px] border border-[#e2ddd2] bg-[#faf9f4]">
+      <div className="flex items-center justify-between gap-3 border-b border-[#e6e1d6] px-3 py-2">
+        <div className="text-xs font-semibold text-[#3f453d]">{title}</div>
+        <div className="font-mono text-[10px] text-[#8b8579]">{detail}</div>
+      </div>
+      <div className="max-h-[260px] overflow-auto p-3">
+        {bindings.length ? (
+          <div className="space-y-2">
+            {bindings.map((binding, index) => {
+              const name = readUiString(binding, ['name', 'key', 'variable', 'target', 'path']) || `binding ${index + 1}`
+              const source = readUiString(binding, ['source', 'source_type', 'kind', 'type'])
+              const value = formatBindingValue(binding)
+              return (
+                <div key={`${name}-${index}`} className="rounded-[8px] border border-[#e3ded2] bg-white px-2.5 py-2">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <div className="truncate text-xs font-semibold text-[#2f352f]">{name}</div>
+                    {source ? <div className="shrink-0 rounded-full bg-[#eef1ea] px-2 py-0.5 font-mono text-[10px] text-[#62705f]">{source}</div> : null}
+                  </div>
+                  {value ? <div className="mt-1 line-clamp-2 break-words text-[11px] leading-5 text-[#6f6a60]">{value}</div> : null}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-[8px] border border-dashed border-[#ddd7ca] bg-white/70 px-3 py-4 text-xs leading-5 text-[#817c73]">
+            {fallback}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioLightMemoryGraphPanel({
+  novel,
+  featureState,
+  handlers,
+  ready,
+  busy,
+}: {
+  novel: PlotPilotNovel | null
+  featureState: PlotPilotNativeFeatureState
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+}) {
+  const [query, setQuery] = React.useState('')
+  const triples = featureState.knowledgeTriples ?? []
+  const searchResults = featureState.knowledgeSearchResults ?? []
+  const stats = asUiRecord(featureState.knowledgeStats)
+  const entities = extractMemoryEntities(triples)
+  const canSearch = Boolean(novel && ready && !busy && query.trim() && handlers?.onSearchMemory)
+
+  return (
+    <div className="rounded-[10px] border border-[#e2ddd2] bg-[#faf9f4]">
+      <div className="flex flex-col gap-3 border-b border-[#e6e1d6] px-3 py-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="text-xs font-semibold text-[#3f453d]">Memory graph</div>
+          <div className="mt-0.5 font-mono text-[10px] text-[#8b8579]">{triples.length} triples / {entities.length} entities</div>
+        </div>
+        {novel ? (
+          <div className="flex flex-wrap gap-1.5">
+            <ScriptStudioLightAction
+              onClick={() => handlers?.onRefreshMemory?.(novel.id)}
+              disabled={!ready || busy || !handlers?.onRefreshMemory}
+            >
+              <RotateCw className="size-3.5" />
+              刷新
+            </ScriptStudioLightAction>
+            <ScriptStudioLightAction
+              onClick={() => handlers?.onInferKnowledgeGraph?.(novel.id)}
+              disabled={!ready || busy || !handlers?.onInferKnowledgeGraph}
+              primary
+            >
+              <Network className="size-3.5" />
+              推断
+            </ScriptStudioLightAction>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="space-y-3 p-3">
+        <form
+          className="flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (novel && canSearch) handlers?.onSearchMemory?.(novel.id, query.trim())
+          }}
+        >
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.currentTarget.value)}
+            placeholder="检索人物、伏笔、地点或章节状态"
+            className="min-w-0 flex-1 rounded-[8px] border border-[#ded9cd] bg-white px-3 text-xs text-[#2c3029] outline-none placeholder:text-[#aaa398] focus:border-[#174a38]/45 focus:ring-2 focus:ring-[#174a38]/10"
+          />
+          <ScriptStudioLightAction disabled={!canSearch} primary>
+            <Search className="size-3.5" />
+            搜索
+          </ScriptStudioLightAction>
+        </form>
+
+        <ScriptStudioLightMetricGrid
+          metrics={[
+            { label: '实体', value: String(entities.length) },
+            { label: '关系', value: String(triples.length) },
+            { label: '检索结果', value: String(searchResults.length) },
+            { label: '版本', value: readUiString(stats, ['version', 'updated_at', 'updatedAt']) || '-' },
+          ]}
+        />
+
+        <div>
+          <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b8579]">实体索引</div>
+          {entities.length ? (
+            <div className="flex max-h-24 flex-wrap gap-1.5 overflow-auto">
+              {entities.slice(0, 24).map((entity) => (
+                <span
+                  key={entity.id}
+                  className="rounded-full border border-[#dfe5dc] bg-white px-2 py-1 text-[11px] font-semibold text-[#3f573f]"
+                >
+                  {entity.label} <span className="font-mono text-[#8b9484]">{entity.count}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[8px] border border-dashed border-[#ddd7ca] bg-white/70 px-3 py-3 text-xs text-[#817c73]">
+              暂无实体。先刷新或推断知识图谱。
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b8579]">关系三元组</div>
+          <div className="max-h-[220px] space-y-2 overflow-auto pr-1">
+            {triples.slice(0, 12).map((triple, index) => (
+              <ScriptStudioLightMemoryRelation key={String(triple.id ?? index)} record={triple} />
+            ))}
+            {triples.length === 0 ? (
+              <div className="rounded-[8px] border border-dashed border-[#ddd7ca] bg-white/70 px-3 py-3 text-xs text-[#817c73]">
+                还没有三元组。
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {searchResults.length ? (
+          <div>
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b8579]">检索结果</div>
+            <div className="max-h-[180px] space-y-2 overflow-auto pr-1">
+              {searchResults.slice(0, 8).map((result, index) => (
+                <ScriptStudioLightMemoryRelation key={String(result.id ?? index)} record={result} result />
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioLightMemoryRelation({
+  record,
+  result,
+}: {
+  record: Record<string, unknown>
+  result?: boolean
+}) {
+  const subject = readUiString(record, ['subject', 'subject_id', 'source', 'head']) || 'subject'
+  const predicate = readUiString(record, ['predicate', 'relation', 'type']) || 'relates'
+  const object = readUiString(record, ['object', 'object_id', 'target', 'tail']) || 'object'
+  const score = readUiString(record, ['score', 'confidence', 'weight'])
+  const description = readUiString(record, ['description', 'summary', 'evidence', 'text'])
+
+  return (
+    <div className="rounded-[8px] border border-[#e3ded2] bg-white px-3 py-2">
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <div className="min-w-0 truncate text-xs font-semibold text-[#2f352f]">
+          {subject} <span className="text-[#7c8578]">{' -> '}{predicate}{' -> '}</span> {object}
+        </div>
+        {score ? <span className="shrink-0 rounded-full bg-[#eef1ea] px-2 py-0.5 font-mono text-[10px] text-[#62705f]">{score}</span> : null}
+      </div>
+      {description ? <div className="mt-1 line-clamp-2 text-[11px] leading-5 text-[#6f6a60]">{description}</div> : null}
+      {result ? <div className="mt-1 font-mono text-[10px] text-[#8b8579]">retrieved memory</div> : null}
+    </div>
+  )
+}
+
+function ScriptStudioGraphEventNotice({ items }: { items: string[] }) {
+  return (
+    <div className="rounded-[10px] border border-[#dfe5dc] bg-[#f4f8f1] p-3">
+      <div className="flex items-center gap-2 text-xs font-semibold text-[#274735]">
+        <GitBranch className="size-3.5" />
+        Graph event contract
+      </div>
+      <div className="mt-3 space-y-2">
+        {items.map((item) => (
+          <div key={item} className="rounded-[7px] border border-[#dfe5dc] bg-white px-2.5 py-2 font-mono text-[10px] text-[#536258]">
+            {item}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioLightLog({ entry }: { entry: PlotPilotLogEntry }) {
+  const tone =
+    entry.level === 'error'
+      ? 'border-[#e8c0bc] bg-[#fff1ef] text-[#7d2e27]'
+      : entry.level === 'warning'
+        ? 'border-[#ead7a0] bg-[#fff9e8] text-[#6d540b]'
+        : entry.level === 'success'
+          ? 'border-[#cfe0cd] bg-[#f3faf0] text-[#31573a]'
+          : 'border-[#e2ddd2] bg-[#faf9f4] text-[#5f655a]'
+
+  return (
+    <div className={cn('rounded-[8px] border px-3 py-2', tone)}>
+      <div className="font-mono text-[10px] opacity-70">{entry.time ?? 'now'}</div>
+      <div className="mt-1 text-xs leading-5">{entry.message}</div>
+    </div>
+  )
+}
+
+function ScriptStudioLightEmpty({
+  icon: Icon,
+  title,
+  body,
+  compact,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  body: string
+  compact?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'grid place-items-center rounded-[12px] border border-dashed border-[#ded9cd] bg-[#fffefd]/90 px-6 text-center',
+        compact ? 'py-8' : 'min-h-[240px] py-12 shadow-[0_12px_28px_rgba(43,38,27,0.08)]',
+      )}
+    >
+      <div className="max-w-[360px]">
+        <div className="mx-auto grid size-10 place-items-center rounded-[9px] border border-[#e2ddd2] bg-[#f7f5ee] text-[#5b6258]">
+          <Icon className="size-5" />
+        </div>
+        <div className="mt-3 text-sm font-semibold text-[#242821]">{title}</div>
+        <div className="mt-1 text-xs leading-5 text-[#777268]">{body}</div>
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioAdvancedCard({ card }: { card: ScriptStudioAdvancedCardView }) {
+  const Icon = card.icon
+  const toneClassName =
+    card.tone === 'gold'
+      ? 'bg-[#c4a86a] text-[#2e2718]'
+      : card.tone === 'rose'
+        ? 'bg-[#b98c84] text-[#2b1c1a]'
+        : card.tone === 'ink'
+          ? 'bg-[#1e211d] text-white'
+          : 'bg-[#9ead99] text-[#162319]'
+
+  return (
+    <article className="min-h-[214px] rounded-[12px] border border-[#ddd8cd] bg-[#fffefd]/96 p-4 shadow-[0_16px_38px_rgba(43,38,27,0.10)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className={cn('grid size-9 shrink-0 place-items-center rounded-[9px]', toneClassName)}>
+            <Icon className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#8b8579]">{card.eyebrow}</div>
+            <h3 className="mt-1 truncate text-sm font-semibold text-[#242821]">{card.title}</h3>
+          </div>
+        </div>
+        {card.status ? (
+          <span className="shrink-0 rounded-full border border-[#dfdacd] bg-[#f7f5ee] px-2 py-1 text-[11px] font-semibold text-[#5f655a]">
+            {card.status}
+          </span>
+        ) : null}
+      </div>
+
+      <p className="mt-3 min-h-[44px] text-xs leading-5 text-[#63665f]">{card.body}</p>
+
+      {card.metrics?.length ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {card.metrics.map((metric) => (
+            <div key={metric.label} className="rounded-[8px] border border-[#e4dfd4] bg-[#faf9f4] px-3 py-2">
+              <div className="text-[10px] font-semibold text-[#8b8579]">{metric.label}</div>
+              <div className="mt-0.5 truncate text-xs font-semibold text-[#2c3029]">{metric.value}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {card.actions?.length ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {card.actions.map((action) => {
+            const ActionIcon = action.icon
+            return (
+              <button
+                key={action.label}
+                type="button"
+                onClick={action.onClick}
+                disabled={action.disabled || !action.onClick}
+                className={cn(
+                  'inline-flex h-8 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20 disabled:cursor-not-allowed disabled:opacity-45',
+                  action.primary
+                    ? 'border-[#174a38] bg-[#174a38] text-white hover:bg-[#1f5b46]'
+                    : 'border-[#ded9cd] bg-[#f8f7f2] text-[#343831] hover:bg-white',
+                )}
+              >
+                {ActionIcon ? <ActionIcon className="size-3.5" /> : null}
+                {action.label}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+    </article>
   )
 }
 
@@ -1123,6 +3922,7 @@ function ScriptStudioRightRail({
   codexStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
+  handlers,
 }: {
   mode: ScriptStudioMode
   logs: PlotPilotLogEntry[]
@@ -1141,7 +3941,14 @@ function ScriptStudioRightRail({
   codexStatus?: PlotPilotCodexStatus | null
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+  handlers?: PlotPilotNativeHandlers
 }) {
+  const canEditCards = Boolean(novel && canUseNovel && handlers?.onSaveStorageCard)
+  const saveStorageCard = (card: ScriptStudioStorageCardDraft) => {
+    if (!novel) return
+    handlers?.onSaveStorageCard?.(novel.id, card)
+  }
+
   return (
     <aside className="sticky top-0 flex h-[calc(100vh-92px)] min-h-[640px] flex-col gap-3 overflow-y-auto pr-1">
       <ScriptStudioFloatingCard
@@ -1210,13 +4017,19 @@ function ScriptStudioRightRail({
       <ScriptStudioStorageDeck
         title="人设存储"
         detail="Bible character cards"
+        kind="character"
         cards={characterCards}
+        disabled={!canEditCards}
+        onSave={saveStorageCard}
       />
 
       <ScriptStudioStorageDeck
         title="提示词存储"
         detail="Prompt registry"
+        kind="prompt"
         cards={promptCards}
+        disabled={!canEditCards}
+        onSave={saveStorageCard}
       />
 
       <ScriptStudioMusicPlayer className="mt-auto" />
@@ -1378,12 +4191,35 @@ function ScriptStudioMusicPlayer({ className }: { className?: string }) {
 function ScriptStudioStorageDeck({
   title,
   detail,
+  kind,
   cards,
+  disabled,
+  onSave,
 }: {
   title: string
   detail: string
+  kind: 'character' | 'prompt'
   cards: ScriptStudioStorageCardView[]
+  disabled?: boolean
+  onSave?: (card: ScriptStudioStorageCardDraft) => void
 }) {
+  const [creating, setCreating] = React.useState(false)
+  const draftCard = React.useMemo<ScriptStudioStorageCardView>(() => ({
+    id: `new-${kind}`,
+    kind,
+    title: kind === 'character' ? '新人物' : '新提示词',
+    subtitle: kind === 'character' ? '角色设定' : 'prompt asset',
+    body: kind === 'character'
+      ? '写入人物目标、弱点、声线、秘密和关系。'
+      : '写入系统提示、用户提示、变量约束或审阅策略。',
+    badge: kind === 'character' ? '人设' : 'Prompt',
+    meta: kind === 'character' ? 'Bible' : 'registry',
+    initials: kind === 'character' ? '新' : 'P',
+    tone: kind === 'character' ? 'sage' : 'ink',
+    source: 'draft',
+  }), [kind])
+  const visibleCards = creating ? [draftCard, ...cards] : cards
+
   return (
     <section className="rounded-[10px] border border-[#dedbd2] bg-[#fffefd]/96 p-3 shadow-[0_14px_30px_rgba(43,38,27,0.12)]">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -1391,20 +4227,56 @@ function ScriptStudioStorageDeck({
           <h2 className="truncate text-sm font-semibold text-[#282b25]">{title}</h2>
           <div className="mt-0.5 text-[10px] font-medium text-[#8a867c]">{detail}</div>
         </div>
-        <span className="rounded-full border border-[#e0dccf] bg-[#f7f6f1] px-2 py-0.5 font-mono text-[10px] text-[#5f635c]">
-          {cards.length}
-        </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="rounded-full border border-[#e0dccf] bg-[#f7f6f1] px-2 py-0.5 font-mono text-[10px] text-[#5f635c]">
+            {cards.length}
+          </span>
+          <button
+            type="button"
+            aria-label={`新增${title}`}
+            title={`新增${title}`}
+            onClick={() => setCreating(true)}
+            disabled={disabled || creating}
+            className="grid size-7 place-items-center rounded-full border border-[#ded9cc] bg-[#174a38] text-white outline-none transition hover:bg-[#123d2f] focus-visible:ring-2 focus-visible:ring-[#174a38]/20 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <Plus className="size-3.5" />
+          </button>
+        </div>
       </div>
       <div className="space-y-2.5">
-        {cards.map((card) => (
-          <ScriptStudioFancyStorageCard key={card.id} card={card} />
+        {visibleCards.map((card) => (
+          <ScriptStudioFancyStorageCard
+            key={card.id}
+            card={card}
+            disabled={disabled}
+            forceEditing={card.source === 'draft'}
+            onCancelDraft={card.source === 'draft' ? () => setCreating(false) : undefined}
+            onSave={(draft) => {
+              onSave?.(draft)
+              if (card.source === 'draft') setCreating(false)
+            }}
+          />
         ))}
       </div>
     </section>
   )
 }
 
-function ScriptStudioFancyStorageCard({ card }: { card: ScriptStudioStorageCardView }) {
+function ScriptStudioFancyStorageCard({
+  card,
+  disabled,
+  forceEditing,
+  onCancelDraft,
+  onSave,
+}: {
+  card: ScriptStudioStorageCardView
+  disabled?: boolean
+  forceEditing?: boolean
+  onCancelDraft?: () => void
+  onSave?: (card: ScriptStudioStorageCardDraft) => void
+}) {
+  const [editing, setEditing] = React.useState(Boolean(forceEditing))
+  const [draft, setDraft] = React.useState<ScriptStudioStorageCardDraft>(() => toStorageCardDraft(card))
   const tone = {
     sage: {
       root: '#98a295',
@@ -1428,6 +4300,28 @@ function ScriptStudioFancyStorageCard({ card }: { card: ScriptStudioStorageCardV
       chip: 'rgba(255, 255, 255, .26)',
     },
   }[card.tone]
+
+  React.useEffect(() => {
+    setDraft(toStorageCardDraft(card))
+    setEditing(Boolean(forceEditing))
+  }, [card.id, card.title, card.subtitle, card.body, card.meta, card.badge, forceEditing])
+
+  const updateDraft = (patch: Partial<ScriptStudioStorageCardDraft>) => {
+    setDraft((current) => ({ ...current, ...patch }))
+  }
+
+  const saveDraft = () => {
+    const clean = {
+      ...draft,
+      title: draft.title.trim() || card.title,
+      subtitle: draft.subtitle.trim() || card.subtitle,
+      body: draft.body.trim() || card.body,
+      meta: draft.meta?.trim() || card.meta,
+      badge: draft.badge?.trim() || card.badge,
+    }
+    onSave?.(clean)
+    setEditing(false)
+  }
 
   return (
     <article
@@ -1455,7 +4349,64 @@ function ScriptStudioFancyStorageCard({ card }: { card: ScriptStudioStorageCardV
         </span>
       </div>
       <p className="relative z-10 mt-2 line-clamp-3 text-[11px] leading-[1.35] opacity-90">{card.body}</p>
-      <div className="relative z-10 mt-3 grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2 rounded-[8px] bg-white/[0.92] p-2 text-[#4b514b] shadow-[0_8px_20px_rgba(36,38,31,.16)]">
+      {editing ? (
+        <div className="relative z-10 mt-3 space-y-2 rounded-[8px] bg-white/[0.94] p-2 text-[#3d423c] shadow-[0_8px_20px_rgba(36,38,31,.16)]">
+          <input
+            aria-label="卡片标题"
+            value={draft.title}
+            onChange={(event) => updateDraft({ title: event.currentTarget.value })}
+            className="h-8 w-full rounded-[6px] border border-[#ded8ca] bg-[#fffdf8] px-2 text-xs font-semibold outline-none focus:border-[#174a38]"
+          />
+          <input
+            aria-label="卡片分类"
+            value={draft.subtitle}
+            onChange={(event) => updateDraft({ subtitle: event.currentTarget.value })}
+            className="h-8 w-full rounded-[6px] border border-[#ded8ca] bg-[#fffdf8] px-2 text-xs outline-none focus:border-[#174a38]"
+          />
+          <textarea
+            aria-label="卡片正文"
+            value={draft.body}
+            onChange={(event) => updateDraft({ body: event.currentTarget.value })}
+            rows={4}
+            className="min-h-20 w-full resize-none rounded-[6px] border border-[#ded8ca] bg-[#fffdf8] px-2 py-1.5 text-xs leading-5 outline-none focus:border-[#174a38]"
+          />
+          <input
+            aria-label="卡片索引"
+            value={draft.meta ?? ''}
+            onChange={(event) => updateDraft({ meta: event.currentTarget.value })}
+            className="h-8 w-full rounded-[6px] border border-[#ded8ca] bg-[#fffdf8] px-2 text-xs outline-none focus:border-[#174a38]"
+          />
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(toStorageCardDraft(card))
+                if (onCancelDraft) onCancelDraft()
+                else setEditing(false)
+              }}
+              className="rounded-[6px] border border-[#dcd6c9] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#5d5f58] outline-none hover:bg-[#f5f3ec] focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              onClick={saveDraft}
+              disabled={disabled || !onSave}
+              className="inline-flex items-center gap-1 rounded-[6px] bg-[#174a38] px-2.5 py-1 text-[11px] font-semibold text-white outline-none hover:bg-[#123d2f] focus-visible:ring-2 focus-visible:ring-[#174a38]/25 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              <Save className="size-3" />
+              保存
+            </button>
+          </div>
+        </div>
+      ) : null}
+      <button
+        type="button"
+        aria-label={`编辑${card.title}`}
+        title={`编辑${card.title}`}
+        onClick={() => setEditing((current) => !current)}
+        className="relative z-10 mt-3 grid w-full grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2 rounded-[8px] bg-white/[0.92] p-2 text-left text-[#4b514b] shadow-[0_8px_20px_rgba(36,38,31,.16)] outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-white/45"
+      >
         <div className="grid size-8 place-items-center rounded-full bg-[#f0eee8] font-serif text-[13px] font-bold text-[#26342d]">
           {card.initials}
         </div>
@@ -1463,10 +4414,26 @@ function ScriptStudioFancyStorageCard({ card }: { card: ScriptStudioStorageCardV
           <div className="truncate text-xs font-bold">{card.meta}</div>
           <div className="truncate text-[10px] text-[#7c776d]">{card.kind === 'character' ? 'character profile' : 'prompt asset'}</div>
         </div>
-        <ChevronDown className="size-3.5 text-[#777268]" />
-      </div>
+        <ChevronDown className={cn('size-3.5 text-[#777268] transition', editing ? 'rotate-180' : '')} />
+      </button>
     </article>
   )
+}
+
+function toStorageCardDraft(card: ScriptStudioStorageCardView): ScriptStudioStorageCardDraft {
+  return {
+    id: card.id,
+    kind: card.kind,
+    title: card.title,
+    subtitle: card.subtitle,
+    body: card.body,
+    badge: card.badge,
+    meta: card.meta,
+    tone: card.tone,
+    sourceIndex: card.sourceIndex,
+    sourceId: card.sourceId,
+    source: card.source,
+  }
 }
 
 function ScriptStudioFloatingCard({
@@ -1637,6 +4604,9 @@ function createScriptStudioCharacterCards(
       meta: firstNonEmptyString(record, ['faction', 'relationship', 'arc']) || 'Bible',
       initials: name.slice(0, 2),
       tone: index % 2 === 0 ? 'sage' as const : 'gold' as const,
+      sourceIndex: index,
+      sourceId: String(record.id ?? ''),
+      source: 'bible' as const,
     }
   }) ?? []
 
@@ -1650,6 +4620,9 @@ function createScriptStudioCharacterCards(
     meta: novel.title,
     initials: character.slice(0, 2),
     tone: index % 2 === 0 ? 'sage' as const : 'gold' as const,
+    sourceIndex: index,
+    sourceId: character,
+    source: 'summary' as const,
   })) ?? []
 
   const cards = [...editorCharacters, ...summaryCharacters]
@@ -1666,6 +4639,7 @@ function createScriptStudioCharacterCards(
       meta: '主线人物',
       initials: '拓',
       tone: 'sage',
+      source: 'fallback',
     },
     {
       id: 'character-fallback-mentor',
@@ -1677,6 +4651,7 @@ function createScriptStudioCharacterCards(
       meta: '关系锚点',
       initials: '乔',
       tone: 'gold',
+      source: 'fallback',
     },
   ]
 }
@@ -1698,6 +4673,9 @@ function createScriptStudioPromptCards(featureState: PlotPilotNativeFeatureState
       meta: firstNonEmptyString(record, ['version', 'model', 'provider']) || 'registry',
       initials: 'P',
       tone: index % 2 === 0 ? 'ink' as const : 'sage' as const,
+      sourceIndex: index,
+      sourceId: String(record.id ?? record.key ?? ''),
+      source: 'prompt-registry' as const,
     }
   })
 
@@ -1714,6 +4692,7 @@ function createScriptStudioPromptCards(featureState: PlotPilotNativeFeatureState
       meta: 'PLM runtime',
       initials: '章',
       tone: 'ink',
+      source: 'fallback',
     },
     {
       id: 'prompt-fallback-voice',
@@ -1725,6 +4704,7 @@ function createScriptStudioPromptCards(featureState: PlotPilotNativeFeatureState
       meta: 'WritingSpec',
       initials: '声',
       tone: 'sage',
+      source: 'fallback',
     },
   ]
 }
@@ -4197,6 +7177,21 @@ function asUiRecord(value: unknown): Record<string, unknown> {
     : {}
 }
 
+function asUiRecordArray(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value)
+    ? value.map(asUiRecord).filter((record) => Object.keys(record).length > 0)
+    : []
+}
+
+function readUiString(record: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' && value.trim()) return value
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  }
+  return ''
+}
+
 function pickRecord(record: Record<string, unknown>, keys: string[]) {
   return keys.reduce<Record<string, unknown>>((result, key) => {
     if (record[key] !== undefined) result[key] = record[key]
@@ -4205,13 +7200,35 @@ function pickRecord(record: Record<string, unknown>, keys: string[]) {
 }
 
 function resolvePromptPreview(session: Record<string, unknown>): string {
+  const parts = resolvePromptParts(session)
+  return [parts.system, parts.user].filter(Boolean).join('\n\n')
+}
+
+function resolvePromptParts(session: Record<string, unknown>): { system: string; user: string } {
   const promptSnapshot = asUiRecord(session.prompt_snapshot)
   const prompt = asUiRecord(promptSnapshot.prompt)
   const draftPrompt = asUiRecord(promptSnapshot.draft_prompt)
   const templatePrompt = asUiRecord(promptSnapshot.template_prompt)
   const system = String(prompt.system ?? draftPrompt.system ?? templatePrompt.system ?? '')
   const user = String(prompt.user ?? draftPrompt.user ?? templatePrompt.user ?? '')
-  return [system, user].filter(Boolean).join('\n\n')
+  return { system, user }
+}
+
+function readInvocationSessionId(invocation: Record<string, unknown>, session: Record<string, unknown>): string {
+  return readUiString(session, ['id', 'session_id'])
+    || readUiString(invocation, ['sessionId', 'session_id', 'id'])
+}
+
+function formatBindingValue(binding: Record<string, unknown>): string {
+  const keys = ['value', 'preview', 'text', 'resolved_value', 'default', 'path', 'target']
+  for (const key of keys) {
+    const value = binding[key]
+    if (value === null || value === undefined) continue
+    if (typeof value === 'string' && value.trim()) return value.trim()
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+    if (typeof value === 'object') return JSON.stringify(value)
+  }
+  return ''
 }
 
 function onboardingDraftFromNovel(novel: PlotPilotNovel | null): PlotPilotOnboardingDraft {
@@ -4231,9 +7248,101 @@ function onboardingDraftFromNovel(novel: PlotPilotNovel | null): PlotPilotOnboar
   }
 }
 
+function buildProductionTimelineEvents(input: {
+  autopilotEvents: Array<Record<string, unknown>>
+  autopilotStatusEvents: Array<Record<string, unknown>>
+  autopilotChapterEvents: Array<Record<string, unknown>>
+  hostedWriteEvents: Array<Record<string, unknown>>
+}): ScriptStudioProductionTimelineEvent[] {
+  const events: ScriptStudioProductionTimelineEvent[] = []
+  input.hostedWriteEvents.forEach((event, index) => {
+    events.push(toProductionTimelineEvent('hosted', event, index))
+  })
+  input.autopilotEvents.forEach((event, index) => {
+    events.push(toProductionTimelineEvent('autopilot', event, index))
+  })
+  input.autopilotStatusEvents.forEach((event, index) => {
+    events.push(toProductionTimelineEvent('status', event, index))
+  })
+  input.autopilotChapterEvents.forEach((event, index) => {
+    events.push(toProductionTimelineEvent('chapter', event, index))
+  })
+
+  return events
+    .sort((left, right) => right.sortKey.localeCompare(left.sortKey))
+    .slice(0, 80)
+}
+
+function toProductionTimelineEvent(
+  source: string,
+  event: Record<string, unknown>,
+  index: number,
+): ScriptStudioProductionTimelineEvent {
+  const type = readUiString(event, ['type']) || 'event'
+  const metadata = asUiRecord(event.metadata)
+  const chapter = readUiString(event, ['chapter_number', 'chapter']) || readUiString(metadata, ['chapter_number', 'chapter'])
+  const message = readUiString(event, ['message', 'detail'])
+    || readUiString(metadata, ['message'])
+    || (chapter ? `chapter ${chapter}` : type)
+  const timestamp = readUiString(event, ['timestamp', 'updatedAt', 'created_at'])
+    || new Date().toISOString()
+  const tone: ScriptStudioProductionTimelineEvent['tone'] =
+    type === 'error' || type === 'beat_error'
+      ? 'error'
+      : type === 'approval_required' || type === 'paused_for_review'
+        ? 'warning'
+        : type === 'saved' || type === 'session_done' || type === 'autopilot_complete'
+          ? 'success'
+          : 'info'
+
+  return {
+    id: `${source}:${type}:${String(event.id ?? event.seq ?? index)}:${timestamp}`,
+    source,
+    type,
+    message,
+    timestamp: formatTimelineTimestamp(timestamp),
+    sortKey: timestamp,
+    tone,
+  }
+}
+
+function formatTimelineTimestamp(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value.slice(0, 16)
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function extractMemoryEntities(triples: Array<Record<string, unknown>>): Array<{ id: string; label: string; count: number }> {
+  const counts = new Map<string, { label: string; count: number }>()
+  for (const triple of triples) {
+    const candidates = [
+      readUiString(triple, ['subject', 'subject_id', 'source', 'head']),
+      readUiString(triple, ['object', 'object_id', 'target', 'tail']),
+    ]
+    for (const candidate of candidates) {
+      const label = candidate.trim()
+      if (!label) continue
+      const id = label.toLowerCase()
+      const current = counts.get(id)
+      counts.set(id, {
+        label,
+        count: (current?.count ?? 0) + 1,
+      })
+    }
+  }
+  return Array.from(counts.entries())
+    .map(([id, value]) => ({ id, ...value }))
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
+}
+
 function countDraftText(value: string | undefined) {
   const text = value?.trim() ?? ''
   return text.length
+}
+
+function normalizeProgressPercent(value: number | undefined) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return 0
+  return clampProgress(value > 0 && value <= 1 ? value * 100 : value)
 }
 
 function clampProgress(value: number | undefined) {

@@ -1,0 +1,76 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+#zen-drama-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  min-width: 0;
+  min-height: 0;
+  overflow: clip;
+  background: color-mix(in srgb, var(--zen-main-browser-background) 96%, var(--zen-primary-color) 4%);
+  border: var(--zen-appcontent-border);
+  border-radius: var(--zen-native-inner-radius);
+  box-shadow: var(--zen-big-shadow);
+}
+
+#zen-drama-panel[hidden="true"] {
+  display: none;
+}
+
+#zen-drama-toolbar {
+  min-height: var(--zen-toolbar-height);
+  padding: 0 var(--zen-element-separation);
+  gap: 4px;
+  background: color-mix(in srgb, var(--zen-toolbar-element-bg) 80%, transparent);
+  border-bottom: 1px solid var(--zen-colors-border);
+  color: var(--toolbar-color);
+}
+
+.zen-drama-toolbar-button {
+  min-width: 54px;
+  border-radius: var(--toolbarbutton-border-radius);
+}
+
+.zen-drama-toolbar-button[zen-drama-active="true"] {
+  background: color-mix(in srgb, var(--zen-primary-color) 28%, transparent);
+  color: var(--zen-colors-primary-foreground);
+}
+
+.zen-drama-icon-button {
+  min-width: var(--zen-toolbar-height);
+  border-radius: var(--toolbarbutton-border-radius);
+}
+
+#zen-drama-open-tab-button {
+  list-style-image: url("chrome://browser/skin/zen-icons/open.svg");
+  display: none;
+}
+
+#zen-drama-close-button {
+  list-style-image: url("chrome://browser/skin/zen-icons/close.svg");
+}
+
+#zen-drama-runtime-status {
+  margin-inline: 8px;
+  color: color-mix(in srgb, currentColor 62%, transparent);
+  font-size: 0.92em;
+}
+
+#zen-drama-browser {
+  min-width: 0;
+  min-height: 0;
+  background: transparent;
+}
+
+#zen-drama-button[zen-drama-active="true"],
+.zen-drama-sidebar-surface-button[zen-drama-active="true"] {
+  background: var(--zen-toolbar-element-bg-hover);
+}
+
+.zen-drama-sidebar-surface-button[zen-drama-active="true"] {
+  color: var(--zen-primary-color);
+}
