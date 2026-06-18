@@ -10,6 +10,7 @@
 - [x] 2.2 Replace plain text route links with compact icon-first Graph / PLM / Crew controls
 - [x] 2.3 Add runtime status, workspace metadata, and route title as styled shell chrome
 - [x] 2.4 Ensure Zen's sidebar and browser chrome remain visible while Drama occupies the right workbench area
+- [x] 2.5 Add a persistent Zen chrome PLM entry that can reopen Drama after a normal browser tab is closed
 
 ## 3. Theme and CSS Loading
 
@@ -41,3 +42,4 @@
 - [x] 6.4 Run `bun run browser-shell:build`
 - [x] 6.5 Run Zen Drama panel verification script after implementation
 - [x] 6.6 Run installed package root redirect smoke for `http://127.0.0.1:3198/`
+- [x] 6.7 Verify the packaged macOS Zen app can reopen PLM from the persistent chrome entry

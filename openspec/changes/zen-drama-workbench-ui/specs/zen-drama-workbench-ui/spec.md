@@ -27,6 +27,15 @@ The system SHALL render Drama as a styled workbench surface inside Zen Browser's
 - **AND** plain text links such as `Graph`, `PLM`, and `Crew` are not the primary navigation surface
 - **AND** the route title and status use Drama/Warp styling
 
+#### Scenario: Reopen PLM after a browser tab is closed
+
+- **GIVEN** Drama is packaged into Zen Browser chrome
+- **AND** the user closes or switches away from a normal browser tab that previously showed Drama content
+- **WHEN** the user activates the persistent Drama chrome entry
+- **THEN** Zen reopens the Drama panel to the PLM surface
+- **AND** the user does not need to restart Zen or manually enter a `chrome://browser/content/drama/app/index.html` URL
+- **AND** the entry remains available even when Zen sidebar customization does not expose a Drama toolbar item
+
 ### Requirement: Visual Parity With Drama/Warp
 
 The system SHALL preserve the compact dark Drama/Warp workbench style across Zen-hosted routes.

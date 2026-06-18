@@ -21,6 +21,42 @@
   display: none;
 }
 
+#zen-drama-launcher-button {
+  position: fixed;
+  inset-inline-end: 18px;
+  inset-block-end: 18px;
+  z-index: 8;
+  min-width: 64px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--zen-colors-border) 80%, transparent);
+  border-radius: var(--toolbarbutton-border-radius);
+  background: color-mix(in srgb, var(--zen-toolbar-element-bg) 88%, var(--zen-primary-color) 12%);
+  box-shadow: var(--zen-big-shadow);
+  color: var(--toolbar-color);
+}
+
+#zen-drama-launcher-button:hover {
+  background: var(--zen-toolbar-element-bg-hover);
+}
+
+#zen-drama-launcher-button[zen-drama-active="true"] {
+  border-color: color-mix(in srgb, var(--zen-primary-color) 72%, var(--zen-colors-border));
+  background: color-mix(in srgb, var(--zen-primary-color) 34%, var(--zen-toolbar-element-bg));
+}
+
+#zen-drama-launcher-button .toolbarbutton-icon {
+  width: 16px;
+  height: 16px;
+  margin-inline-end: 5px;
+}
+
+#zen-drama-launcher-button .toolbarbutton-text {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
 #zen-drama-toolbar {
   min-height: var(--zen-toolbar-height);
   padding: 0 var(--zen-element-separation);

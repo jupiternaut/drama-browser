@@ -28,19 +28,24 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   #hasLoadedBrowser = false;
   #runtimeLaunchPromise = null;
   #tabSelectHandler = null;
+  #panelOpenGeneration = 0;
 
   init() {
     this.panel = document.getElementById("zen-drama-panel");
     this.browser = document.getElementById("zen-drama-browser");
     this.status = document.getElementById("zen-drama-runtime-status");
     this.sidebarButton = document.getElementById("zen-drama-button");
+    this.launcherButton = document.getElementById("zen-drama-launcher-button");
 
+    this.#ensureLauncherButton();
     this.#ensureSidebarSurfaceButtons();
     window.requestAnimationFrame(() => {
+      this.#ensureLauncherButton();
       this.#ensureSidebarSurfaceButtons();
       this.#updateActiveSurface();
     });
     window.setTimeout(() => {
+      this.#ensureLauncherButton();
       this.#ensureSidebarSurfaceButtons();
       this.#updateActiveSurface();
     }, 1200);
@@ -65,6 +70,39 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       event.stopPropagation();
       handler();
     });
+  }
+
+  #ensureLauncherButton() {
+    let button = document.getElementById("zen-drama-launcher-button");
+    if (!button) {
+      const parent = this.panel?.parentElement || document.body || document.documentElement;
+      if (!parent) {
+        return null;
+      }
+
+      button = document.createXULElement("toolbarbutton");
+      button.setAttribute("id", "zen-drama-launcher-button");
+      parent.insertBefore(button, this.panel || parent.firstChild);
+    }
+
+    button.setAttribute("class", "toolbarbutton-1 zen-drama-launcher-button");
+    button.setAttribute("image", "chrome://browser/content/zen-icons/drama-plm.svg");
+    button.setAttribute("label", "PLM");
+    button.setAttribute("tooltiptext", "Open Drama PLM");
+    button.setAttribute("removable", "false");
+    button.setAttribute("overflows", "false");
+
+    if (button.getAttribute("zen-drama-launcher-bound") !== "true") {
+      button.addEventListener("command", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.open("plm");
+      });
+      button.setAttribute("zen-drama-launcher-bound", "true");
+    }
+
+    this.launcherButton = button;
+    return button;
   }
 
   #ensureSidebarSurfaceButtons() {
@@ -127,8 +165,9 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     window.addEventListener("TabSelect", this.#tabSelectHandler);
     gBrowser.tabContainer.addEventListener("TabSelect", this.#tabSelectHandler);
     gBrowser.tabContainer.addEventListener("TabOpen", event => {
+      const panelOpenGeneration = this.#panelOpenGeneration;
       window.requestAnimationFrame(() => {
-        if (gBrowser.selectedTab === event.target) {
+        if (this.#panelOpenGeneration === panelOpenGeneration && gBrowser.selectedTab === event.target) {
           this.#hideForBrowserTab();
         }
       });
@@ -288,8 +327,10 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       return;
     }
 
+    this.#ensureLauncherButton();
     this.#ensureSidebarSurfaceButtons();
     this.#surface = surface;
+    this.#panelOpenGeneration += 1;
     this.#bindTabSelection();
     this.#setPanelVisible(true);
     void this.#loadSurface();
@@ -341,15 +382,20 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     }
 
     this.panel.hidden = !visible;
+    const launcherButton = this.#ensureLauncherButton();
     if (visible) {
       this.sidebarButton?.setAttribute("zen-drama-active", "true");
+      launcherButton?.setAttribute("zen-drama-active", "true");
     } else {
       this.sidebarButton?.removeAttribute("zen-drama-active");
+      launcherButton?.removeAttribute("zen-drama-active");
     }
     this.#updateActiveSurface();
   }
 
   #updateActiveSurface() {
+    const launcherButton = this.#ensureLauncherButton();
+    launcherButton?.setAttribute("zen-drama-surface", this.#surface);
     this.#ensureSidebarSurfaceButtons();
     const ids = {
       graph: ["zen-drama-graph-button", "zen-drama-graph-sidebar-button"],

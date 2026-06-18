@@ -84,6 +84,7 @@ def parse_args():
     parser.add_argument("--keep-profile", action="store_true", help="Do not delete the temporary profile.")
     parser.add_argument("--strict", action="store_true", help="Exit non-zero when verification fails.")
     parser.add_argument("--check-route-switches", action="store_true", help="Measure warm route switches inside the mounted shell.")
+    parser.add_argument("--check-launcher-reopen", action="store_true", help="Verify the persistent chrome entry can reopen PLM after a normal tab hides the panel.")
     parser.add_argument("--first-viewport-budget-ms", type=int, default=FIRST_VIEWPORT_BUDGET_MS)
     parser.add_argument("--runtime-budget-ms", type=int, default=RUNTIME_READY_BUDGET_MS)
     parser.add_argument("--sidecar-budget-ms", type=int, default=SIDECAR_READY_BUDGET_MS)
@@ -159,7 +160,12 @@ def verification_schema() -> str:
 INSPECTION_SCRIPT = r"""
 const panel = document.getElementById('zen-drama-panel');
 const browser = document.getElementById('zen-drama-browser');
+const launcher = document.getElementById('zen-drama-launcher-button');
 const manager = window.gZenDramaManager;
+const launcherRect = launcher ? (() => {
+  const rect = launcher.getBoundingClientRect();
+  return { width: rect.width, height: rect.height, top: rect.top, left: rect.left };
+})() : null;
 let content = null;
 try {
   const doc = browser?.contentWindow?.document ?? browser?.contentDocument ?? null;
@@ -196,6 +202,12 @@ return {
   panelExists: Boolean(panel),
   panelHidden: panel?.hidden ?? null,
   panelDisplay: panel ? getComputedStyle(panel).display : null,
+  launcherExists: Boolean(launcher),
+  launcherBound: launcher?.getAttribute('zen-drama-launcher-bound') ?? null,
+  launcherLabel: launcher?.getAttribute('label') ?? null,
+  launcherActive: launcher?.getAttribute('zen-drama-active') ?? null,
+  launcherDisplay: launcher ? getComputedStyle(launcher).display : null,
+  launcherRect,
   browserExists: Boolean(browser),
   currentURI: browser?.currentURI?.spec ?? null,
   statusValue: document.getElementById('zen-drama-runtime-status')?.getAttribute('value') ?? null,
@@ -290,6 +302,106 @@ const done = arguments[arguments.length - 1];
     switches,
     finalSurface: doc.documentElement.dataset.dramaSurface ?? null,
     shellRemounted: doc.querySelector('[data-drama-shell="workbench"]') !== initialShell,
+  });
+})().catch((error) => {
+  done({ ok: false, error: String(error), name: error?.name, message: error?.message });
+});
+"""
+
+
+LAUNCHER_REOPEN_SCRIPT = r"""
+const done = arguments[arguments.length - 1];
+(async () => {
+  const panel = document.getElementById('zen-drama-panel');
+  const browser = document.getElementById('zen-drama-browser');
+  const launcher = document.getElementById('zen-drama-launcher-button');
+  const manager = window.gZenDramaManager;
+
+  if (!panel || !browser || !launcher || !manager) {
+    done({
+      ok: false,
+      error: 'launcher, panel, browser, or manager is missing',
+      launcherExists: Boolean(launcher),
+      panelExists: Boolean(panel),
+      browserExists: Boolean(browser),
+      managerExists: Boolean(manager),
+    });
+    return;
+  }
+
+  const now = () => {
+    try {
+      return performance.now();
+    } catch {
+      return Date.now();
+    }
+  };
+
+  const contentSurface = () => {
+    try {
+      const doc = browser.contentWindow?.document ?? browser.contentDocument ?? null;
+      return doc?.documentElement?.dataset?.dramaSurface ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  const waitFor = (predicate, timeoutMs) => new Promise((resolve) => {
+    const startedAt = now();
+    const check = () => {
+      if (predicate()) {
+        resolve({ ok: true, elapsedMs: now() - startedAt });
+        return;
+      }
+      if (now() - startedAt >= timeoutMs) {
+        resolve({ ok: false, elapsedMs: now() - startedAt });
+        return;
+      }
+      setTimeout(check, 25);
+    };
+    check();
+  });
+
+  manager.open('graph');
+  const graphReady = await waitFor(() => {
+    const uri = browser.currentURI?.spec ?? '';
+    return !panel.hidden && uri.includes('surface=graph') && contentSurface() === 'graph';
+  }, 5000);
+
+  let hideMethod = 'manual';
+  if (typeof gBrowser !== 'undefined' && typeof gBrowser.addTrustedTab === 'function') {
+    hideMethod = 'browser-tab';
+    const tab = gBrowser.addTrustedTab('about:blank', {
+      triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+    });
+    gBrowser.selectedTab = tab;
+  } else {
+    panel.hidden = true;
+  }
+
+  const hidden = await waitFor(() => panel.hidden === true, 3000);
+  const beforeReopenUri = browser.currentURI?.spec ?? null;
+  const startedAt = now();
+  launcher.dispatchEvent(new Event('command', { bubbles: true, cancelable: true }));
+
+  const reopened = await waitFor(() => {
+    const uri = browser.currentURI?.spec ?? '';
+    return !panel.hidden && uri.includes('surface=plm') && contentSurface() === 'plm';
+  }, 5000);
+
+  done({
+    ok: graphReady.ok && hidden.ok && reopened.ok,
+    launcherExists: true,
+    launcherBound: launcher.getAttribute('zen-drama-launcher-bound') ?? null,
+    launcherLabel: launcher.getAttribute('label') ?? null,
+    hideMethod,
+    graphReady,
+    hiddenBeforeReopen: hidden,
+    beforeReopenUri,
+    afterReopenUri: browser.currentURI?.spec ?? null,
+    panelHiddenAfterReopen: panel.hidden,
+    contentSurfaceAfterReopen: contentSurface(),
+    elapsedMs: now() - startedAt,
   });
 })().catch((error) => {
   done({ ok: false, error: String(error), name: error?.name, message: error?.message });
@@ -496,6 +608,32 @@ def capture_screenshot(client: MarionetteClient, args):
         }, [f"screenshot capture failed: {error}"]
 
 
+def launcher_reopen_reasons(result):
+    if result is None:
+        return []
+
+    if not isinstance(result, dict):
+        return ["launcher reopen verification did not return a structured result."]
+
+    reasons = []
+    if result.get("error"):
+        reasons.append(f"launcher reopen verification failed: {result.get('error')}")
+    if result.get("launcherExists") is not True:
+        reasons.append("persistent Drama launcher is missing.")
+    if result.get("launcherBound") != "true":
+        reasons.append("persistent Drama launcher did not bind its command handler.")
+    if result.get("ok") is not True:
+        reasons.append("persistent Drama launcher did not reopen PLM after the panel was hidden.")
+    if result.get("panelHiddenAfterReopen") is True:
+        reasons.append("Drama panel remained hidden after launcher activation.")
+    if result.get("contentSurfaceAfterReopen") != "plm":
+        reasons.append("Drama launcher did not restore the PLM surface.")
+    after_uri = result.get("afterReopenUri")
+    if not isinstance(after_uri, str) or "surface=plm" not in after_uri:
+        reasons.append("Drama launcher did not load a PLM chrome-resource URI.")
+    return reasons
+
+
 def failure_reasons(result, surface: str):
     content = result.get("content") if isinstance(result, dict) else None
     dataset = content.get("dataset", {}) if isinstance(content, dict) else {}
@@ -508,6 +646,13 @@ def failure_reasons(result, surface: str):
         reasons.append("ZenDramaManager did not initialize in browser.xhtml.")
     if result.get("panelExists") is not True or result.get("panelHidden") is True:
         reasons.append("zen-drama-panel is missing or hidden.")
+    if result.get("launcherExists") is not True:
+        reasons.append("persistent Drama launcher is missing.")
+    if result.get("launcherBound") != "true":
+        reasons.append("persistent Drama launcher did not bind its command handler.")
+    launcher_rect = result.get("launcherRect")
+    if isinstance(launcher_rect, dict) and (float(launcher_rect.get("width") or 0) <= 0 or float(launcher_rect.get("height") or 0) <= 0):
+        reasons.append("persistent Drama launcher has an empty viewport rectangle.")
     if result.get("browserExists") is not True:
         reasons.append("zen-drama-browser is missing.")
     if not current_uri or "chrome://browser/content/drama/app/index.html" not in current_uri:
@@ -582,8 +727,19 @@ def main() -> int:
                 "WebDriver:ExecuteAsyncScript",
                 {"script": ROUTE_SWITCH_SCRIPT, "args": [], "newSandbox": False},
             ).get("value")
+        launcher_reopen_result = None
+        if args.check_launcher_reopen:
+            launcher_reopen_result = client.call(
+                "WebDriver:ExecuteAsyncScript",
+                {"script": LAUNCHER_REOPEN_SCRIPT, "args": [], "newSandbox": False},
+            ).get("value")
         performance, performance_reasons = performance_report(inspected, args.surface, args, route_switch_result)
-        reasons = failure_reasons(inspected, args.surface) + performance_reasons + screenshot_reasons
+        reasons = (
+            failure_reasons(inspected, args.surface)
+            + performance_reasons
+            + screenshot_reasons
+            + launcher_reopen_reasons(launcher_reopen_result)
+        )
         ok = len(reasons) == 0
         output = {
             "ok": ok,
@@ -602,6 +758,7 @@ def main() -> int:
                 "session": session,
             },
             "result": inspected,
+            "launcherReopen": launcher_reopen_result,
             "screenshot": screenshot,
             "performance": performance,
             "failureReasons": reasons,

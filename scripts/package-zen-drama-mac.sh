@@ -75,6 +75,7 @@ if body_marker not in text:
     <command id="cmd_zenDramaOpenCrew" />
     <command id="cmd_zenDramaOpenInTab" />
   </commandset>
+  <toolbarbutton id="zen-drama-launcher-button" class="toolbarbutton-1 zen-drama-launcher-button" image="chrome://browser/content/zen-icons/drama-plm.svg" label="PLM" tooltiptext="Open Drama PLM" />
   <vbox id="zen-drama-panel" hidden="true">
     <hbox id="zen-drama-toolbar" class="chromeclass-toolbar" align="center">
       <toolbarbutton id="zen-drama-graph-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenGraph" label="Drama Graph" tooltiptext="Drama Graph" />
@@ -89,6 +90,10 @@ if body_marker not in text:
   </vbox>
 """
     text = text.replace("</html:body>", f"{body_hook}</html:body>", 1)
+elif "zen-drama-launcher-button" not in text:
+    launcher_hook = """  <toolbarbutton id="zen-drama-launcher-button" class="toolbarbutton-1 zen-drama-launcher-button" image="chrome://browser/content/zen-icons/drama-plm.svg" label="PLM" tooltiptext="Open Drama PLM" />
+"""
+    text = text.replace('  <vbox id="zen-drama-panel" hidden="true">', f"{launcher_hook}  <vbox id=\"zen-drama-panel\" hidden=\"true\">", 1)
 
 path.write_text(text)
 PY
