@@ -85,6 +85,7 @@ def parse_args():
     parser.add_argument("--strict", action="store_true", help="Exit non-zero when verification fails.")
     parser.add_argument("--check-route-switches", action="store_true", help="Measure warm route switches inside the mounted shell.")
     parser.add_argument("--check-launcher-reopen", action="store_true", help="Verify the persistent chrome entry can reopen PLM after a normal tab hides the panel.")
+    parser.add_argument("--check-lock-release", action="store_true", help="Verify the lock command releases the embedded browser surface and PLM can be restored.")
     parser.add_argument("--first-viewport-budget-ms", type=int, default=FIRST_VIEWPORT_BUDGET_MS)
     parser.add_argument("--runtime-budget-ms", type=int, default=RUNTIME_READY_BUDGET_MS)
     parser.add_argument("--sidecar-budget-ms", type=int, default=SIDECAR_READY_BUDGET_MS)
@@ -161,6 +162,7 @@ INSPECTION_SCRIPT = r"""
 const panel = document.getElementById('zen-drama-panel');
 const browser = document.getElementById('zen-drama-browser');
 const launcher = document.getElementById('zen-drama-launcher-button');
+const lockButton = document.getElementById('zen-drama-lock-button');
 const manager = window.gZenDramaManager;
 const launcherRect = launcher ? (() => {
   const rect = launcher.getBoundingClientRect();
@@ -208,6 +210,8 @@ return {
   launcherActive: launcher?.getAttribute('zen-drama-active') ?? null,
   launcherDisplay: launcher ? getComputedStyle(launcher).display : null,
   launcherRect,
+  lockButtonExists: Boolean(lockButton),
+  lockButtonTooltip: lockButton?.getAttribute('tooltiptext') ?? null,
   browserExists: Boolean(browser),
   currentURI: browser?.currentURI?.spec ?? null,
   statusValue: document.getElementById('zen-drama-runtime-status')?.getAttribute('value') ?? null,
@@ -402,6 +406,121 @@ const done = arguments[arguments.length - 1];
     panelHiddenAfterReopen: panel.hidden,
     contentSurfaceAfterReopen: contentSurface(),
     elapsedMs: now() - startedAt,
+  });
+})().catch((error) => {
+  done({ ok: false, error: String(error), name: error?.name, message: error?.message });
+});
+"""
+
+
+LOCK_RELEASE_SCRIPT = r"""
+const done = arguments[arguments.length - 1];
+(async () => {
+  const panel = document.getElementById('zen-drama-panel');
+  const browser = document.getElementById('zen-drama-browser');
+  const launcher = document.getElementById('zen-drama-launcher-button');
+  const lockButton = document.getElementById('zen-drama-lock-button');
+  const toggleCommand = document.getElementById('cmd_zenDramaToggle');
+  const manager = window.gZenDramaManager;
+
+  if (!panel || !browser || !launcher || !lockButton || !toggleCommand || !manager) {
+    done({
+      ok: false,
+      error: 'panel, browser, launcher, lock command, or manager is missing',
+      panelExists: Boolean(panel),
+      browserExists: Boolean(browser),
+      launcherExists: Boolean(launcher),
+      lockButtonExists: Boolean(lockButton),
+      toggleCommandExists: Boolean(toggleCommand),
+      managerExists: Boolean(manager),
+    });
+    return;
+  }
+
+  const now = () => {
+    try {
+      return performance.now();
+    } catch {
+      return Date.now();
+    }
+  };
+
+  const contentSurface = () => {
+    try {
+      const doc = browser.contentWindow?.document ?? browser.contentDocument ?? null;
+      return doc?.documentElement?.dataset?.dramaSurface ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  const waitFor = (predicate, timeoutMs) => new Promise((resolve) => {
+    const startedAt = now();
+    const check = () => {
+      if (predicate()) {
+        resolve({ ok: true, elapsedMs: now() - startedAt });
+        return;
+      }
+      if (now() - startedAt >= timeoutMs) {
+        resolve({ ok: false, elapsedMs: now() - startedAt });
+        return;
+      }
+      setTimeout(check, 25);
+    };
+    check();
+  });
+
+  const runtimeStatus = async () => {
+    try {
+      const response = await fetch(`${manager.runtimeUrl}/runtime/status`, { cache: 'no-store' });
+      const status = await response.json();
+      return {
+        ok: response.ok,
+        state: status?.state ?? null,
+        plmState: status?.plmRuntime?.state ?? null,
+        plmHealthy: status?.plmRuntime?.healthy ?? null,
+      };
+    } catch (error) {
+      return { ok: false, error: String(error) };
+    }
+  };
+
+  manager.open('plm');
+  const plmReady = await waitFor(() => {
+    const uri = browser.currentURI?.spec ?? '';
+    return !panel.hidden && uri.includes('surface=plm') && contentSurface() === 'plm';
+  }, 5000);
+  const runtimeBeforeLock = await runtimeStatus();
+
+  const lockStartedAt = now();
+  toggleCommand.dispatchEvent(new Event('command', { bubbles: true, cancelable: true }));
+  const locked = await waitFor(() => {
+    const uri = browser.currentURI?.spec ?? '';
+    return panel.hidden === true && uri === 'about:blank';
+  }, 5000);
+  const lockedUri = browser.currentURI?.spec ?? null;
+  const runtimeAfterLock = await runtimeStatus();
+
+  launcher.dispatchEvent(new Event('command', { bubbles: true, cancelable: true }));
+  const restored = await waitFor(() => {
+    const uri = browser.currentURI?.spec ?? '';
+    return !panel.hidden && uri.includes('surface=plm') && contentSurface() === 'plm';
+  }, 5000);
+
+  done({
+    ok: plmReady.ok && locked.ok && restored.ok && runtimeAfterLock.ok === true,
+    lockButtonExists: true,
+    lockButtonTooltip: lockButton.getAttribute('tooltiptext') ?? null,
+    plmReady,
+    locked,
+    restored,
+    runtimeBeforeLock,
+    runtimeAfterLock,
+    lockedUri,
+    finalUri: browser.currentURI?.spec ?? null,
+    panelHiddenAfterRestore: panel.hidden,
+    contentSurfaceAfterRestore: contentSurface(),
+    elapsedMs: now() - lockStartedAt,
   });
 })().catch((error) => {
   done({ ok: false, error: String(error), name: error?.name, message: error?.message });
@@ -634,6 +753,37 @@ def launcher_reopen_reasons(result):
     return reasons
 
 
+def lock_release_reasons(result):
+    if result is None:
+        return []
+
+    if not isinstance(result, dict):
+        return ["lock release verification did not return a structured result."]
+
+    reasons = []
+    if result.get("error"):
+        reasons.append(f"lock release verification failed: {result.get('error')}")
+    if result.get("lockButtonExists") is not True:
+        reasons.append("Drama lock button is missing.")
+    if result.get("ok") is not True:
+        reasons.append("Drama lock did not release and restore the PLM panel.")
+    if result.get("lockedUri") != "about:blank":
+        reasons.append("Drama lock did not release the embedded browser to about:blank.")
+    runtime_after = result.get("runtimeAfterLock")
+    if not isinstance(runtime_after, dict) or runtime_after.get("ok") is not True or runtime_after.get("state") != "ready":
+        reasons.append("Drama runtime was not ready after lock.")
+    if isinstance(runtime_after, dict) and runtime_after.get("plmState") not in (None, "running"):
+        reasons.append("PLM sidecar was not running after lock.")
+    if result.get("panelHiddenAfterRestore") is True:
+        reasons.append("Drama panel remained hidden after lock restore.")
+    if result.get("contentSurfaceAfterRestore") != "plm":
+        reasons.append("Drama lock restore did not return to PLM.")
+    final_uri = result.get("finalUri")
+    if not isinstance(final_uri, str) or "surface=plm" not in final_uri:
+        reasons.append("Drama lock restore did not load a PLM chrome-resource URI.")
+    return reasons
+
+
 def failure_reasons(result, surface: str):
     content = result.get("content") if isinstance(result, dict) else None
     dataset = content.get("dataset", {}) if isinstance(content, dict) else {}
@@ -653,6 +803,10 @@ def failure_reasons(result, surface: str):
     launcher_rect = result.get("launcherRect")
     if isinstance(launcher_rect, dict) and (float(launcher_rect.get("width") or 0) <= 0 or float(launcher_rect.get("height") or 0) <= 0):
         reasons.append("persistent Drama launcher has an empty viewport rectangle.")
+    if result.get("lockButtonExists") is not True:
+        reasons.append("Drama lock button is missing.")
+    if result.get("lockButtonTooltip") != "Lock Drama and release panel memory":
+        reasons.append("Drama lock button tooltip does not describe lock semantics.")
     if result.get("browserExists") is not True:
         reasons.append("zen-drama-browser is missing.")
     if not current_uri or "chrome://browser/content/drama/app/index.html" not in current_uri:
@@ -733,12 +887,19 @@ def main() -> int:
                 "WebDriver:ExecuteAsyncScript",
                 {"script": LAUNCHER_REOPEN_SCRIPT, "args": [], "newSandbox": False},
             ).get("value")
+        lock_release_result = None
+        if args.check_lock_release:
+            lock_release_result = client.call(
+                "WebDriver:ExecuteAsyncScript",
+                {"script": LOCK_RELEASE_SCRIPT, "args": [], "newSandbox": False},
+            ).get("value")
         performance, performance_reasons = performance_report(inspected, args.surface, args, route_switch_result)
         reasons = (
             failure_reasons(inspected, args.surface)
             + performance_reasons
             + screenshot_reasons
             + launcher_reopen_reasons(launcher_reopen_result)
+            + lock_release_reasons(lock_release_result)
         )
         ok = len(reasons) == 0
         output = {
@@ -759,6 +920,7 @@ def main() -> int:
             },
             "result": inspected,
             "launcherReopen": launcher_reopen_result,
+            "lockRelease": lock_release_result,
             "screenshot": screenshot,
             "performance": performance,
             "failureReasons": reasons,

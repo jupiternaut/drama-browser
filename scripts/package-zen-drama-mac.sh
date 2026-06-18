@@ -84,7 +84,7 @@ if body_marker not in text:
       <spacer flex="1" />
       <label id="zen-drama-runtime-status" value="Drama" />
       <toolbarbutton id="zen-drama-open-tab-button" class="toolbarbutton-1 zen-drama-icon-button" command="cmd_zenDramaOpenInTab" tooltiptext="Open Drama in a tab" />
-      <toolbarbutton id="zen-drama-close-button" class="toolbarbutton-1 zen-drama-icon-button" command="cmd_zenDramaToggle" tooltiptext="Close Drama" />
+      <toolbarbutton id="zen-drama-lock-button" class="toolbarbutton-1 zen-drama-icon-button" command="cmd_zenDramaToggle" tooltiptext="Lock Drama and release panel memory" />
     </hbox>
     <browser id="zen-drama-browser" type="content" remote="true" flex="1" maychangeremoteness="true" disableglobalhistory="true" />
   </vbox>
@@ -94,6 +94,9 @@ elif "zen-drama-launcher-button" not in text:
     launcher_hook = """  <toolbarbutton id="zen-drama-launcher-button" class="toolbarbutton-1 zen-drama-launcher-button" image="chrome://browser/content/zen-icons/drama-plm.svg" label="PLM" tooltiptext="Open Drama PLM" />
 """
     text = text.replace('  <vbox id="zen-drama-panel" hidden="true">', f"{launcher_hook}  <vbox id=\"zen-drama-panel\" hidden=\"true\">", 1)
+
+text = text.replace('id="zen-drama-close-button"', 'id="zen-drama-lock-button"')
+text = text.replace('tooltiptext="Close Drama"', 'tooltiptext="Lock Drama and release panel memory"')
 
 path.write_text(text)
 PY

@@ -22,6 +22,7 @@ const DRAMA_RUNTIME_LAUNCH_CWD_PREF = "zen.drama.runtime-launch.cwd";
 const DRAMA_RUNTIME_LAUNCH_TIMEOUT_MS_PREF = "zen.drama.runtime-launch.timeout-ms";
 const DRAMA_OPEN_ON_STARTUP_PREF = "zen.drama.open-on-startup";
 const DRAMA_START_SURFACE_PREF = "zen.drama.start-surface";
+const DRAMA_LOCKED_URL = "about:blank";
 
 class nsZenDramaManager extends nsZenDOMOperatedFeature {
   #surface = "graph";
@@ -29,6 +30,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   #runtimeLaunchPromise = null;
   #tabSelectHandler = null;
   #panelOpenGeneration = 0;
+  #isLocked = false;
 
   init() {
     this.panel = document.getElementById("zen-drama-panel");
@@ -319,7 +321,11 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       return;
     }
 
-    this.#setPanelVisible(false);
+    this.lock();
+  }
+
+  lock() {
+    this.#lockPanel(true);
   }
 
   open(surface = "graph") {
@@ -331,6 +337,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     this.#ensureSidebarSurfaceButtons();
     this.#surface = surface;
     this.#panelOpenGeneration += 1;
+    this.#isLocked = false;
     this.#bindTabSelection();
     this.#setPanelVisible(true);
     void this.#loadSurface();
@@ -373,7 +380,41 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       return;
     }
 
+    this.#lockPanel(true);
+  }
+
+  #lockPanel(releaseContent = true) {
+    if (!this.panel || !this.browser || this.panel.hidden) {
+      return;
+    }
+
+    this.#panelOpenGeneration += 1;
+    this.#isLocked = true;
     this.#setPanelVisible(false);
+    if (releaseContent) {
+      this.#releaseBrowserContent();
+    }
+    this.#setStatus("Drama locked");
+  }
+
+  #releaseBrowserContent() {
+    if (!this.browser) {
+      return;
+    }
+
+    this.#hasLoadedBrowser = false;
+    if (this.browser.currentURI?.spec === DRAMA_LOCKED_URL) {
+      return;
+    }
+
+    try {
+      this.browser.loadURI(Services.io.newURI(DRAMA_LOCKED_URL), {
+        triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+      });
+    } catch (error) {
+      console.error("[ZenDrama] Failed to release Drama surface:", error);
+      this.browser.setAttribute("src", DRAMA_LOCKED_URL);
+    }
   }
 
   #setPanelVisible(visible) {
@@ -390,12 +431,14 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       this.sidebarButton?.removeAttribute("zen-drama-active");
       launcherButton?.removeAttribute("zen-drama-active");
     }
+    launcherButton?.setAttribute("zen-drama-locked", this.#isLocked ? "true" : "false");
     this.#updateActiveSurface();
   }
 
   #updateActiveSurface() {
     const launcherButton = this.#ensureLauncherButton();
     launcherButton?.setAttribute("zen-drama-surface", this.#surface);
+    launcherButton?.setAttribute("zen-drama-locked", this.#isLocked ? "true" : "false");
     this.#ensureSidebarSurfaceButtons();
     const ids = {
       graph: ["zen-drama-graph-button", "zen-drama-graph-sidebar-button"],

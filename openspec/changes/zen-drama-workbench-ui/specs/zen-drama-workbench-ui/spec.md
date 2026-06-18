@@ -36,6 +36,15 @@ The system SHALL render Drama as a styled workbench surface inside Zen Browser's
 - **AND** the user does not need to restart Zen or manually enter a `chrome://browser/content/drama/app/index.html` URL
 - **AND** the entry remains available even when Zen sidebar customization does not expose a Drama toolbar item
 
+#### Scenario: Lock Drama instead of closing it
+
+- **GIVEN** the Drama panel is open inside Zen Browser chrome
+- **WHEN** the user activates the panel lock control
+- **THEN** Zen hides the Drama panel without destroying the Drama chrome manager or persistent PLM entry
+- **AND** the embedded Drama browser surface is released from memory by navigating it to a neutral blank page
+- **AND** the local Drama runtime and PLM sidecar remain available for recovery
+- **AND** activating the persistent PLM entry restores the PLM panel without restarting Zen
+
 ### Requirement: Visual Parity With Drama/Warp
 
 The system SHALL preserve the compact dark Drama/Warp workbench style across Zen-hosted routes.

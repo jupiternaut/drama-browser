@@ -86,8 +86,8 @@
   display: none;
 }
 
-#zen-drama-close-button {
-  list-style-image: url("chrome://browser/skin/zen-icons/close.svg");
+#zen-drama-lock-button {
+  list-style-image: url("chrome://browser/skin/zen-icons/selectable/lock-closed.svg");
 }
 
 #zen-drama-runtime-status {
