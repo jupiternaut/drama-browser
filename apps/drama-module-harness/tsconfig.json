@@ -32,8 +32,12 @@
       "@drama/graph-ui/*": ["../../packages/drama-graph-ui/src/*"],
       "@drama/host": ["../../packages/drama-host/src/index.ts"],
       "@drama/host/*": ["../../packages/drama-host/src/*"],
+      "@drama/plm": ["../../packages/drama-plm/src/index.ts"],
+      "@drama/plm/*": ["../../packages/drama-plm/src/*"],
       "@drama/plm-ui": ["../../packages/drama-plm-ui/src/index.ts"],
-      "@drama/plm-ui/*": ["../../packages/drama-plm-ui/src/*"]
+      "@drama/plm-ui/*": ["../../packages/drama-plm-ui/src/*"],
+      "@drama/ui": ["../../packages/drama-ui/src/index.ts"],
+      "@drama/ui/*": ["../../packages/drama-ui/src/*"]
     }
   },
   "include": ["src/**/*", "vite.config.ts"],
