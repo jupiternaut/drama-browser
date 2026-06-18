@@ -308,16 +308,22 @@
 
 .drama-shell.zen-host .drama-workbench-tool-button,
 .drama-shell.zen-host .drama-tool-button {
-  width: 28px;
+  width: auto;
   height: 28px;
-  min-width: 28px;
+  min-width: 104px;
+  max-width: 128px;
   border-radius: var(--drama-radius-sm);
-  padding: 0;
+  justify-content: flex-start;
+  padding: 0 9px;
 }
 
 .drama-shell.zen-host .drama-workbench-tool-button-label,
 .drama-shell.zen-host .drama-tool-button-label {
-  display: none;
+  display: inline-block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drama-shell.zen-host .drama-workbench-tool-button-icon,
@@ -393,6 +399,13 @@
   font-size: 11px;
   line-height: 1;
   font-weight: 650;
+}
+
+.drama-shell-state-badge {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .runtime-status-dot {

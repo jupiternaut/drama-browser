@@ -30,7 +30,9 @@ const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5_000
 const DEFAULT_POLL_INTERVAL_MS = 100
 const DEFAULT_MAX_LOG_ENTRIES = 500
 const EMBEDDED_BOOT_MODULE = 'plotpilot_embedded_boot:app'
-const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
+const MODULE_DIR = typeof __dirname === 'string'
+  ? __dirname
+  : dirname(fileURLToPath(import.meta.url))
 
 export interface PlotPilotSpawnOptions {
   cwd: string
@@ -490,6 +492,9 @@ export class PlotPilotRuntimeManager {
   }
 
   getStatus(): PlotPilotRuntimeStatus {
+    if (this.adopted && this.port) {
+      return this.currentStatus()
+    }
     if (!this.child || this.hasExited(this.child)) {
       this.markStopped()
     }

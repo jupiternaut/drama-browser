@@ -1,0 +1,94 @@
+name: Zen Drama Windows Product Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      package-zip-url:
+        description: "Optional HTTPS URL or repo-relative path to a built Zen Drama Windows package zip"
+        required: false
+        default: ""
+        type: string
+      zen-installer-url:
+        description: "Zen Windows installer URL used when building a package in the workflow"
+        required: false
+        default: "https://github.com/zen-browser/desktop/releases/latest/download/zen.installer.exe"
+        type: string
+      artifact-name:
+        description: "Verification artifact name"
+        required: false
+        default: "zen-drama-windows-product-gate"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  windows-product-gate:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.10"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install screenshot analysis dependency
+        shell: pwsh
+        run: python -m pip install --upgrade pip pillow
+
+      - name: Install dependencies
+        if: ${{ inputs.package-zip-url == '' }}
+        run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Zen Drama package from Zen installer
+        if: ${{ inputs.package-zip-url == '' }}
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-zen-windows-bin.ps1 `
+            -ZenInstallerUrl "${{ inputs.zen-installer-url }}" `
+            -OutputDir "dist\zen-windows-bin" `
+            -Force
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/package-zen-drama-win.ps1 `
+            -ZenBinDir "dist\zen-windows-bin" `
+            -NoPlotPilotBundle `
+            -Zip
+
+      - name: Run Windows product-path gate from provided package
+        if: ${{ inputs.package-zip-url != '' }}
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-zen-drama-windows-gate.ps1 `
+            -PackageZip "${{ inputs.package-zip-url }}" `
+            -AllSurfaces `
+            -CheckRouteSwitches
+
+      - name: Run Windows product-path gate from built package
+        if: ${{ inputs.package-zip-url == '' }}
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-zen-drama-windows-gate.ps1 `
+            -PackageZip "dist\zen-drama-win-x64.zip" `
+            -AllSurfaces `
+            -CheckRouteSwitches
+
+      - name: Upload verification evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            docs/verification/zen-drama-win-*
+            docs/verification/zen-drama-windows-product-gate-current.json
+            dist/zen-drama-win-x64.zip
+          if-no-files-found: warn

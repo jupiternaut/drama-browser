@@ -233,7 +233,15 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       return configured;
     }
 
-    return AppConstants.platform === "win" ? "powershell.exe" : "";
+    if (AppConstants.platform === "win") {
+      return "powershell.exe";
+    }
+
+    if (AppConstants.platform === "macosx" || AppConstants.platform === "linux") {
+      return "/bin/bash";
+    }
+
+    return "";
   }
 
   get runtimeLaunchArgs() {
@@ -252,6 +260,13 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
         `${cwd}\\scripts\\launch-drama-runtime.ps1`,
       ];
     }
+
+    if ((AppConstants.platform === "macosx" || AppConstants.platform === "linux") && cwd) {
+      return [
+        `${cwd}/scripts/launch-drama-runtime.sh`,
+      ];
+    }
+
     return [];
   }
 

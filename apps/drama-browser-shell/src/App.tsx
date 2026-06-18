@@ -21,19 +21,46 @@ import {
 
 import { createSkillCrewAgentOutputEvent, createSkillCrewSuggestionEvent, inferSkillCrewRoomId } from '@drama/crew'
 import { StoryletNativeGraphContainer } from '@drama/graph-ui'
-import { createBrowserHostApi, createDramaRuntimeClient, type DramaRuntimeStatus } from '@drama/host'
+import {
+  classifyDramaPlmSurface,
+  createBrowserHostApi,
+  createDramaRuntimeClient,
+  type DramaPlmReadinessStatus,
+  type DramaPlmSurfaceClassificationResult,
+  type DramaRuntimeStatus,
+} from '@drama/host'
 import { createGeckoHostApi } from '@drama/host/gecko'
 import {
   PlotPilotNativeContainer,
+  type PlotPilotIntegrationStatus,
   type PlotPilotNativeApi,
 } from '@drama/plm-ui'
 import { Button, StatusBadge, WorkbenchToolButton, type StatusTone } from '@drama/ui'
 
 import { fallbackGraphApi } from './fallback-graph-api'
+import { markProductPath, setDramaReadySignal } from './performance'
 import { createRuntimeBackedGraphApi } from './runtime-graph-api'
 
 type Surface = 'graph' | 'plm' | 'crew'
 type StyleReadiness = 'checking' | 'ready' | 'missing'
+type ShellStateId =
+  | 'booting-shell'
+  | 'runtime-connecting'
+  | 'runtime-ready'
+  | 'runtime-unavailable'
+  | 'sidecar-starting'
+  | 'sidecar-ready'
+  | 'sidecar-unavailable'
+  | 'ai-unavailable'
+  | 'workspace-missing'
+  | 'parity-blocked'
+
+interface ShellState {
+  id: ShellStateId
+  label: string
+  message: string
+  tone: StatusTone
+}
 
 interface SurfaceDescriptor {
   id: Surface
@@ -93,6 +120,10 @@ function isZenHost(): boolean {
   return new URLSearchParams(globalThis.location?.search ?? '').get('host') === 'zen'
 }
 
+function currentDocumentUrl(): string {
+  return globalThis.location?.href ?? ''
+}
+
 function getRuntimeBaseUrl(): string {
   return new URLSearchParams(globalThis.location?.search ?? '').get('runtime')
     ?? import.meta.env.VITE_DRAMA_RUNTIME_BASE_URL
@@ -121,6 +152,22 @@ function withRuntimeProxyBaseUrl(
     apiBaseUrl: `${proxyBaseUrl}/api/v1`,
     url: proxyBaseUrl,
   }
+}
+
+function markPlotPilotSidecarStatus(status: PlotPilotNativeRuntimeStatus): void {
+  setDramaReadySignal('dramaSidecarReady', status.healthy === true ? 'ready' : status.state ?? 'blocked')
+  if (status.healthy !== true) return
+  markProductPath('sidecar-ready', {
+    surface: 'plm',
+    state: status.state ?? 'ready',
+    detail: {
+      port: status.port,
+      pid: status.pid,
+      adopted: status.adopted,
+      owned: status.owned,
+      baseUrl: status.baseUrl,
+    },
+  })
 }
 
 function useStyleReadiness() {
@@ -237,6 +284,164 @@ function RuntimeChip({
   )
 }
 
+function surfaceClassificationLabel(result: DramaPlmSurfaceClassificationResult): string {
+  if (result.classification === 'product-zen-panel') return 'Zen panel'
+  if (result.classification === 'dev-localhost') return 'dev-localhost'
+  if (result.classification === 'legacy-electron') return 'legacy'
+  return 'fallback'
+}
+
+function surfaceClassificationTone(result: DramaPlmSurfaceClassificationResult): StatusTone {
+  if (result.classification === 'product-zen-panel') return 'success'
+  if (result.classification === 'dev-localhost') return 'warning'
+  if (result.classification === 'legacy-electron') return 'neutral'
+  return 'warning'
+}
+
+function createShellReadinessTiers(
+  surfaceClassification: DramaPlmSurfaceClassificationResult,
+  runtimeStatus: DramaRuntimeStatus,
+): DramaPlmReadinessStatus[] {
+  return [
+    {
+      tier: 'shell-ready',
+      state: surfaceClassification.productPath ? 'ready' : 'blocked',
+      message: surfaceClassification.productPath
+        ? 'Loaded from Zen chrome-resource PLM panel.'
+        : surfaceClassification.reason,
+    },
+    {
+      tier: 'runtime-ready',
+      state: runtimeStatus.state === 'ready' ? 'ready' : runtimeStatus.state === 'starting' ? 'pending' : 'blocked',
+      message: runtimeStatus.message ?? `Drama runtime is ${runtimeStatus.state}.`,
+    },
+  ]
+}
+
+function toPlmIntegrationStatus(
+  surfaceClassification: DramaPlmSurfaceClassificationResult,
+  runtimeStatus: DramaRuntimeStatus,
+): PlotPilotIntegrationStatus {
+  return {
+    surface: surfaceClassification.classification,
+    productPath: surfaceClassification.productPath,
+    currentUrl: surfaceClassification.currentUrl,
+    reason: surfaceClassification.reason,
+    tiers: createShellReadinessTiers(surfaceClassification, runtimeStatus),
+    parityGaps: [
+      'PlotPilot-native prompt registry writes',
+      'Post-chapter memory sync visualization',
+    ],
+  }
+}
+
+function findReadinessTier(status: PlotPilotIntegrationStatus, tier: string) {
+  return status.tiers.find((item) => item.tier === tier)
+}
+
+function deriveShellState({
+  styleReadiness,
+  runtimeStatus,
+  surface,
+  plmIntegrationStatus,
+}: {
+  styleReadiness: StyleReadiness
+  runtimeStatus: DramaRuntimeStatus
+  surface: Surface
+  plmIntegrationStatus: PlotPilotIntegrationStatus
+}): ShellState {
+  if (styleReadiness !== 'ready') {
+    return {
+      id: 'booting-shell',
+      label: '工作台启动中',
+      message: styleReadiness === 'checking' ? '正在校验 shell 和样式。' : '样式或 token bridge 未完整加载。',
+      tone: styleReadiness === 'checking' ? 'info' : 'danger',
+    }
+  }
+
+  if (runtimeStatus.state === 'starting') {
+    return {
+      id: 'runtime-connecting',
+      label: '连接 runtime',
+      message: runtimeStatus.message ?? '正在连接 Drama standalone runtime。',
+      tone: 'info',
+    }
+  }
+
+  if (runtimeStatus.state === 'offline' || runtimeStatus.state === 'error') {
+    return {
+      id: 'runtime-unavailable',
+      label: 'runtime 不可用',
+      message: runtimeStatus.message ?? 'Drama runtime 暂不可用。',
+      tone: 'danger',
+    }
+  }
+
+  if (surface !== 'plm') {
+    return {
+      id: 'runtime-ready',
+      label: 'runtime ready',
+      message: 'Drama runtime 已就绪。',
+      tone: 'success',
+    }
+  }
+
+  const sidecar = findReadinessTier(plmIntegrationStatus, 'plm-sidecar-ready')
+  if (sidecar?.state === 'pending') {
+    return {
+      id: 'sidecar-starting',
+      label: 'PLM 启动中',
+      message: sidecar.message,
+      tone: 'info',
+    }
+  }
+  if (sidecar?.state === 'blocked') {
+    return {
+      id: 'sidecar-unavailable',
+      label: 'PLM 不可用',
+      message: sidecar.message,
+      tone: 'danger',
+    }
+  }
+
+  const ai = findReadinessTier(plmIntegrationStatus, 'ai-ready')
+  if (ai?.state === 'blocked') {
+    return {
+      id: 'ai-unavailable',
+      label: 'AI 不可用',
+      message: ai.message,
+      tone: 'warning',
+    }
+  }
+
+  const workflow = findReadinessTier(plmIntegrationStatus, 'workflow-preview-ready')
+  if (workflow?.state === 'blocked') {
+    return {
+      id: 'workspace-missing',
+      label: '工作区缺失',
+      message: workflow.message,
+      tone: 'warning',
+    }
+  }
+
+  const parity = findReadinessTier(plmIntegrationStatus, 'plotpilot-parity-ready')
+  if (parity?.state === 'blocked') {
+    return {
+      id: 'parity-blocked',
+      label: 'Parity blocked',
+      message: parity.message,
+      tone: 'warning',
+    }
+  }
+
+  return {
+    id: 'sidecar-ready',
+    label: 'PLM ready',
+    message: sidecar?.message ?? 'PlotPilot sidecar 已就绪。',
+    tone: 'success',
+  }
+}
+
 function DramaRuntimeRecoveryPanel({
   status,
 }: {
@@ -281,8 +486,9 @@ function SurfaceButton({
     <WorkbenchToolButton
       onClick={onClick}
       active={active}
+      data-drama-surface-button={item.id}
       title={`${item.title} - ${item.subtitle}`}
-      label={item.shortLabel}
+      label={item.title}
       icon={<Icon className="drama-workbench-tool-button-svg" />}
     />
   )
@@ -294,8 +500,10 @@ function DramaWorkbenchShell({
   activeSurface,
   zenHost,
   hostKind,
+  surfaceClassification,
   runtimeStatus,
   runtimeStateLabel,
+  shellState,
   onSwitchSurface,
   children,
 }: {
@@ -304,8 +512,10 @@ function DramaWorkbenchShell({
   activeSurface: SurfaceDescriptor
   zenHost: boolean
   hostKind: string
+  surfaceClassification: DramaPlmSurfaceClassificationResult
   runtimeStatus: DramaRuntimeStatus
   runtimeStateLabel: string
+  shellState: ShellState
   onSwitchSurface: (surface: Surface) => void
   children: React.ReactNode
 }) {
@@ -316,6 +526,7 @@ function DramaWorkbenchShell({
     <div
       className={['drama-shell', zenHost ? 'zen-host' : ''].filter(Boolean).join(' ')}
       data-drama-shell="workbench"
+      data-drama-shell-state={shellState.id}
       data-host={zenHost ? 'zen' : 'browser'}
     >
       {!zenHost ? (
@@ -374,8 +585,23 @@ function DramaWorkbenchShell({
           </div>
 
           <div className="drama-workbench-meta">
-            <span className="drama-host-badge">{zenHost ? 'Zen' : hostKind}</span>
+            <StatusBadge
+              className="drama-surface-classification-badge"
+              tone={surfaceClassificationTone(surfaceClassification)}
+              title={surfaceClassification.reason}
+            >
+              {surfaceClassificationLabel(surfaceClassification)}
+            </StatusBadge>
+            <span className="drama-host-badge">{zenHost ? 'host=zen' : hostKind}</span>
             <RuntimeChip status={runtimeStatus} stateLabel={runtimeStateLabel} />
+            <StatusBadge
+              className="drama-shell-state-badge"
+              tone={shellState.tone}
+              dot
+              title={shellState.message}
+            >
+              {shellState.label}
+            </StatusBadge>
           </div>
         </header>
 
@@ -400,6 +626,7 @@ export function App() {
     message: 'Connecting to Drama standalone runtime.',
     updatedAt: new Date().toISOString(),
   })
+  const [resolvedPlmIntegrationStatus, setResolvedPlmIntegrationStatus] = React.useState<PlotPilotIntegrationStatus | undefined>()
   const [crewWriteStatus, setCrewWriteStatus] = React.useState<string>('尚未写入 runtime')
   const browserHost = React.useMemo(() => (
     zenHost
@@ -423,22 +650,28 @@ export function App() {
       return runtimeClient.request('plotpilot:runtime:logs', { limit: 80 })
     },
     async getPlotPilotRuntimeStatus() {
-      return withRuntimeProxyBaseUrl(
+      const status = withRuntimeProxyBaseUrl(
         await runtimeClient.request('plotpilot:runtime:status', { checkHealth: true }),
         runtimeBaseUrl,
       )
+      markPlotPilotSidecarStatus(status)
+      return status
     },
     async startPlotPilotRuntime() {
-      return withRuntimeProxyBaseUrl(
+      const status = withRuntimeProxyBaseUrl(
         await runtimeClient.request('plotpilot:runtime:start', { preferExisting: true }),
         runtimeBaseUrl,
       )
+      markPlotPilotSidecarStatus(status)
+      return status
     },
     async restartPlotPilotRuntime() {
-      return withRuntimeProxyBaseUrl(
+      const status = withRuntimeProxyBaseUrl(
         await runtimeClient.request('plotpilot:runtime:restart', { preferExisting: false }),
         runtimeBaseUrl,
       )
+      markPlotPilotSidecarStatus(status)
+      return status
     },
     async openUrl(url: string) {
       await browserHost.shell.openUrl(url)
@@ -547,6 +780,12 @@ export function App() {
   }, [surface])
 
   React.useEffect(() => {
+    setDramaReadySignal('dramaShellMounted', 'true')
+    setDramaReadySignal('dramaSurface', surface)
+    setDramaReadySignal('dramaHost', zenHost ? 'zen' : 'browser')
+  }, [surface, zenHost])
+
+  React.useEffect(() => {
     const handlePopState = () => {
       setSurface(getInitialSurface())
       setZenHost(isZenHost())
@@ -558,14 +797,37 @@ export function App() {
   React.useEffect(() => {
     let disposed = false
     let interval: ReturnType<typeof globalThis.setInterval> | undefined
+    let activeController: AbortController | undefined
+    const pollerState = globalThis as typeof globalThis & { __DRAMA_RUNTIME_STATUS_POLLER_COUNT__?: number }
+    pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__ = (pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__ ?? 0) + 1
+    setDramaReadySignal('dramaRuntimePollers', String(pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__))
 
     const refresh = async () => {
+      activeController?.abort()
+      const controller = new AbortController()
+      activeController = controller
       try {
-        const status = await runtimeClient.getStatus()
-        if (!disposed) setRuntimeStatus(status)
-      } catch (error) {
+        const status = await runtimeClient.getStatus({ signal: controller.signal, timeoutMs: 2_000 })
         if (!disposed) {
+          setRuntimeStatus(status)
+          setDramaReadySignal('dramaRuntimeReady', status.state)
+          if (status.state === 'ready') {
+            markProductPath('runtime-ready', {
+              surface,
+              state: status.state,
+              detail: {
+                runtimeBaseUrl,
+                workspaceRoot: (status as DramaRuntimeStatus & { workspaceRoot?: string }).workspaceRoot,
+              },
+            })
+          }
+        }
+      } catch (error) {
+        const cancelled = error instanceof Error && error.message.includes('cancelled')
+        if (!disposed) {
+          if (cancelled) return
           setRuntimeStatus(offlineRuntimeStatus(error instanceof Error ? error.message : String(error)))
+          setDramaReadySignal('dramaRuntimeReady', 'offline')
         }
       }
     }
@@ -574,9 +836,12 @@ export function App() {
     interval = globalThis.setInterval(refresh, 5000)
     return () => {
       disposed = true
+      activeController?.abort()
+      pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__ = Math.max(0, (pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__ ?? 1) - 1)
+      setDramaReadySignal('dramaRuntimePollers', String(pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__))
       if (interval !== undefined) globalThis.clearInterval(interval)
     }
-  }, [crewRoom, runtimeClient])
+  }, [crewRoom, runtimeBaseUrl, runtimeClient, surface])
 
   React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -645,6 +910,29 @@ export function App() {
   const activeSurface = surfaces.find((item) => item.id === surface) ?? surfaces[0]!
   const runtimeStateLabel = runtimeStatus.state === 'ready' ? 'ready' : runtimeStatus.state
   const hostKind = browserHost.getInfo().kind
+  const surfaceClassification = React.useMemo(() => classifyDramaPlmSurface({
+    url: currentDocumentUrl(),
+    hostKind,
+    userAgent: browserHost.getInfo().userAgent,
+    expectedSurface: surface,
+  }), [hostKind, surface])
+  const plmIntegrationStatus = React.useMemo(
+    () => toPlmIntegrationStatus(surfaceClassification, runtimeStatus),
+    [runtimeStatus, surfaceClassification],
+  )
+  const effectivePlmIntegrationStatus = resolvedPlmIntegrationStatus ?? plmIntegrationStatus
+  const shellState = React.useMemo(
+    () => deriveShellState({
+      styleReadiness,
+      runtimeStatus,
+      surface,
+      plmIntegrationStatus: effectivePlmIntegrationStatus,
+    }),
+    [effectivePlmIntegrationStatus, runtimeStatus, styleReadiness, surface],
+  )
+  const handlePlmIntegrationStatusChange = React.useCallback((status: PlotPilotIntegrationStatus | undefined) => {
+    setResolvedPlmIntegrationStatus(status)
+  }, [])
 
   const probes = (
     <StyleReadinessProbes
@@ -652,6 +940,27 @@ export function App() {
       tailwindProbeRef={tailwindProbeRef}
     />
   )
+
+  React.useEffect(() => {
+    setDramaReadySignal('dramaShellState', shellState.id)
+  }, [shellState.id])
+
+  React.useEffect(() => {
+    if (styleReadiness !== 'ready') return
+    setDramaReadySignal('dramaFirstStyledViewport', 'ready')
+    markProductPath('first-styled-viewport', {
+      surface,
+      state: 'ready',
+    })
+    markProductPath('route-ready', {
+      surface,
+      state: 'ready',
+      detail: {
+        hostKind,
+        productPath: surfaceClassification.productPath,
+      },
+    }, { once: false })
+  }, [hostKind, shellState.id, styleReadiness, surface, surfaceClassification.productPath])
 
   if (styleReadiness !== 'ready') {
     return (
@@ -671,8 +980,10 @@ export function App() {
         activeSurface={activeSurface}
         zenHost={zenHost}
         hostKind={hostKind}
+        surfaceClassification={surfaceClassification}
         runtimeStatus={runtimeStatus}
         runtimeStateLabel={runtimeStateLabel}
+        shellState={shellState}
         onSwitchSurface={switchSurface}
       >
         {surface === 'graph' ? (
@@ -689,7 +1000,11 @@ export function App() {
         ) : null}
 
         {surface === 'plm' ? (
-          <PlotPilotNativeContainer api={plmApi} />
+          <PlotPilotNativeContainer
+            api={plmApi}
+            integrationStatus={plmIntegrationStatus}
+            onIntegrationStatusChange={handlePlmIntegrationStatusChange}
+          />
         ) : null}
 
         {surface === 'crew' ? (

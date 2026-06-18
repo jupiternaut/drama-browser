@@ -106,6 +106,7 @@ const runtimePackageRoot = process.env.DRAMA_RUNTIME_PACKAGE_ROOT ?? null
 
 const store = new DramaGraphStore({ workspaceRoot })
 const plotPilotRuntime = new PlotPilotRuntimeManager()
+let keepAliveTimer: ReturnType<typeof setInterval> | undefined
 
 function json(data: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(data, null, 2), {
@@ -447,6 +448,10 @@ async function shutdownRuntime(payload: RuntimeShutdownRequest = {}): Promise<{ 
 
   const stoppedAt = new Date().toISOString()
   setTimeout(() => {
+    if (keepAliveTimer) {
+      clearInterval(keepAliveTimer)
+      keepAliveTimer = undefined
+    }
     server.stop(true)
   }, 50)
 
@@ -549,7 +554,7 @@ async function getPlotPilotCodexStatus(): Promise<PlotPilotCodexStatusResponse> 
     }
   }
 
-  return createPlotPilotClient({ baseUrl: apiBaseUrl }).getCodexStatus()
+  return createPlotPilotClient({ baseUrl: apiBaseUrl }).getCodexStatus({ timeoutMs: 2_000 })
 }
 
 async function startPlotPilotCodexLogin(): Promise<PlotPilotCodexLoginStartResponse> {
@@ -848,3 +853,4 @@ const server = Bun.serve({
 
 console.log(`[drama-runtime] ready at http://${server.hostname}:${server.port}`)
 console.log(`[drama-runtime] workspace ${workspaceRoot}`)
+keepAliveTimer = setInterval(() => undefined, 60_000)

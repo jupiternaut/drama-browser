@@ -80,11 +80,13 @@ export interface PlotPilotClientOptions {
   protocol?: 'http' | 'https' | (string & {})
   fetch?: PlotPilotFetch
   headers?: HeadersInit
+  timeoutMs?: number
 }
 
 export interface PlotPilotRequestOptions {
   signal?: AbortSignal
   headers?: HeadersInit
+  timeoutMs?: number
 }
 
 export interface PlotPilotGenerateBibleStreamOptions extends PlotPilotRequestOptions {
@@ -340,6 +342,18 @@ export class PlotPilotResponseParseError extends Error {
   }
 }
 
+export class PlotPilotRequestTimeoutError extends Error {
+  readonly url: string
+  readonly timeoutMs: number
+
+  constructor(url: string, timeoutMs: number) {
+    super(`PlotPilot request timed out after ${timeoutMs}ms: ${url}`)
+    this.name = 'PlotPilotRequestTimeoutError'
+    this.url = url
+    this.timeoutMs = timeoutMs
+  }
+}
+
 function parsePlotPilotErrorBody(error: unknown): unknown | null {
   if (!(error instanceof PlotPilotHttpError)) return null
   const trimmed = error.body.trim()
@@ -511,11 +525,38 @@ async function requestJson<T>(
     headers.set('Content-Type', 'application/json')
   }
 
-  const response = await fetchImpl(url, {
-    ...init,
-    headers,
-    signal: requestOptions?.signal ?? init.signal,
-  })
+  const timeoutMs = requestOptions?.timeoutMs
+  const upstreamSignal = requestOptions?.signal ?? init.signal
+  const controller = timeoutMs !== undefined ? new AbortController() : null
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  let timeoutElapsed = false
+  const abortFromUpstream = () => controller?.abort()
+
+  if (controller) {
+    if (upstreamSignal?.aborted) controller.abort()
+    else upstreamSignal?.addEventListener('abort', abortFromUpstream, { once: true })
+    timeout = setTimeout(() => {
+      timeoutElapsed = true
+      controller.abort()
+    }, timeoutMs)
+  }
+
+  let response: Response
+  try {
+    response = await fetchImpl(url, {
+      ...init,
+      headers,
+      signal: controller?.signal ?? upstreamSignal,
+    })
+  } catch (error) {
+    if (timeoutElapsed && timeoutMs !== undefined) {
+      throw new PlotPilotRequestTimeoutError(url, timeoutMs)
+    }
+    throw error
+  } finally {
+    if (timeout) clearTimeout(timeout)
+    upstreamSignal?.removeEventListener('abort', abortFromUpstream)
+  }
 
   if (!response.ok) {
     throw new PlotPilotHttpError(response.status, url, await readErrorBody(response))
@@ -1884,6 +1925,7 @@ function requestOptionsFromCallOptions(options: PlotPilotCallOptions): PlotPilot
   return {
     signal: options.signal,
     headers: options.headers,
+    timeoutMs: options.timeoutMs,
   }
 }
 

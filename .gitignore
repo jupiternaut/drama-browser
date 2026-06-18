@@ -38,6 +38,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # OSS sync temp directory
 .oss-sync-temp/
+tmp/
 
 # IntelliJ based IDEs
 .idea

@@ -225,3 +225,12 @@ export type {
   DramaRuntimeStatus,
 } from './runtime-client.ts'
 export { DramaRuntimeError, createDramaRuntimeClient } from './runtime-client.ts'
+export type {
+  DramaPlmReadinessState,
+  DramaPlmReadinessStatus,
+  DramaPlmReadinessTier,
+  DramaPlmSurfaceClassification,
+  DramaPlmSurfaceClassificationInput,
+  DramaPlmSurfaceClassificationResult,
+} from './surface.ts'
+export { classifyDramaPlmSurface, isZenDramaProductPath } from './surface.ts'

@@ -14,12 +14,14 @@ import {
   type PlotPilotChapterEditor,
   type PlotPilotCodexStatus as PlotPilotUiCodexStatus,
   type PlotPilotHumanizerSettingsDraft,
+  type PlotPilotIntegrationStatus,
   type PlotPilotNativeFeatureState,
   type PlotPilotOnboardingDraft,
   type PlotPilotProjectGuardStatus,
   type PlotPilotLogEntry as PlotPilotUiLogEntry,
   type PlotPilotNativeHandlers,
   type PlotPilotNovel,
+  type PlotPilotReadinessStatus,
   type PlotPilotRuntimeStatus as PlotPilotUiRuntimeStatus,
   type ScriptStudioStorageCardDraft,
   type PlotPilotWritingSpecFailureView,
@@ -69,6 +71,7 @@ const EMPTY_RUNTIME_STATUS: PlotPilotRuntimeStatus = {
   dataDir: '',
 }
 
+const STATUS_REQUEST_TIMEOUT_MS = 2_000
 const DRAMA_PLM_OPEN_REQUEST_KEY = 'drama.plm.openRequest.v1'
 const DRAMA_CODEX_PROFILE_ID = 'drama-codex-chatgpt'
 
@@ -117,6 +120,8 @@ export interface PlotPilotNativeApi {
 export interface PlotPilotNativeContainerProps {
   api: PlotPilotNativeApi
   createClient?: typeof createPlotPilotClient
+  integrationStatus?: PlotPilotIntegrationStatus
+  onIntegrationStatusChange?: (status: PlotPilotIntegrationStatus | undefined) => void
 }
 
 function isRuntimeReady(status: PlotPilotRuntimeStatus): boolean {
@@ -430,9 +435,18 @@ function shouldFallbackToLegacyChapterStream(error: unknown): boolean {
 }
 
 function consumeDramaPlmOpenRequest(): DramaPlmOpenRequest | null {
-  const raw = window.sessionStorage.getItem(DRAMA_PLM_OPEN_REQUEST_KEY)
+  let raw: string | null = null
+  try {
+    raw = window.sessionStorage.getItem(DRAMA_PLM_OPEN_REQUEST_KEY)
+  } catch {
+    return null
+  }
   if (!raw) return null
-  window.sessionStorage.removeItem(DRAMA_PLM_OPEN_REQUEST_KEY)
+  try {
+    window.sessionStorage.removeItem(DRAMA_PLM_OPEN_REQUEST_KEY)
+  } catch {
+    // Some chrome-resource hosts expose a sessionStorage object but reject writes.
+  }
   try {
     const value = JSON.parse(raw) as Partial<DramaPlmOpenRequest>
     if (value.schema !== DRAMA_PLM_OPEN_REQUEST_KEY) return null
@@ -490,6 +504,95 @@ function toUiRuntimeStatus(
     message: 'PlotPilot runtime 尚未启动。',
     endpoint: status.baseUrl ?? status.apiBaseUrl ?? status.url ?? undefined,
     activeJob,
+  }
+}
+
+function mergeReadinessTiers(
+  base: PlotPilotReadinessStatus[],
+  next: PlotPilotReadinessStatus[],
+): PlotPilotReadinessStatus[] {
+  const nextTierIds = new Set(next.map((item) => item.tier))
+  return [
+    ...base.filter((item) => !nextTierIds.has(item.tier)),
+    ...next,
+  ]
+}
+
+function workspacePathHints(status: PlotPilotRuntimeStatus): string[] {
+  return [
+    status.projectRoot,
+    status.dataDir,
+  ].filter((value): value is string => Boolean(value?.trim()))
+}
+
+function resolveIntegrationStatus(
+  baseStatus: PlotPilotIntegrationStatus | undefined,
+  runtimeStatus: PlotPilotRuntimeStatus,
+  codexStatus: PlotPilotCodexStatusResponse | null,
+  selectedNovel: NovelDTO | null,
+): PlotPilotIntegrationStatus | undefined {
+  if (!baseStatus) return undefined
+
+  const runtimeReady = isRuntimeReady(runtimeStatus)
+  const runtimePending = runtimeStatus.state === 'starting' || runtimeStatus.state === 'stopping'
+  const sidecarStatus: PlotPilotReadinessStatus = {
+    tier: 'plm-sidecar-ready',
+    state: runtimeReady ? 'ready' : runtimePending ? 'pending' : 'blocked',
+    message: runtimeReady
+      ? 'PlotPilot-compatible sidecar is healthy through the Drama runtime.'
+      : runtimePending
+        ? 'Waiting for PlotPilot-compatible sidecar startup.'
+        : runtimeStatus.error ?? runtimeStatus.lastError ?? 'PlotPilot-compatible sidecar is unavailable.',
+  }
+
+  const codexReady = codexStatus?.available === true && codexStatus.authenticated === true
+  const aiStatus: PlotPilotReadinessStatus = {
+    tier: 'ai-ready',
+    state: codexReady ? 'ready' : codexStatus ? 'blocked' : 'pending',
+    message: codexReady
+      ? 'Codex-backed AI is available and authenticated.'
+      : codexStatus?.error
+        ? codexStatus.error
+        : codexStatus
+          ? 'Codex-backed AI is unavailable or unauthenticated.'
+          : 'Codex-backed AI status has not been loaded yet.',
+  }
+
+  const workflowStatus: PlotPilotReadinessStatus = {
+    tier: 'workflow-preview-ready',
+    state: runtimeReady && selectedNovel ? 'ready' : runtimeReady ? 'blocked' : 'pending',
+    message: runtimeReady && selectedNovel
+      ? 'Script Studio has an active project workspace.'
+      : runtimeReady
+        ? 'Workspace/project is missing; project-dependent PLM surfaces remain blocked.'
+        : 'Waiting for runtime and workspace before workflow preview can be ready.',
+  }
+
+  const parityStatus: PlotPilotReadinessStatus = {
+    tier: 'plotpilot-parity-ready',
+    state: 'blocked',
+    message: 'Blocked until PlotPilot-native prompt registry writes and post-chapter memory sync visualization are complete.',
+  }
+
+  return {
+    ...baseStatus,
+    tiers: mergeReadinessTiers(baseStatus.tiers, [
+      sidecarStatus,
+      aiStatus,
+      workflowStatus,
+      parityStatus,
+    ]),
+    workspacePathHints: selectedNovel
+      ? baseStatus.workspacePathHints
+      : [
+        ...(baseStatus.workspacePathHints ?? []),
+        ...workspacePathHints(runtimeStatus),
+      ].filter((item, index, list) => list.indexOf(item) === index),
+    parityGaps: [
+      ...(baseStatus.parityGaps ?? []),
+      'PlotPilot-native prompt registry writes',
+      'Post-chapter memory sync visualization',
+    ].filter((item, index, list) => list.indexOf(item) === index),
   }
 }
 
@@ -896,7 +999,12 @@ function toUiLogs(logs: PlmLogEntry[]): PlotPilotUiLogEntry[] {
   }))
 }
 
-export function PlotPilotNativeContainer({ api, createClient = createPlotPilotClient }: PlotPilotNativeContainerProps) {
+export function PlotPilotNativeContainer({
+  api,
+  createClient = createPlotPilotClient,
+  integrationStatus,
+  onIntegrationStatusChange,
+}: PlotPilotNativeContainerProps) {
   const [runtimeStatus, setRuntimeStatus] = React.useState<PlotPilotRuntimeStatus>(EMPTY_RUNTIME_STATUS)
   const [runtimeLogs, setRuntimeLogs] = React.useState<PlmLogEntry[]>([])
   const [novels, setNovels] = React.useState<NovelDTO[]>([])
@@ -925,7 +1033,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       return
     }
     try {
-      setCodexStatus(await activeClient.getCodexStatus())
+      setCodexStatus(await activeClient.getCodexStatus({ timeoutMs: STATUS_REQUEST_TIMEOUT_MS }))
     } catch (error) {
       setCodexStatus({
         available: false,
@@ -1033,7 +1141,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
   const loadNovels = React.useCallback(async () => {
     if (!client) return
     try {
-      const nextNovels = await client.listNovels()
+      const nextNovels = await client.listNovels({ timeoutMs: STATUS_REQUEST_TIMEOUT_MS })
       setNovels(nextNovels)
       setSelectedNovelId((current) => current ?? nextNovels[0]?.id ?? null)
     } catch (error) {
@@ -3759,7 +3867,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     let candidateNovels = novels
 
     if (activeClient && candidateNovels.length === 0) {
-      const remoteNovels = await activeClient.listNovels()
+      const remoteNovels = await activeClient.listNovels({ timeoutMs: STATUS_REQUEST_TIMEOUT_MS })
       setNovels(remoteNovels)
       candidateNovels = remoteNovels
     }
@@ -4006,6 +4114,14 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     [novels, selectedBible, selectedNovel?.id],
   )
   const uiSelectedNovel = uiNovels.find((novel) => novel.id === selectedNovel?.id) ?? uiNovels[0] ?? null
+  const resolvedIntegrationStatus = React.useMemo(
+    () => resolveIntegrationStatus(integrationStatus, runtimeStatus, codexStatus, selectedNovel),
+    [codexStatus, integrationStatus, runtimeStatus, selectedNovel],
+  )
+
+  React.useEffect(() => {
+    onIntegrationStatusChange?.(resolvedIntegrationStatus)
+  }, [onIntegrationStatusChange, resolvedIntegrationStatus])
 
   return (
     <PlotPilotNativePage
@@ -4015,6 +4131,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       chapterEditor={chapterEditor}
       selectedBibleData={selectedBible as unknown as PlotPilotBibleEditorData | null}
       codexStatus={toUiCodexStatus(codexStatus)}
+      integrationStatus={resolvedIntegrationStatus}
       projectGuardStatus={toProjectGuardStatus(writingSpec, humanizer)}
       lastWritingSpecFailure={lastWritingSpecFailure}
       featureState={featureState}

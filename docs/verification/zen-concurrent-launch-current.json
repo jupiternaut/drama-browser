@@ -1,0 +1,142 @@
+{
+  "ok": true,
+  "schema": "zen-concurrent-launch-verification.v1",
+  "startedAt": "2026-06-18T01:33:24.634Z",
+  "generatedAt": "2026-06-18T01:33:26.055Z",
+  "attempts": 5,
+  "surface": "plm",
+  "zenApp": "/Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app",
+  "runtimeUrl": "http://127.0.0.1:3198",
+  "launches": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "code": 0,
+      "durationMs": 170,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "attempt": 2,
+      "ok": true,
+      "code": 0,
+      "durationMs": 194,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "attempt": 3,
+      "ok": true,
+      "code": 0,
+      "durationMs": 211,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "attempt": 4,
+      "ok": true,
+      "code": 0,
+      "durationMs": 337,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "attempt": 5,
+      "ok": true,
+      "code": 0,
+      "durationMs": 180,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "runtimeStatus": {
+    "ok": true,
+    "status": 200,
+    "durationMs": 17,
+    "body": {
+      "state": "ready",
+      "version": "0.1.0",
+      "message": "Drama standalone runtime ready.",
+      "updatedAt": "2026-06-18T01:33:25.993Z",
+      "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+      "startedAt": "2026-06-17T12:56:14.470Z",
+      "runtimePackageRoot": null,
+      "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+      "plmRuntime": {
+        "state": "running",
+        "healthy": true,
+        "port": 8005,
+        "url": "http://127.0.0.1:8005",
+        "baseUrl": "http://127.0.0.1:8005",
+        "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+        "owned": false,
+        "adopted": true,
+        "projectRoot": "/Users/gengrf/PlotPilot",
+        "dataDir": "/Users/gengrf/.plotpilot/data",
+        "health": {
+          "status": "healthy",
+          "version": "1.0.2",
+          "build_id": "build-20260209-1200-c4d2",
+          "uptime_seconds": 45418.69,
+          "daemon_process": {
+            "running": true,
+            "pid": 17275
+          }
+        }
+      },
+      "endpoints": {
+        "graph": "http://127.0.0.1:3198/graph",
+        "plm": "http://127.0.0.1:3198/plm/runtime/status",
+        "crew": "http://127.0.0.1:3198/crew",
+        "app": "http://127.0.0.1:3198/app",
+        "events": "ws://127.0.0.1:3198/events"
+      }
+    }
+  },
+  "sidecarStatus": {
+    "ok": true,
+    "status": 200,
+    "durationMs": 3,
+    "body": {
+      "state": "running",
+      "healthy": true,
+      "port": 8005,
+      "url": "http://127.0.0.1:8005",
+      "baseUrl": "http://127.0.0.1:8005",
+      "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+      "owned": false,
+      "adopted": true,
+      "projectRoot": "/Users/gengrf/PlotPilot",
+      "dataDir": "/Users/gengrf/.plotpilot/data",
+      "health": {
+        "status": "healthy",
+        "version": "1.0.2",
+        "build_id": "build-20260209-1200-c4d2",
+        "uptime_seconds": 45419.94,
+        "daemon_process": {
+          "running": true,
+          "pid": 17275
+        }
+      }
+    }
+  },
+  "listenerCounts": {
+    "runtime": {
+      "port": 3198,
+      "count": 1,
+      "entries": [
+        "bun     17232 gengrf    4u  IPv4 0xda5d51e3eef45e84      0t0  TCP 127.0.0.1:3198 (LISTEN)"
+      ],
+      "ok": true
+    },
+    "plotPilot": {
+      "port": 8005,
+      "count": 1,
+      "entries": [
+        "Python  17264 gengrf   34u  IPv4 0x372192db281d3288      0t0  TCP 127.0.0.1:8005 (LISTEN)"
+      ],
+      "ok": true
+    }
+  },
+  "failureReasons": []
+}

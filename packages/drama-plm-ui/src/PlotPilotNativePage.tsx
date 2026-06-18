@@ -14,6 +14,7 @@ import {
   Clock3,
   FileText,
   Film,
+  FolderOpen,
   Gauge,
   GitBranch,
   GripVertical,
@@ -81,6 +82,38 @@ export interface PlotPilotCodexStatus {
   email?: string | null
   planType?: string | null
   error?: string | null
+}
+
+export type PlotPilotIntegrationSurface =
+  | 'product-zen-panel'
+  | 'dev-localhost'
+  | 'browser-fallback'
+  | 'legacy-electron'
+
+export type PlotPilotReadinessTier =
+  | 'shell-ready'
+  | 'runtime-ready'
+  | 'plm-sidecar-ready'
+  | 'ai-ready'
+  | 'workflow-preview-ready'
+  | 'plotpilot-parity-ready'
+
+export type PlotPilotReadinessState = 'ready' | 'pending' | 'blocked'
+
+export interface PlotPilotReadinessStatus {
+  tier: PlotPilotReadinessTier
+  state: PlotPilotReadinessState
+  message: string
+}
+
+export interface PlotPilotIntegrationStatus {
+  surface: PlotPilotIntegrationSurface
+  productPath: boolean
+  currentUrl?: string
+  reason?: string
+  tiers: PlotPilotReadinessStatus[]
+  parityGaps?: string[]
+  workspacePathHints?: string[]
 }
 
 export interface PlotPilotProjectGuardStatus {
@@ -380,6 +413,54 @@ export interface PlotPilotNativeHandlers {
   onStopGeneration?: (jobId: string) => void
 }
 
+const CODEX_BACKED_HANDLER_KEYS = [
+  'onGenerateBible',
+  'onSuggestMainPlotOptions',
+  'onGeneratePlotOutline',
+  'onGenerateMacroPlan',
+  'onContinuePlanning',
+  'onGenerateBeat',
+  'onGenerateChapter',
+  'onHostedWrite',
+  'onStartAutopilot',
+  'onResumeAutopilot',
+  'onReviewChapter',
+  'onSimulateReaders',
+  'onInferKnowledgeGraph',
+  'onResumeInvocation',
+  'onRetryInvocation',
+] as const satisfies ReadonlyArray<keyof PlotPilotNativeHandlers>
+
+function isCodexReady(status?: PlotPilotCodexStatus | null): boolean {
+  return status?.available === true && status.authenticated === true
+}
+
+function codexUnavailableMessage(status?: PlotPilotCodexStatus | null): string {
+  if (!status) return 'Codex AI 状态尚未载入，生成动作暂时锁定。'
+  if (!status.available) return status.error ?? 'Codex CLI 或 ChatGPT OAuth 不可用，生成动作暂时锁定。'
+  if (!status.authenticated) return status.error ?? 'Codex 尚未登录，生成动作需要完成认证后再启用。'
+  return 'Codex 已就绪。'
+}
+
+function createCodexGuardedHandlers(
+  handlers: PlotPilotNativeHandlers | undefined,
+  codexStatus?: PlotPilotCodexStatus | null,
+): PlotPilotNativeHandlers | undefined {
+  if (!handlers || isCodexReady(codexStatus)) return handlers
+  const guarded: PlotPilotNativeHandlers = { ...handlers }
+  for (const key of CODEX_BACKED_HANDLER_KEYS) {
+    delete guarded[key]
+  }
+  return guarded
+}
+
+function readinessByTier(
+  status: PlotPilotIntegrationStatus | undefined,
+  tier: PlotPilotReadinessTier,
+): PlotPilotReadinessStatus | undefined {
+  return status?.tiers.find((row) => row.tier === tier)
+}
+
 export interface PlotPilotNativePageProps {
   runtimeStatus?: PlotPilotRuntimeStatus
   novels?: PlotPilotNovel[]
@@ -387,6 +468,7 @@ export interface PlotPilotNativePageProps {
   chapterEditor?: PlotPilotChapterEditor | null
   selectedBibleData?: PlotPilotBibleEditorData | null
   codexStatus?: PlotPilotCodexStatus | null
+  integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
   featureState?: PlotPilotNativeFeatureState
@@ -468,6 +550,7 @@ export function PlotPilotNativePage({
   chapterEditor,
   selectedBibleData,
   codexStatus,
+  integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
   featureState = {},
@@ -487,6 +570,7 @@ export function PlotPilotNativePage({
       chapterEditor={chapterEditor}
       selectedBibleData={selectedBibleData}
       codexStatus={codexStatus}
+      integrationStatus={integrationStatus}
       projectGuardStatus={projectGuardStatus}
       lastWritingSpecFailure={lastWritingSpecFailure}
       featureState={featureState}
@@ -661,10 +745,11 @@ function ScriptStudioPlmSurface({
   chapterEditor,
   selectedBibleData,
   codexStatus,
+  integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
   featureState,
-  handlers,
+  handlers: rawHandlers,
   logs,
   ready,
   busy,
@@ -676,6 +761,7 @@ function ScriptStudioPlmSurface({
   chapterEditor?: PlotPilotChapterEditor | null
   selectedBibleData?: PlotPilotBibleEditorData | null
   codexStatus?: PlotPilotCodexStatus | null
+  integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
   featureState: PlotPilotNativeFeatureState
@@ -717,6 +803,17 @@ function ScriptStudioPlmSurface({
   const totalChapters = novel?.targetChapters ?? novel?.chapterCount ?? chapters.length
   const progressPct = activeJob?.progress ?? (totalChapters > 0 ? (completedChapters / totalChapters) * 100 : 0)
   const canUseNovel = Boolean(novel && ready && !busy)
+  const handlers = React.useMemo(
+    () => createCodexGuardedHandlers(rawHandlers, codexStatus),
+    [rawHandlers, codexStatus],
+  )
+  const canCreateOrAdd = !busy && (
+    !novel
+      ? Boolean(handlers?.onCreateNovel)
+      : chapters.length === 0
+        ? Boolean(handlers?.onPrepareFirstChapter)
+        : Boolean(handlers?.onGenerateChapter)
+  )
 
   React.useEffect(() => {
     setDraft(chapterEditor?.content ?? '')
@@ -921,11 +1018,12 @@ function ScriptStudioPlmSurface({
           </div>
 
           <div className="flex items-center gap-2">
+            <IntegrationBadge status={integrationStatus} />
             <RuntimeBadge state={runtimeStatus.state} />
             <button
               type="button"
               onClick={createOrAdd}
-              disabled={busy || (!handlers?.onCreateNovel && !handlers?.onPrepareFirstChapter && !handlers?.onGenerateChapter)}
+              disabled={!canCreateOrAdd}
               className="flex h-8 items-center gap-1.5 rounded-[7px] bg-[#174a38] px-3 text-xs font-semibold text-white shadow-[0_2px_5px_rgba(23,74,56,0.18)] outline-none transition hover:bg-[#113d2f] focus-visible:ring-2 focus-visible:ring-[#174a38]/25 disabled:cursor-not-allowed disabled:opacity-45"
             >
               <Plus className="size-3.5" />
@@ -935,6 +1033,13 @@ function ScriptStudioPlmSurface({
         </header>
 
         <section className="min-h-0 flex-1 overflow-auto bg-transparent px-3 py-4 lg:px-5">
+          <ScriptStudioLayerFailureBanner
+            runtimeStatus={runtimeStatus}
+            integrationStatus={integrationStatus}
+            codexStatus={codexStatus}
+            handlers={rawHandlers}
+            busy={busy}
+          />
           {workspaceMode === 'creation' ? (
             <div className="grid min-h-full w-full min-w-[720px] grid-cols-[minmax(0,1fr)_264px] gap-4">
             <div className="min-w-0">
@@ -1002,6 +1107,7 @@ function ScriptStudioPlmSurface({
               draft={draft}
               novel={novel}
               codexStatus={codexStatus}
+              integrationStatus={integrationStatus}
               projectGuardStatus={projectGuardStatus}
               lastWritingSpecFailure={lastWritingSpecFailure}
               handlers={handlers}
@@ -1021,6 +1127,7 @@ function ScriptStudioPlmSurface({
               ready={ready}
               busy={busy}
               codexStatus={codexStatus}
+              integrationStatus={integrationStatus}
               projectGuardStatus={projectGuardStatus}
               lastWritingSpecFailure={lastWritingSpecFailure}
             />
@@ -1044,6 +1151,7 @@ function ScriptStudioAdvancedWorkspace({
   ready,
   busy,
   codexStatus,
+  integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
 }: {
@@ -1059,6 +1167,7 @@ function ScriptStudioAdvancedWorkspace({
   ready: boolean
   busy: boolean
   codexStatus?: PlotPilotCodexStatus | null
+  integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
 }) {
@@ -1100,6 +1209,7 @@ function ScriptStudioAdvancedWorkspace({
             <div className="mt-0.5 truncate text-xs text-[#817c73]">{detail}</div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <IntegrationBadge status={integrationStatus} />
             <RuntimeBadge state={runtimeStatus.state} />
             <span className="rounded-[6px] border border-[#e4e0d6] bg-[#f7f6f1] px-2 py-1 font-mono text-[10px] text-[#68645d]">
               {novels.length} novels
@@ -1107,6 +1217,7 @@ function ScriptStudioAdvancedWorkspace({
           </div>
         </div>
         <div className="space-y-4 bg-[#f8f7f2] p-4">
+          <ScriptStudioIntegrationPanel status={integrationStatus} />
           <ScriptStudioAdvancedOverview cards={cards} />
           <ScriptStudioAdvancedDetail
             workspaceMode={workspaceMode}
@@ -1265,6 +1376,7 @@ function createScriptStudioAdvancedCards({
   ready,
   busy,
   codexStatus,
+  integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
 }: {
@@ -1280,6 +1392,7 @@ function createScriptStudioAdvancedCards({
   ready: boolean
   busy: boolean
   codexStatus?: PlotPilotCodexStatus | null
+  integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
 }): ScriptStudioAdvancedCardView[] {
@@ -3920,6 +4033,7 @@ function ScriptStudioRightRail({
   draft,
   novel,
   codexStatus,
+  integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
   handlers,
@@ -3939,6 +4053,7 @@ function ScriptStudioRightRail({
   draft: string
   novel: PlotPilotNovel | null
   codexStatus?: PlotPilotCodexStatus | null
+  integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
   handlers?: PlotPilotNativeHandlers
@@ -4013,6 +4128,8 @@ function ScriptStudioRightRail({
           </div>
         </div>
       </ScriptStudioFloatingCard>
+
+      <ScriptStudioIntegrationPanel status={integrationStatus} compact />
 
       <ScriptStudioStorageDeck
         title="人设存储"
@@ -4735,6 +4852,302 @@ function RuntimeBadge({ state }: { state: PlotPilotRuntimeState }) {
     >
       {meta.label}
     </StatusBadge>
+  )
+}
+
+function integrationSurfaceLabel(surface: PlotPilotIntegrationSurface): string {
+  if (surface === 'product-zen-panel') return 'Zen panel'
+  if (surface === 'dev-localhost') return 'dev-localhost'
+  if (surface === 'legacy-electron') return 'legacy-electron'
+  return 'browser-fallback'
+}
+
+function readinessTierLabel(tier: PlotPilotReadinessTier): string {
+  if (tier === 'shell-ready') return 'Shell'
+  if (tier === 'runtime-ready') return 'Runtime'
+  if (tier === 'plm-sidecar-ready') return 'PLM sidecar'
+  if (tier === 'ai-ready') return 'Codex AI'
+  if (tier === 'workflow-preview-ready') return 'Workflow'
+  return 'PlotPilot parity'
+}
+
+function readinessStateClassName(state: PlotPilotReadinessState): string {
+  if (state === 'ready') return 'border-[#bddbcf] bg-[#edf8f2] text-[#245342]'
+  if (state === 'pending') return 'border-[#ded2a2] bg-[#fff8df] text-[#6a5417]'
+  return 'border-[#ebc6bc] bg-[#fff2ee] text-[#7a3327]'
+}
+
+function IntegrationBadge({ status }: { status?: PlotPilotIntegrationStatus }) {
+  if (!status) return null
+  return (
+    <span
+      title={status.reason}
+      className={cn(
+        'hidden h-5 items-center rounded-[6px] border px-1.5 py-0.5 font-mono text-[10px] font-semibold sm:inline-flex',
+        status.productPath
+          ? 'border-[#bddbcf] bg-[#edf8f2] text-[#245342]'
+          : 'border-[#ded2a2] bg-[#fff8df] text-[#6a5417]',
+      )}
+    >
+      {integrationSurfaceLabel(status.surface)}
+    </span>
+  )
+}
+
+function ScriptStudioLayerFailureBanner({
+  runtimeStatus,
+  integrationStatus,
+  codexStatus,
+  handlers,
+  busy,
+}: {
+  runtimeStatus: PlotPilotRuntimeStatus
+  integrationStatus?: PlotPilotIntegrationStatus
+  codexStatus?: PlotPilotCodexStatus | null
+  handlers?: PlotPilotNativeHandlers
+  busy?: boolean
+}) {
+  const runtimeTier = readinessByTier(integrationStatus, 'runtime-ready')
+  const sidecarTier = readinessByTier(integrationStatus, 'plm-sidecar-ready')
+  const aiTier = readinessByTier(integrationStatus, 'ai-ready')
+  const workspaceTier = readinessByTier(integrationStatus, 'workflow-preview-ready')
+  const runtimeBlocked = runtimeTier?.state === 'blocked'
+  const sidecarBlocked = !runtimeBlocked && (
+    sidecarTier?.state === 'blocked'
+    || runtimeStatus.state === 'offline'
+    || runtimeStatus.state === 'error'
+  )
+  const aiBlocked = aiTier?.state === 'blocked' || (codexStatus ? !isCodexReady(codexStatus) : false)
+  const workspaceBlocked = workspaceTier?.state === 'blocked'
+  const cards: Array<{
+    id: string
+    icon: React.ComponentType<{ className?: string }>
+    title: string
+    body: string
+    tone: 'red' | 'amber' | 'neutral'
+    actions?: React.ReactNode
+    meta?: React.ReactNode
+  }> = []
+
+  const copyDiagnostics = () => {
+    const diagnostics = {
+      runtime: {
+        state: runtimeStatus.state,
+        message: runtimeStatus.message,
+        endpoint: runtimeStatus.endpoint,
+      },
+      integration: integrationStatus,
+      codex: codexStatus,
+    }
+    void globalThis.navigator?.clipboard?.writeText(JSON.stringify(diagnostics, null, 2))
+  }
+
+  if (runtimeBlocked) {
+    cards.push({
+      id: 'runtime-unavailable',
+      icon: Power,
+      title: 'Runtime unavailable',
+      body: runtimeTier?.message ?? runtimeStatus.message ?? 'Drama runtime 尚未连上，PLM 只能显示本地壳和诊断信息。',
+      tone: 'red',
+      actions: (
+        <>
+          <button
+            type="button"
+            onClick={handlers?.onStartEngine}
+            disabled={busy || !handlers?.onStartEngine}
+            className="h-7 rounded-[6px] border border-[#d9c6bd] bg-white px-2 text-[11px] font-semibold text-[#6d3326] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            启动
+          </button>
+          <button
+            type="button"
+            onClick={handlers?.onRestartEngine}
+            disabled={busy || !handlers?.onRestartEngine}
+            className="h-7 rounded-[6px] border border-[#d9c6bd] bg-white px-2 text-[11px] font-semibold text-[#6d3326] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            重试
+          </button>
+          <button
+            type="button"
+            onClick={copyDiagnostics}
+            className="h-7 rounded-[6px] border border-[#d9c6bd] bg-white px-2 text-[11px] font-semibold text-[#6d3326]"
+          >
+            复制诊断
+          </button>
+        </>
+      ),
+      meta: runtimeStatus.endpoint ? (
+        <div className="mt-2 break-all rounded-[6px] bg-white/70 px-2 py-1 font-mono text-[10px] text-[#7a4a3e]">
+          {runtimeStatus.endpoint}
+        </div>
+      ) : null,
+    })
+  }
+
+  if (sidecarBlocked) {
+    cards.push({
+      id: 'plotpilot-sidecar-unavailable',
+      icon: AlertTriangle,
+      title: 'PlotPilot sidecar unavailable',
+      body: sidecarTier?.message ?? runtimeStatus.message ?? 'Drama runtime 在线，但 PlotPilot-compatible sidecar 未通过健康检查。',
+      tone: 'amber',
+      actions: (
+        <button
+          type="button"
+          onClick={handlers?.onRestartEngine}
+          disabled={busy || !handlers?.onRestartEngine}
+          className="h-7 rounded-[6px] border border-[#d8c690] bg-white px-2 text-[11px] font-semibold text-[#6f5614] disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          重试 sidecar
+        </button>
+      ),
+    })
+  }
+
+  if (aiBlocked) {
+    cards.push({
+      id: 'codex-unavailable',
+      icon: LogIn,
+      title: 'Codex auth required',
+      body: aiTier?.message ?? codexUnavailableMessage(codexStatus),
+      tone: 'amber',
+      actions: (
+        <button
+          type="button"
+          onClick={handlers?.onStartCodexLogin}
+          disabled={busy || !codexStatus?.available || !handlers?.onStartCodexLogin}
+          className="h-7 rounded-[6px] border border-[#d8c690] bg-white px-2 text-[11px] font-semibold text-[#6f5614] disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          登录 Codex
+        </button>
+      ),
+    })
+  }
+
+  if (workspaceBlocked) {
+    const pathHints = integrationStatus?.workspacePathHints?.filter(Boolean) ?? []
+    cards.push({
+      id: 'workspace-missing',
+      icon: FolderOpen,
+      title: 'Workspace missing',
+      body: workspaceTier?.message ?? '尚未选择可用项目，项目相关 PLM 面板保持锁定。',
+      tone: 'neutral',
+      meta: pathHints.length ? (
+        <div className="mt-2 max-h-24 overflow-auto rounded-[6px] border border-[#ded9cd] bg-[#fbfaf6] p-2 font-mono text-[10px] leading-4 text-[#5b5d56]">
+          {pathHints.map((path) => (
+            <div key={path} className="break-all">{path}</div>
+          ))}
+        </div>
+      ) : null,
+    })
+  }
+
+  if (cards.length === 0) return null
+
+  return (
+    <div className="mb-4 grid gap-2 lg:grid-cols-2">
+      {cards.map((card) => {
+        const Icon = card.icon
+        return (
+          <div
+            key={card.id}
+            data-plm-failure={card.id}
+            className={cn(
+              'rounded-[10px] border px-3 py-2.5 shadow-[0_10px_24px_rgba(43,38,27,0.08)] backdrop-blur-[2px]',
+              card.tone === 'red' && 'border-[#e4bfb4] bg-[#fff1ed]/94 text-[#673026]',
+              card.tone === 'amber' && 'border-[#e6d39a] bg-[#fff8df]/94 text-[#684f12]',
+              card.tone === 'neutral' && 'border-[#d8d3c8] bg-[#fffefd]/94 text-[#343831]',
+            )}
+          >
+            <div className="flex items-start gap-2.5">
+              <div className="grid size-8 shrink-0 place-items-center rounded-[7px] border border-current/15 bg-white/55">
+                <Icon className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold">{card.title}</div>
+                <div className="mt-0.5 text-xs leading-5 opacity-80">{card.body}</div>
+                {card.meta}
+                {card.actions ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">{card.actions}</div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function ScriptStudioIntegrationPanel({
+  status,
+  compact = false,
+}: {
+  status?: PlotPilotIntegrationStatus
+  compact?: boolean
+}) {
+  if (!status) return null
+  const rows = status.tiers
+  const blockedRows = rows.filter((row) => row.state === 'blocked')
+  const content = (
+    <div className="space-y-2">
+      {!status.productPath ? (
+        <div className="rounded-[7px] border border-[#ead7bd] bg-[#fff8eb] px-2.5 py-2 text-xs leading-5 text-[#6a4a17]">
+          {status.reason ?? '当前不是 Zen chrome-resource product panel。'}
+        </div>
+      ) : null}
+      <div className={compact ? 'space-y-1.5' : 'grid gap-2 md:grid-cols-2 xl:grid-cols-3'}>
+        {rows.map((row) => (
+          <div
+            key={row.tier}
+            className={cn(
+              'min-w-0 rounded-[7px] border px-2.5 py-2',
+              readinessStateClassName(row.state),
+            )}
+          >
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <span className="truncate text-xs font-semibold">{readinessTierLabel(row.tier)}</span>
+              <span className="font-mono text-[10px] uppercase">{row.state}</span>
+            </div>
+            <div className="mt-1 line-clamp-2 text-[11px] leading-4 opacity-80">{row.message}</div>
+          </div>
+        ))}
+      </div>
+      {status.currentUrl ? (
+        <div className="truncate rounded-[6px] border border-[#e3dfd4] bg-[#fbfaf6] px-2 py-1.5 font-mono text-[10px] text-[#6f6a61]">
+          {status.currentUrl}
+        </div>
+      ) : null}
+      {status.parityGaps?.length ? (
+        <div className="rounded-[7px] border border-[#ded9cd] bg-[#f8f7f2] px-2.5 py-2 text-[11px] leading-5 text-[#68645d]">
+          <span className="font-semibold text-[#343831]">Parity gaps:</span>{' '}
+          {status.parityGaps.join(' / ')}
+        </div>
+      ) : null}
+      {blockedRows.length ? (
+        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9a5547]">
+          {blockedRows.length} blocked readiness tier{blockedRows.length === 1 ? '' : 's'}
+        </div>
+      ) : null}
+    </div>
+  )
+
+  if (compact) {
+    return (
+      <ScriptStudioFloatingCard title="Integration Contract" icon={ShieldCheck}>
+        {content}
+      </ScriptStudioFloatingCard>
+    )
+  }
+
+  return (
+    <ScriptStudioLightPanel
+      icon={ShieldCheck}
+      title="Zen PLM Integration Contract"
+      detail={integrationSurfaceLabel(status.surface)}
+    >
+      {content}
+    </ScriptStudioLightPanel>
   )
 }
 

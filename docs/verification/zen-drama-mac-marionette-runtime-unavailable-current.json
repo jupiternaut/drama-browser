@@ -1,0 +1,221 @@
+{
+  "ok": true,
+  "schema": "zen-drama-mac-marionette-verification.v1",
+  "surfaceClassification": "product-zen-panel",
+  "surface": "graph",
+  "zenApp": "/Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app",
+  "runtimeUrl": "http://127.0.0.1:39999",
+  "profile": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-profile-y2tbim6t",
+  "logPath": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-1781748806.log",
+  "durationMs": 10361,
+  "marionette": {
+    "hello": {
+      "applicationType": "gecko",
+      "marionetteProtocol": 3
+    },
+    "session": {
+      "sessionId": "36eb291b-2ee7-4155-9f5f-4b522ea05c6c",
+      "capabilities": {
+        "acceptInsecureCerts": false,
+        "browserName": "zen",
+        "browserVersion": "1.21.2b",
+        "platformName": "mac",
+        "setWindowRect": true,
+        "unhandledPromptBehavior": "dismiss and notify",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:152.0) Gecko/20100101 Firefox/152.0",
+        "moz:buildID": "20260617194839",
+        "moz:headless": false,
+        "moz:platformVersion": "25.4.0",
+        "moz:processID": 5723,
+        "moz:profile": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-profile-y2tbim6t",
+        "moz:shutdownTimeout": 60000,
+        "pageLoadStrategy": "normal",
+        "timeouts": {
+          "implicit": 0,
+          "pageLoad": 300000,
+          "script": 30000
+        },
+        "strictFileInteractability": false,
+        "moz:accessibilityChecks": false,
+        "moz:webdriverClick": true,
+        "moz:windowless": false,
+        "proxy": {}
+      }
+    }
+  },
+  "result": {
+    "managerType": "object",
+    "managerConstructor": "nsZenDramaManager",
+    "panelExists": true,
+    "panelHidden": false,
+    "panelDisplay": "flex",
+    "browserExists": true,
+    "currentURI": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A39999&surface=graph",
+    "statusValue": "Drama runtime offline",
+    "sidebarButtons": [
+      true,
+      true,
+      true
+    ],
+    "content": {
+      "uri": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A39999&surface=graph",
+      "readyState": "complete",
+      "title": "Drama Browser Shell",
+      "dataset": {
+        "dramaStyles": "ready",
+        "dramaShellMounted": "true",
+        "dramaSurface": "graph",
+        "dramaHost": "zen",
+        "dramaRuntimePollers": "1",
+        "dramaShellState": "runtime-unavailable",
+        "dramaFirstStyledViewport": "ready",
+        "dramaRuntimeReady": "offline",
+        "dramaStartupMaxTaskMs": "11",
+        "host": "zen"
+      },
+      "rootExists": true,
+      "rootChildCount": 3,
+      "rootText": "DDrama GraphDrama PLMSkill CrewDrama WorkspaceDrama Graph状态机画布Zen panelhost=zenofflineruntime 不可用DDrama Runtime后台运行时未就绪Drama 工作台已经作为 Zen 内部资源加载，但本地 runtime 暂时不可用。请重新加载面板，或重新双击桌面 Drama 启动完整应用。offline10:13:33 AM重新加载",
+      "shellExists": true,
+      "shellText": "DDrama GraphDrama PLMSkill CrewDrama WorkspaceDrama Graph状态机画布Zen panelhost=zenofflineruntime 不可用DDrama Runtime后台运行时未就绪Drama 工作台已经作为 Zen 内部资源加载，但本地 runtime 暂时不可用。请重新加载面板，或重新双击桌面 Drama 启动完整应用。offline10:13:33 AM重新加载",
+      "shellRect": {
+        "width": 1278,
+        "height": 856,
+        "top": 0,
+        "left": 0
+      },
+      "elementCount": 78,
+      "scripts": [
+        "chrome://browser/content/drama/app/assets/index-Gb5Zb-mV.js"
+      ],
+      "stylesheets": 2,
+      "marks": {
+        "shell-document-load": {
+          "name": "shell-document-load",
+          "markedAt": 72.24820833333332,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A39999&surface=graph",
+          "surface": null,
+          "state": "interactive",
+          "detail": null
+        },
+        "first-styled-viewport": {
+          "name": "first-styled-viewport",
+          "markedAt": 78.40458333333333,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A39999&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": null
+        },
+        "route-ready": {
+          "name": "route-ready",
+          "markedAt": 360.06037499999996,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A39999&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        }
+      },
+      "events": [
+        {
+          "name": "shell-document-load",
+          "markedAt": 72.24820833333332,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A39999&surface=graph",
+          "surface": null,
+          "state": "interactive",
+          "detail": null
+        },
+        {
+          "name": "first-styled-viewport",
+          "markedAt": 78.40458333333333,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A39999&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": null
+        },
+        {
+          "name": "route-ready",
+          "markedAt": 78.441375,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A39999&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        },
+        {
+          "name": "route-ready",
+          "markedAt": 360.06037499999996,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A39999&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        }
+      ],
+      "responsiveness": {
+        "startedAt": 72.27925,
+        "endedAt": 5078.271083333333,
+        "status": "complete",
+        "durationMs": 5000,
+        "intervalMs": 50,
+        "thresholdMs": 100,
+        "samples": 82,
+        "supportedLongTasks": false,
+        "maxLongTaskDurationMs": 0,
+        "maxEventLoopDelayMs": 238.328625,
+        "p95EventLoopDelayMs": 10.667041666666591,
+        "maxStartupBlockingMs": 10.667041666666591
+      }
+    },
+    "documentTitle": "Zen Browser",
+    "location": "chrome://browser/content/browser.xhtml"
+  },
+  "screenshot": {
+    "path": "/Users/gengrf/drama-browser/docs/verification/zen-drama-mac-marionette-runtime-unavailable-current.png",
+    "captured": true,
+    "width": 2560,
+    "height": 1800,
+    "averageLuma": 39.007,
+    "darkRatio": 0.0,
+    "brightRatio": 0.0,
+    "uniqueColorBuckets": 183
+  },
+  "performance": {
+    "budgets": {
+      "firstStyledViewportMs": 2000,
+      "runtimeReadyOrUnavailableMs": 8000,
+      "sidecarReadyOrUnavailableMs": 45000,
+      "routeSwitchMs": 500,
+      "startupMainThreadTaskMs": 100
+    },
+    "measurements": {
+      "firstStyledViewportMs": 6.156,
+      "runtimeReadyMs": null,
+      "sidecarReadyMs": null,
+      "startupMainThreadTaskMs": 10.667,
+      "shellState": "runtime-unavailable"
+    },
+    "responsiveness": {
+      "startedAt": 72.27925,
+      "endedAt": 5078.271083333333,
+      "status": "complete",
+      "durationMs": 5000,
+      "intervalMs": 50,
+      "thresholdMs": 100,
+      "samples": 82,
+      "supportedLongTasks": false,
+      "maxLongTaskDurationMs": 0,
+      "maxEventLoopDelayMs": 238.328625,
+      "p95EventLoopDelayMs": 10.667041666666591,
+      "maxStartupBlockingMs": 10.667041666666591
+    },
+    "routeSwitches": null
+  },
+  "failureReasons": []
+}

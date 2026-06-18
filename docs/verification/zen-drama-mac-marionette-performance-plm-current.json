@@ -1,0 +1,328 @@
+{
+  "ok": true,
+  "schema": "zen-drama-marionette-verification.v2",
+  "surfaceClassification": "product-zen-panel",
+  "surface": "plm",
+  "platform": "darwin",
+  "zenApp": "/Users/gengrf/drama-browser/dist/zen-drama-mac/Zen Browser.app",
+  "zenBin": "/Users/gengrf/drama-browser/dist/zen-drama-mac/Zen Browser.app/Contents/MacOS/zen",
+  "runtimeUrl": "http://127.0.0.1:3198",
+  "profile": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-profile-w9_ban0w",
+  "logPath": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-1781787795.log",
+  "durationMs": 10885,
+  "marionette": {
+    "hello": {
+      "applicationType": "gecko",
+      "marionetteProtocol": 3
+    },
+    "session": {
+      "sessionId": "7454f40b-82e5-46ae-b613-eea8ff91dbcf",
+      "capabilities": {
+        "acceptInsecureCerts": false,
+        "browserName": "zen",
+        "browserVersion": "1.21.2b",
+        "platformName": "mac",
+        "setWindowRect": true,
+        "unhandledPromptBehavior": "dismiss and notify",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:152.0) Gecko/20100101 Firefox/152.0",
+        "moz:buildID": "20260617194839",
+        "moz:headless": false,
+        "moz:platformVersion": "25.4.0",
+        "moz:processID": 43213,
+        "moz:profile": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-profile-w9_ban0w",
+        "moz:shutdownTimeout": 60000,
+        "pageLoadStrategy": "normal",
+        "timeouts": {
+          "implicit": 0,
+          "pageLoad": 300000,
+          "script": 30000
+        },
+        "strictFileInteractability": false,
+        "moz:accessibilityChecks": false,
+        "moz:webdriverClick": true,
+        "moz:windowless": false,
+        "proxy": {}
+      }
+    }
+  },
+  "result": {
+    "managerType": "object",
+    "managerConstructor": "nsZenDramaManager",
+    "panelExists": true,
+    "panelHidden": false,
+    "panelDisplay": "flex",
+    "browserExists": true,
+    "currentURI": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+    "statusValue": "Runtime ready / plm",
+    "sidebarButtons": [
+      true,
+      true,
+      true
+    ],
+    "content": {
+      "uri": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+      "readyState": "complete",
+      "title": "Drama Browser Shell",
+      "dataset": {
+        "dramaStyles": "ready",
+        "dramaShellMounted": "true",
+        "dramaSurface": "plm",
+        "dramaHost": "zen",
+        "dramaRuntimePollers": "1",
+        "dramaShellState": "ai-unavailable",
+        "dramaFirstStyledViewport": "ready",
+        "dramaStartupMaxTaskMs": "8",
+        "dramaRuntimeReady": "ready",
+        "dramaSidecarReady": "ready"
+      },
+      "rootExists": true,
+      "rootChildCount": 3,
+      "rootText": "DDrama GraphDrama PLMSkill CrewDrama WorkspaceDrama PLM长上下文生成Zen panelhost=zenreadyAI 不可用《搜神记》工作模式创作剧本 / 节拍 / 大纲设定Onboarding / Bible规划主线 / 宏观 / 连续规划生产Autopilot / 连写审阅审稿 / 读者模拟调试Trace / Prompt / Memory创作模块剧本节拍人物道具地点分镜场次资产设计节拍1 序幕 · 海猎凶兽2 第一幕 · 神帝之殇3 第一幕 · 坠崖奇遇诗shizhiMaster创作3创作设定规划生产审阅调试编辑节拍大纲Zen panel就绪添加Codex auth required未找到 codex CLI，请先安装或确认 PATH 中可执行 codex。登录 CodexWorkspace missingWorkspace/project is missing; project-dependent PLM surfaces remain blocked./Users/gengrf/PlotPilot/Users/gengrf/.plotpilot/data剧本剧本封面场次动作角色括号对话转场注释字幕第 1 章序幕 · 海猎凶兽生成保存回写大纲→节拍→剧本01 / 03完整剧本大纲内容1.乔羽携子荒尤在海猎中遇见云龙，个人命运被拖入神权、血书与旧王朝的冲突。2.主角从局部冒险进入更大的权力结构，必须在亲情、责任与自由之间不断选择。3.反派力量并非单一恶，而是由制度、记忆和误解共同构成，推动故事进入多线并行。4.最终阶段把人物关系、世界秘密和核心主题收束到同一场不可回避的公开抉择。核心人物关系链神女 → 拓拔野（传人 · 三书 · 神木令）乔羽 → 荒尤（父子 · 长生创）空桑 → 拓拔野（暗声铺 · 三次告别）雨师妾 → 拓拔野（敌意 · 盟约）木族人 → 所有人（反派 · 旧王龙角）当前进度总表等待 runtime 就绪就绪章节0/3字数0 wordsCodex 未登录 · WritingSpec 未绑定 · Humanizer offIntegration ContractShellreadyLoaded from Zen chrome-resource PLM panel.RuntimereadyDrama standalone runtime ready.PLM sidecarreadyPlotPilot-compatible sidecar is healthy through the Drama runtime.Codex AIblocked未找到 codex CLI，请先安装或确认 PATH 中可执行 codex。WorkflowblockedWorkspace/project is ",
+      "shellExists": true,
+      "shellText": "DDrama GraphDrama PLMSkill CrewDrama WorkspaceDrama PLM长上下文生成Zen panelhost=zenreadyAI 不可用《搜神记》工作模式创作剧本 / 节拍 / 大纲设定Onboarding / Bible规划主线 / 宏观 / 连续规划生产Autopilot / 连写审阅审稿 / 读者模拟调试Trace / Prompt / Memory创作模块剧本节拍人物道具地点分镜场次资产设计节拍1 序幕 · 海猎凶兽2 第一幕 · 神帝之殇3 第一幕 · 坠崖奇遇诗shizhiMaster创作3创作设定规划生产审阅调试编辑节拍大纲Zen panel就绪添加Codex auth required未找到 codex CLI，请先安装或确认 PATH 中可执行 codex。登录 CodexWorkspace missingWorkspace/project is missing; project-dependent PLM surfaces remain blocked./Users/gengrf/PlotPilot/Users/gengrf/.plotpilot/data剧本剧本封面场次动作角色括号对话转场注释字幕第 1 章序幕 · 海猎凶兽生成保存回写大纲→节拍→剧本01 / 03完整剧本大纲内容1.乔羽携子荒尤在海猎中遇见云龙，个人命运被拖入神权、血书与旧王朝的冲突。2.主角从局部冒险进入更大的权力结构，必须在亲情、责任与自由之间不断选择。3.反派力量并非单一恶，而是由制度、记忆和误解共同构成，推动故事进入多线并行。4.最终阶段把人物关系、世界秘密和核心主题收束到同一场不可回避的公开抉择。核心人物关系链神女 → 拓拔野（传人 · 三书 · 神木令）乔羽 → 荒尤（父子 · 长生创）空桑 → 拓拔野（暗声铺 · 三次告别）雨师妾 → 拓拔野（敌意 · 盟约）木族人 → 所有人（反派 · 旧王龙角）当前进度总表等待 runtime 就绪就绪章节0/3字数0 wordsCodex 未登录 · WritingSpec 未绑定 · Humanizer offIntegration ContractShellreadyLoaded from Zen chrome-resource PLM panel.RuntimereadyDrama standalone runtime ready.PLM sidecarreadyPlotPilot-compatible sidecar is healthy through the Drama runtime.Codex AIblocked未找到 codex CLI，请先安装或确认 PATH 中可执行 codex。WorkflowblockedWorkspace/project is ",
+      "shellRect": {
+        "width": 1278,
+        "height": 858,
+        "top": 0,
+        "left": 0
+      },
+      "elementCount": 643,
+      "scripts": [
+        "chrome://browser/content/drama/app/assets/index-Gb5Zb-mV.js"
+      ],
+      "stylesheets": 2,
+      "marks": {
+        "shell-document-load": {
+          "name": "shell-document-load",
+          "markedAt": 89.63120833333332,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": null,
+          "state": "interactive",
+          "detail": null
+        },
+        "first-styled-viewport": {
+          "name": "first-styled-viewport",
+          "markedAt": 179.85920833333333,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "ready",
+          "detail": null
+        },
+        "route-ready": {
+          "name": "route-ready",
+          "markedAt": 399.2599583333333,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        },
+        "runtime-ready": {
+          "name": "runtime-ready",
+          "markedAt": 194.37691666666666,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "ready",
+          "detail": {
+            "runtimeBaseUrl": "http://127.0.0.1:3198",
+            "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace"
+          }
+        },
+        "sidecar-ready": {
+          "name": "sidecar-ready",
+          "markedAt": 328.07912500000003,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "running",
+          "detail": {
+            "port": 8005,
+            "pid": null,
+            "adopted": true,
+            "owned": false,
+            "baseUrl": "http://127.0.0.1:3198/plm/proxy"
+          }
+        }
+      },
+      "events": [
+        {
+          "name": "shell-document-load",
+          "markedAt": 89.63120833333332,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": null,
+          "state": "interactive",
+          "detail": null
+        },
+        {
+          "name": "first-styled-viewport",
+          "markedAt": 179.85920833333333,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "ready",
+          "detail": null
+        },
+        {
+          "name": "route-ready",
+          "markedAt": 179.8868333333333,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        },
+        {
+          "name": "runtime-ready",
+          "markedAt": 194.37691666666666,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "ready",
+          "detail": {
+            "runtimeBaseUrl": "http://127.0.0.1:3198",
+            "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace"
+          }
+        },
+        {
+          "name": "route-ready",
+          "markedAt": 196.31029166666667,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        },
+        {
+          "name": "sidecar-ready",
+          "markedAt": 328.07912500000003,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "running",
+          "detail": {
+            "port": 8005,
+            "pid": null,
+            "adopted": true,
+            "owned": false,
+            "baseUrl": "http://127.0.0.1:3198/plm/proxy"
+          }
+        },
+        {
+          "name": "route-ready",
+          "markedAt": 331.1747083333333,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        },
+        {
+          "name": "route-ready",
+          "markedAt": 399.2599583333333,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+          "surface": "plm",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        }
+      ],
+      "responsiveness": {
+        "startedAt": 89.67291666666665,
+        "endedAt": 5090.692625,
+        "status": "complete",
+        "durationMs": 5000,
+        "intervalMs": 50,
+        "thresholdMs": 100,
+        "samples": 90,
+        "supportedLongTasks": false,
+        "maxLongTaskDurationMs": 0,
+        "maxEventLoopDelayMs": 85.81212499999987,
+        "p95EventLoopDelayMs": 8.043791666666948,
+        "maxStartupBlockingMs": 8.043791666666948
+      }
+    },
+    "documentTitle": "Zen Browser",
+    "location": "chrome://browser/content/browser.xhtml"
+  },
+  "screenshot": {
+    "path": "/Users/gengrf/drama-browser/docs/verification/zen-drama-mac-marionette-performance-plm-current.png",
+    "captured": true,
+    "width": 2560,
+    "height": 1804,
+    "averageLuma": 225.102,
+    "darkRatio": 0.005534,
+    "brightRatio": 0.590321,
+    "uniqueColorBuckets": 341
+  },
+  "performance": {
+    "budgets": {
+      "firstStyledViewportMs": 2000,
+      "runtimeReadyOrUnavailableMs": 8000,
+      "sidecarReadyOrUnavailableMs": 45000,
+      "routeSwitchMs": 500,
+      "startupMainThreadTaskMs": 100
+    },
+    "measurements": {
+      "firstStyledViewportMs": 90.228,
+      "runtimeReadyMs": 104.746,
+      "sidecarReadyMs": 238.448,
+      "startupMainThreadTaskMs": 8.044,
+      "shellState": "ai-unavailable"
+    },
+    "responsiveness": {
+      "startedAt": 89.67291666666665,
+      "endedAt": 5090.692625,
+      "status": "complete",
+      "durationMs": 5000,
+      "intervalMs": 50,
+      "thresholdMs": 100,
+      "samples": 90,
+      "supportedLongTasks": false,
+      "maxLongTaskDurationMs": 0,
+      "maxEventLoopDelayMs": 85.81212499999987,
+      "p95EventLoopDelayMs": 8.043791666666948,
+      "maxStartupBlockingMs": 8.043791666666948
+    },
+    "routeSwitches": {
+      "ok": true,
+      "switches": [
+        {
+          "surface": "graph",
+          "ok": true,
+          "elapsedMs": 33.46354166666606,
+          "waitedMs": 32.17733333333308,
+          "timedOut": false,
+          "shellRemounted": false,
+          "shellState": "runtime-ready"
+        },
+        {
+          "surface": "crew",
+          "ok": true,
+          "elapsedMs": 44.72124999999869,
+          "waitedMs": 44.204249999998865,
+          "timedOut": false,
+          "shellRemounted": false,
+          "shellState": "runtime-ready"
+        },
+        {
+          "surface": "plm",
+          "ok": true,
+          "elapsedMs": 48.04437500000131,
+          "waitedMs": 47.672833333332164,
+          "timedOut": false,
+          "shellRemounted": false,
+          "shellState": "ai-unavailable"
+        }
+      ],
+      "finalSurface": "plm",
+      "shellRemounted": false
+    }
+  },
+  "failureReasons": []
+}
