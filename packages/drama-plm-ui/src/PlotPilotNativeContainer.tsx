@@ -18,6 +18,8 @@ import {
   type PlotPilotNativeFeatureState,
   type PlotPilotOnboardingDraft,
   type PlotPilotParityCheck,
+  type PlotPilotProductionEvidenceItem,
+  type PlotPilotProductionEvidenceSnapshot,
   type PlotPilotProjectGuardStatus,
   type PlotPilotLogEntry as PlotPilotUiLogEntry,
   type PlotPilotNativeHandlers,
@@ -75,6 +77,15 @@ const EMPTY_RUNTIME_STATUS: PlotPilotRuntimeStatus = {
 const STATUS_REQUEST_TIMEOUT_MS = 2_000
 const DRAMA_PLM_OPEN_REQUEST_KEY = 'drama.plm.openRequest.v1'
 const DRAMA_CODEX_PROFILE_ID = 'drama-codex-chatgpt'
+const DRAMA_PRODUCTION_FIXTURE_ID = 'drama-production-parity-mac'
+const DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY = 'drama.production.parity.chapter-draft'
+const DRAMA_PRODUCTION_FIXTURE_CHAPTER_NUMBER = 1
+
+const DRAMA_PRODUCTION_FIXTURE_CONTENT = `第1章 生产闭环验证
+
+乔羽在海雾里停船，命令桨手收声。荒尤第一次看见云龙的影子从浪脊下翻过，鳞片像旧王朝留下的青铜密令。
+
+这一章用于 Zen Drama PLM macOS production parity 验收：它必须能被真实项目加载、保存、回写，并在 Memory Graph 与 Prompt Registry 面板留下可追踪证据。`
 
 interface DramaPlmOpenRequest {
   schema: typeof DRAMA_PLM_OPEN_REQUEST_KEY
@@ -123,6 +134,7 @@ export interface PlotPilotNativeContainerProps {
   createClient?: typeof createPlotPilotClient
   integrationStatus?: PlotPilotIntegrationStatus
   onIntegrationStatusChange?: (status: PlotPilotIntegrationStatus | undefined) => void
+  productionFixture?: boolean
 }
 
 function isRuntimeReady(status: PlotPilotRuntimeStatus): boolean {
@@ -551,6 +563,161 @@ function metricNumber(record: Record<string, unknown>, keys: string[]): number {
   return 0
 }
 
+function hasNativePromptWrite(featureState: PlotPilotNativeFeatureState): boolean {
+  const promptStats = asRecord(featureState.promptStats)
+  if (metricNumber(promptStats, ['dramaNativePromptWrites']) > 0) return true
+  return (featureState.prompts ?? []).some((prompt) => {
+    const record = asRecord(prompt)
+    return Boolean(record.nativePromptWrite || record.nativeRegistry === 'plotpilot-prompt-plaza')
+  })
+}
+
+function buildProductionEvidenceSnapshot(args: {
+  runtimeReady: boolean
+  productPath: boolean
+  selectedNovel: NovelDTO | null
+  chapterEditor: PlotPilotChapterEditor | null
+  featureState: PlotPilotNativeFeatureState
+}): PlotPilotProductionEvidenceSnapshot {
+  const { runtimeReady, productPath, selectedNovel, chapterEditor, featureState } = args
+  const productionFixture = asRecord(featureState.productionFixture)
+  const pathHints = Array.isArray(productionFixture.pathHints)
+    ? productionFixture.pathHints.map(String).filter(Boolean)
+    : []
+  const fixtureName = String(productionFixture.name ?? 'Zen Drama PLM production parity fixture')
+  const fixtureId = String(productionFixture.fixtureId ?? DRAMA_PRODUCTION_FIXTURE_ID)
+  const firstChapter = selectedNovel?.chapters?.[0] ?? null
+  const activeChapterId = chapterEditor?.chapterId ?? firstChapter?.id
+  const activeChapterNumber = chapterEditor?.chapterNumber ?? firstChapter?.number
+  const hostedSummary = asRecord(featureState.hostedWriteSummary)
+  const hostedEvents = featureState.hostedWriteEvents ?? []
+  const promptNativeReady = hasNativePromptWrite(featureState)
+  const promptCount = featureState.prompts?.length ?? metricNumber(asRecord(featureState.promptStats), ['total_nodes', 'total', 'count'])
+  const memorySync = asRecord(featureState.postChapterMemorySync)
+  const memoryTripleCount = metricNumber(memorySync, ['tripleCount', 'triple_count'])
+    || (featureState.knowledgeTriples?.length ?? 0)
+  const memoryChapterNumber = metricNumber(memorySync, ['chapterNumber', 'chapter_number'])
+  const autopilotStatus = asRecord(featureState.autopilotStatus)
+  const autopilotBreaker = asRecord(featureState.autopilotCircuitBreaker)
+  const autopilotEvents = [
+    ...(featureState.autopilotEvents ?? []),
+    ...(featureState.autopilotStatusEvents ?? []),
+    ...(featureState.autopilotChapterEvents ?? []),
+  ]
+
+  const items: PlotPilotProductionEvidenceItem[] = [
+    {
+      id: 'project',
+      label: 'Project',
+      state: selectedNovel ? 'ready' : 'blocked',
+      detail: selectedNovel
+        ? `Loaded ${selectedNovel.title || selectedNovel.id}.`
+        : 'No active PlotPilot project is loaded.',
+      evidence: selectedNovel?.id,
+      updatedAt: String(productionFixture.loadedAt ?? ''),
+    },
+    {
+      id: 'chapter',
+      label: 'Chapter',
+      state: activeChapterId ? 'ready' : selectedNovel ? 'partial' : 'blocked',
+      detail: activeChapterId
+        ? `Active chapter ${activeChapterNumber ?? '-'} is available in PLM.`
+        : selectedNovel
+          ? 'Project is loaded but no chapter is active yet.'
+          : 'No project chapter can be loaded before a project exists.',
+      evidence: activeChapterId,
+      updatedAt: String(productionFixture.loadedAt ?? ''),
+    },
+    {
+      id: 'hosted-write',
+      label: 'Hosted Write',
+      state: Number(hostedSummary.savedCount ?? 0) > 0 || hostedSummary.lastType === 'session_done'
+        ? 'ready'
+        : hostedEvents.length > 0 || hostedSummary.lastType
+          ? 'partial'
+          : selectedNovel ? 'partial' : 'blocked',
+      detail: Number(hostedSummary.savedCount ?? 0) > 0
+        ? `Saved ${String(hostedSummary.savedCount)} chapter(s) through Hosted Write.`
+        : hostedEvents.length > 0
+          ? 'Hosted Write events are visible, but no saved chapter evidence is present yet.'
+          : selectedNovel
+            ? 'Hosted Write controls are available; run a session to produce saved-chapter evidence.'
+            : 'Hosted Write requires an active project.',
+      evidence: hostedSummary.lastType ? `last=${String(hostedSummary.lastType)}` : `${hostedEvents.length} events`,
+      updatedAt: String(hostedSummary.updatedAt ?? ''),
+    },
+    {
+      id: 'prompt',
+      label: 'Prompt Registry',
+      state: promptNativeReady ? 'ready' : promptCount > 0 ? 'partial' : selectedNovel ? 'partial' : 'blocked',
+      detail: promptNativeReady
+        ? 'Prompt Plaza write evidence is present through PlotPilot-native registry APIs.'
+        : promptCount > 0
+          ? 'Prompt records are visible, but native write evidence is not present.'
+          : selectedNovel
+            ? 'Prompt card save path is available; save or bootstrap a prompt to produce evidence.'
+            : 'Prompt persistence requires an active project.',
+      evidence: promptNativeReady ? 'native prompt write' : `${promptCount} prompt records`,
+      updatedAt: String(productionFixture.promptUpdatedAt ?? ''),
+    },
+    {
+      id: 'memory',
+      label: 'Post-chapter Memory',
+      state: memoryChapterNumber > 0 && memoryTripleCount > 0 ? 'ready' : memoryChapterNumber > 0 ? 'partial' : selectedNovel ? 'partial' : 'blocked',
+      detail: memoryChapterNumber > 0 && memoryTripleCount > 0
+        ? `Chapter ${memoryChapterNumber} produced ${memoryTripleCount} chapter-derived memory item(s).`
+        : memoryChapterNumber > 0
+          ? 'Post-chapter sync ran but produced no chapter-derived memory diff.'
+          : selectedNovel
+            ? 'Save or write back a chapter to refresh memory evidence.'
+            : 'Memory sync requires an active project and chapter.',
+      evidence: memoryChapterNumber > 0 ? `chapter ${memoryChapterNumber}, triples ${memoryTripleCount}` : undefined,
+      updatedAt: String(memorySync.refreshedAt ?? ''),
+    },
+    {
+      id: 'autopilot',
+      label: 'Autopilot',
+      state: Object.keys(autopilotStatus).length > 0 || Object.keys(autopilotBreaker).length > 0
+        ? autopilotEvents.length > 0 ? 'ready' : 'partial'
+        : selectedNovel ? 'partial' : 'blocked',
+      detail: autopilotEvents.length > 0
+        ? `${autopilotEvents.length} Autopilot event(s) are available.`
+        : Object.keys(autopilotStatus).length > 0 || Object.keys(autopilotBreaker).length > 0
+          ? 'Autopilot status and breaker are visible; run controls to produce lifecycle events.'
+          : selectedNovel
+            ? 'Autopilot controls are available after project load.'
+            : 'Autopilot requires an active project.',
+      evidence: String(autopilotStatus.autopilot_status ?? autopilotStatus.status ?? autopilotBreaker.status ?? 'idle'),
+      updatedAt: String(autopilotStatus.updatedAt ?? autopilotBreaker.updatedAt ?? ''),
+    },
+    {
+      id: 'verification',
+      label: 'Verification',
+      state: productPath && selectedNovel && activeChapterId ? 'ready' : productPath ? 'partial' : 'blocked',
+      detail: productPath && selectedNovel && activeChapterId
+        ? 'Zen product-path panel has enough DOM evidence for macOS happy-path verification.'
+        : productPath
+          ? 'Zen product-path panel is loaded; project/chapter evidence is still incomplete.'
+          : 'Production evidence is not running in a product-path Zen panel.',
+      evidence: productPath ? 'product-zen-panel' : 'fallback surface',
+      updatedAt: new Date().toISOString(),
+    },
+  ]
+
+  return {
+    fixtureName,
+    fixtureId,
+    projectId: selectedNovel?.id,
+    projectTitle: selectedNovel?.title,
+    chapterId: activeChapterId,
+    chapterNumber: activeChapterNumber,
+    chapterTitle: chapterEditor?.title ?? firstChapter?.title,
+    pathHints,
+    generatedAt: new Date().toISOString(),
+    items,
+  }
+}
+
 function buildParityChecks(
   runtimeReady: boolean,
   selectedNovel: NovelDTO | null,
@@ -616,6 +783,7 @@ function resolveIntegrationStatus(
   runtimeStatus: PlotPilotRuntimeStatus,
   codexStatus: PlotPilotCodexStatusResponse | null,
   selectedNovel: NovelDTO | null,
+  chapterEditor: PlotPilotChapterEditor | null,
   featureState: PlotPilotNativeFeatureState,
 ): PlotPilotIntegrationStatus | undefined {
   if (!baseStatus) return undefined
@@ -656,13 +824,24 @@ function resolveIntegrationStatus(
   }
 
   const parityChecks = buildParityChecks(runtimeReady, selectedNovel, featureState)
+  const productionEvidence = buildProductionEvidenceSnapshot({
+    runtimeReady,
+    productPath: baseStatus.productPath,
+    selectedNovel,
+    chapterEditor,
+    featureState,
+  })
   const openParityChecks = parityChecks.filter((check) => check.state !== 'ready')
+  const openProductionEvidence = productionEvidence.items.filter((item) => item.state !== 'ready')
   const parityStatus: PlotPilotReadinessStatus = {
     tier: 'plotpilot-parity-ready',
-    state: openParityChecks.length === 0 ? 'ready' : 'blocked',
-    message: openParityChecks.length === 0
+    state: openParityChecks.length === 0 && openProductionEvidence.length === 0 ? 'ready' : 'blocked',
+    message: openParityChecks.length === 0 && openProductionEvidence.length === 0
       ? 'PlotPilot parity checks are complete for the current bridge contract.'
-      : `Blocked by ${openParityChecks.map((check) => check.label).join(', ')}.`,
+      : `Blocked by ${[
+        ...openParityChecks.map((check) => check.label),
+        ...openProductionEvidence.map((item) => item.label),
+      ].join(', ')}.`,
   }
 
   return {
@@ -679,10 +858,12 @@ function resolveIntegrationStatus(
         ...(baseStatus.workspacePathHints ?? []),
         ...workspacePathHints(runtimeStatus),
       ].filter((item, index, list) => list.indexOf(item) === index),
+    productionEvidence,
     parityChecks,
     parityGaps: uniqueStringList([
       ...(baseStatus.parityGaps ?? []),
       ...openParityChecks.map((check) => check.label),
+      ...openProductionEvidence.map((item) => item.label),
     ]),
   }
 }
@@ -1095,6 +1276,7 @@ export function PlotPilotNativeContainer({
   createClient = createPlotPilotClient,
   integrationStatus,
   onIntegrationStatusChange,
+  productionFixture = false,
 }: PlotPilotNativeContainerProps) {
   const [runtimeStatus, setRuntimeStatus] = React.useState<PlotPilotRuntimeStatus>(EMPTY_RUNTIME_STATUS)
   const [runtimeLogs, setRuntimeLogs] = React.useState<PlmLogEntry[]>([])
@@ -1111,6 +1293,7 @@ export function PlotPilotNativeContainer({
   const [featureState, setFeatureState] = React.useState<PlotPilotNativeFeatureState>({})
   const pendingOpenRequestRef = React.useRef<DramaPlmOpenRequest | null>(null)
   const codexProfileEnsuredForRef = React.useRef<string | null>(null)
+  const productionFixtureLoadedRef = React.useRef(false)
   const activeStreamAbortRef = React.useRef<AbortController | null>(null)
   const autopilotStreamAbortRef = React.useRef<AbortController | null>(null)
 
@@ -1697,6 +1880,201 @@ export function PlotPilotNativeContainer({
       }))
     }
   }, [ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile])
+
+  const bootstrapProductionFixture = React.useCallback(async () => {
+    if (productionFixtureLoadedRef.current) return
+    productionFixtureLoadedRef.current = true
+    setActiveJob({
+      id: `production-fixture:${DRAMA_PRODUCTION_FIXTURE_ID}`,
+      label: '载入生产验收项目',
+      phase: 'fixture',
+      detail: DRAMA_PRODUCTION_FIXTURE_ID,
+    })
+    try {
+      const activeClient = await ensureRuntimeClient()
+      let novel: NovelDTO
+      try {
+        novel = await activeClient.getNovel(DRAMA_PRODUCTION_FIXTURE_ID)
+      } catch {
+        try {
+          novel = await activeClient.createNovel({
+            novel_id: DRAMA_PRODUCTION_FIXTURE_ID,
+            title: 'Zen Drama PLM 生产闭环验收',
+            author: 'Drama',
+            target_chapters: 3,
+            premise: '一个固定的 macOS Zen PLM 生产验收项目，用于验证真实项目、章节、Prompt、Memory 和 Autopilot 状态。',
+            genre: 'mythic adventure',
+            world_preset: 'eastern sea myth',
+            story_structure: 'three act verification arc',
+            pacing_control: 'compact',
+            writing_style: 'cinematic prose',
+            special_requirements: 'Keep fixture content deterministic for automated verification.',
+            length_tier: 'short',
+            target_words_per_chapter: 900,
+          })
+        } catch (createError) {
+          if (createError instanceof PlotPilotHttpError && (createError.status === 400 || createError.status === 409)) {
+            novel = await activeClient.getNovel(DRAMA_PRODUCTION_FIXTURE_ID)
+          } else {
+            throw createError
+          }
+        }
+      }
+
+      const ensuredChapter = await activeClient.ensureChapter(
+        novel.id,
+        DRAMA_PRODUCTION_FIXTURE_CHAPTER_NUMBER,
+        { title: '生产闭环验证' },
+      )
+      const chapter = await activeClient.updateChapter(novel.id, DRAMA_PRODUCTION_FIXTURE_CHAPTER_NUMBER, {
+        content: DRAMA_PRODUCTION_FIXTURE_CONTENT,
+      }).catch(() => ensuredChapter)
+      const novelWithChapter = upsertNovelChapter(novel, chapter)
+
+      let nativePromptWrite: Record<string, unknown> | null = null
+      let promptNativeError: string | null = null
+      const promptRecord: Record<string, unknown> = {
+        id: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
+        key: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
+        node_key: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
+        name: '生产闭环章节正文 Prompt',
+        scope: 'production-parity',
+        template: '读取固定 fixture 章节、Bible 和 PlotPilot 状态，生成可回写 Drama Graph 的章节正文。',
+        version: 'mac-production-parity',
+        source: 'drama-production-fixture',
+        updated_at: new Date().toISOString(),
+      }
+      try {
+        nativePromptWrite = await activeClient.updatePrompt(DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY, {
+          name: String(promptRecord.name),
+          description: 'Zen Drama PLM production parity fixture prompt.',
+          user_template: String(promptRecord.template),
+          system: 'You are validating the Zen Drama PLM production parity fixture.',
+          tags: ['drama-production-parity', 'zen-plm', 'fixture'],
+          change_summary: 'Seeded by Drama PLM production parity fixture.',
+        }) as unknown as Record<string, unknown>
+      } catch (error) {
+        try {
+          nativePromptWrite = await activeClient.createPromptNode({
+            node_key: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
+            name: String(promptRecord.name),
+            description: 'Zen Drama PLM production parity fixture prompt.',
+            category: 'drama',
+            system: 'You are validating the Zen Drama PLM production parity fixture.',
+            user_template: String(promptRecord.template),
+          }) as unknown as Record<string, unknown>
+        } catch (createError) {
+          promptNativeError = errorMessage(createError)
+        }
+      }
+
+      const storedPrompt = {
+        ...promptRecord,
+        ...(nativePromptWrite ? {
+          nativeRegistry: 'plotpilot-prompt-plaza',
+          nativePromptWrite,
+        } : {
+          nativeRegistry: 'fallback',
+          promptNativeError,
+        }),
+      }
+      setNovels((current) => [novelWithChapter, ...current.filter((item) => item.id !== novelWithChapter.id)])
+      setSelectedNovelId(novelWithChapter.id)
+      setChapterEditor(toChapterEditor(chapter, { novelId: novelWithChapter.id }))
+      setFeatureState((current) => {
+        const prompts = [
+          storedPrompt,
+          ...(current.prompts ?? []).filter((prompt) => promptRecordKey(asRecord(prompt)) !== DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY),
+        ]
+        return {
+          ...current,
+          prompts,
+          promptStats: {
+            ...(current.promptStats ?? {}),
+            dramaSavedPrompts: prompts.length,
+            dramaNativePromptWrites: metricNumber(asRecord(current.promptStats), ['dramaNativePromptWrites'])
+              + (nativePromptWrite ? 1 : 0),
+          },
+          productionFixture: {
+            fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+            name: 'Zen Drama PLM production parity fixture',
+            projectId: novelWithChapter.id,
+            chapterId: chapter.id,
+            chapterNumber: chapter.number,
+            promptNodeKey: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
+            promptNative: Boolean(nativePromptWrite),
+            promptNativeError,
+            pathHints: workspacePathHints(runtimeStatus),
+            loadedAt: new Date().toISOString(),
+          },
+          lastMessage: nativePromptWrite
+            ? '生产验收项目已载入，Prompt Plaza 原生写入证据已生成。'
+            : `生产验收项目已载入，Prompt 走 fallback：${promptNativeError ?? 'native endpoint unavailable'}`,
+        }
+      })
+      await recordPlmProjectFile({
+        novelId: novelWithChapter.id,
+        type: 'plm.production.fixture.loaded',
+        title: novelWithChapter.title,
+        summary: {
+          fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+          chapterId: chapter.id,
+          chapterNumber: chapter.number,
+          promptNative: Boolean(nativePromptWrite),
+        },
+        payload: {
+          novel: novelRecordSummary(novelWithChapter),
+          chapter: chapterRecordSummary(chapter),
+          prompt: storedPrompt,
+        },
+      })
+      await recordPlmGraphEvent({
+        type: 'plm.production.fixture.loaded',
+        target: {
+          novelId: novelWithChapter.id,
+          chapterId: chapter.id,
+        },
+        status: 'ready',
+        summary: 'Zen Drama PLM 生产闭环验收项目已载入',
+        details: {
+          fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+          promptNative: Boolean(nativePromptWrite),
+          promptNativeError,
+        },
+      })
+      await loadSelectedBible(novelWithChapter.id).catch(() => undefined)
+      const [autopilotStatus, autopilotCircuitBreaker] = await Promise.all([
+        activeClient.getAutopilotStatus(novelWithChapter.id).catch(() => null),
+        activeClient.getAutopilotCircuitBreaker(novelWithChapter.id).catch(() => null),
+      ])
+      if (autopilotStatus || autopilotCircuitBreaker) {
+        setFeatureState((current) => ({
+          ...current,
+          autopilotStatus: autopilotStatus as unknown as Record<string, unknown> | null,
+          autopilotCircuitBreaker: autopilotCircuitBreaker as unknown as Record<string, unknown> | null,
+        }))
+      }
+      await syncPostChapterMemoryEvidence({
+        novelId: novelWithChapter.id,
+        chapter,
+        source: 'manual-save',
+      })
+    } catch (error) {
+      productionFixtureLoadedRef.current = false
+      setFeatureState((current) => ({
+        ...current,
+        productionFixture: {
+          fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+          error: errorMessage(error),
+          loadedAt: new Date().toISOString(),
+        },
+        lastMessage: `生产验收项目载入失败：${errorMessage(error)}`,
+      }))
+      reportPlotPilotError(error)
+    } finally {
+      setActiveJob(null)
+    }
+  }, [ensureRuntimeClient, loadSelectedBible, recordPlmGraphEvent, recordPlmProjectFile, runtimeStatus, syncPostChapterMemoryEvidence])
 
   const handleWritingSpecFailure = React.useCallback(async (
     error: unknown,
@@ -3430,7 +3808,18 @@ export function PlotPilotNativeContainer({
     }
     activeStreamAbortRef.current?.abort()
     autopilotStreamAbortRef.current?.abort()
-    setFeatureState((current) => ({ ...current, loadingKey: null, lastMessage: '生成任务已停止。' }))
+    setFeatureState((current) => ({
+      ...current,
+      loadingKey: null,
+      hostedWriteSummary: current.loadingKey === 'hosted-write'
+        ? {
+          ...asRecord(current.hostedWriteSummary),
+          lastType: 'cancelled',
+          updatedAt: new Date().toISOString(),
+        }
+        : current.hostedWriteSummary,
+      lastMessage: '生成任务已停止。',
+    }))
     setActiveJob(null)
   }, [stopAutopilot])
 
@@ -4247,6 +4636,11 @@ export function PlotPilotNativeContainer({
   }, [client, loadNovels, runtimeReady])
 
   React.useEffect(() => {
+    if (!productionFixture || !runtimeReady || !client) return
+    void bootstrapProductionFixture()
+  }, [bootstrapProductionFixture, client, productionFixture, runtimeReady])
+
+  React.useEffect(() => {
     if (!runtimeReady || !client || !runtimeBaseUrl) return
     if (codexProfileEnsuredForRef.current === runtimeBaseUrl) {
       void refreshCodexStatus(client)
@@ -4305,14 +4699,38 @@ export function PlotPilotNativeContainer({
     return () => window.clearInterval(timer)
   }, [refreshRuntime])
 
+  const productionEvidence = React.useMemo(
+    () => buildProductionEvidenceSnapshot({
+      runtimeReady,
+      productPath: integrationStatus?.productPath === true,
+      selectedNovel,
+      chapterEditor,
+      featureState,
+    }),
+    [chapterEditor, featureState, integrationStatus?.productPath, runtimeReady, selectedNovel],
+  )
+  const featureStateWithProductionEvidence = React.useMemo<PlotPilotNativeFeatureState>(
+    () => ({
+      ...featureState,
+      productionEvidence,
+    }),
+    [featureState, productionEvidence],
+  )
   const uiNovels = React.useMemo(
     () => novels.map((novel) => toUiNovel(novel, novel.id === selectedNovel?.id ? selectedBible : null)),
     [novels, selectedBible, selectedNovel?.id],
   )
   const uiSelectedNovel = uiNovels.find((novel) => novel.id === selectedNovel?.id) ?? uiNovels[0] ?? null
   const resolvedIntegrationStatus = React.useMemo(
-    () => resolveIntegrationStatus(integrationStatus, runtimeStatus, codexStatus, selectedNovel, featureState),
-    [codexStatus, featureState, integrationStatus, runtimeStatus, selectedNovel],
+    () => resolveIntegrationStatus(
+      integrationStatus,
+      runtimeStatus,
+      codexStatus,
+      selectedNovel,
+      chapterEditor,
+      featureStateWithProductionEvidence,
+    ),
+    [chapterEditor, codexStatus, featureStateWithProductionEvidence, integrationStatus, runtimeStatus, selectedNovel],
   )
 
   React.useEffect(() => {
@@ -4330,7 +4748,7 @@ export function PlotPilotNativeContainer({
       integrationStatus={resolvedIntegrationStatus}
       projectGuardStatus={toProjectGuardStatus(writingSpec, humanizer)}
       lastWritingSpecFailure={lastWritingSpecFailure}
-      featureState={featureState}
+      featureState={featureStateWithProductionEvidence}
       handlers={handlers}
       logs={toUiLogs(runtimeLogs)}
     />

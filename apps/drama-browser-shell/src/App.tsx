@@ -130,6 +130,12 @@ function getRuntimeBaseUrl(): string {
     ?? 'http://127.0.0.1:3198'
 }
 
+function shouldBootstrapPlmProductionFixture(): boolean {
+  const params = new URLSearchParams(globalThis.location?.search ?? '')
+  const value = params.get('productionFixture') ?? params.get('plmProductionFixture')
+  return value === '1' || value === 'true' || value === 'yes'
+}
+
 function offlineRuntimeStatus(message = 'Drama standalone runtime is not reachable.'): DramaRuntimeStatus {
   return {
     state: 'offline',
@@ -955,6 +961,7 @@ export function App() {
     [runtimeStatus, surfaceClassification],
   )
   const effectivePlmIntegrationStatus = resolvedPlmIntegrationStatus ?? plmIntegrationStatus
+  const productionFixture = React.useMemo(() => shouldBootstrapPlmProductionFixture(), [])
   const shellState = React.useMemo(
     () => deriveShellState({
       styleReadiness,
@@ -1038,6 +1045,7 @@ export function App() {
             api={plmApi}
             integrationStatus={plmIntegrationStatus}
             onIntegrationStatusChange={handlePlmIntegrationStatusChange}
+            productionFixture={productionFixture}
           />
         ) : null}
 

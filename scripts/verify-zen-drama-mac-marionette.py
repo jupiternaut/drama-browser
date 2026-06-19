@@ -87,6 +87,8 @@ def parse_args():
     parser.add_argument("--check-launcher-reopen", action="store_true", help="Verify the persistent chrome entry can reopen PLM after a normal tab hides the panel.")
     parser.add_argument("--check-lock-release", action="store_true", help="Verify the lock command releases the embedded browser surface and PLM can be restored.")
     parser.add_argument("--expect-shell-state", default=None, help="Require documentElement.dataset.dramaShellState to equal this value.")
+    parser.add_argument("--production-fixture", action="store_true", help="Ask the Zen PLM panel to bootstrap the deterministic production parity fixture.")
+    parser.add_argument("--expect-production-evidence", action="store_true", help="Require PLM production evidence DOM markers for project, chapter, prompt, memory, and autopilot.")
     parser.add_argument("--first-viewport-budget-ms", type=int, default=FIRST_VIEWPORT_BUDGET_MS)
     parser.add_argument("--runtime-budget-ms", type=int, default=RUNTIME_READY_BUDGET_MS)
     parser.add_argument("--sidecar-budget-ms", type=int, default=SIDECAR_READY_BUDGET_MS)
@@ -101,7 +103,7 @@ def allocate_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def write_profile(profile_dir: Path, port: int, runtime_url: str, surface: str) -> None:
+def write_profile(profile_dir: Path, port: int, runtime_url: str, surface: str, production_fixture: bool) -> None:
     profile_dir.mkdir(parents=True, exist_ok=True)
     (profile_dir / "user.js").write_text(
         "\n".join(
@@ -120,6 +122,7 @@ def write_profile(profile_dir: Path, port: int, runtime_url: str, surface: str) 
                 'user_pref("zen.drama.runtime-launch.enabled", false);',
                 'user_pref("zen.drama.open-on-startup", true);',
                 f'user_pref("zen.drama.start-surface", "{surface}");',
+                f'user_pref("zen.drama.production-fixture.enabled", {str(production_fixture).lower()});',
                 "",
             ]
         ),
@@ -174,6 +177,30 @@ try {
   const doc = browser?.contentWindow?.document ?? browser?.contentDocument ?? null;
   const root = doc?.getElementById('root') ?? null;
   const shell = doc?.querySelector('[data-drama-shell="workbench"], .drama-shell, .drama-critical-fallback') ?? null;
+  const productionEvidenceRoot = doc?.querySelector('[data-plm-production-evidence="true"]') ?? null;
+  const productionEvidenceItems = productionEvidenceRoot
+    ? [...productionEvidenceRoot.querySelectorAll('[data-plm-production-evidence-item]')].map((item) => ({
+      id: item.getAttribute('data-plm-production-evidence-item'),
+      state: item.getAttribute('data-state'),
+      text: (item.textContent ?? '').slice(0, 320),
+    }))
+    : [];
+  const productionEvidence = productionEvidenceRoot ? {
+    exists: true,
+    projectId: productionEvidenceRoot.getAttribute('data-plm-production-project-id') ?? null,
+    chapterId: productionEvidenceRoot.getAttribute('data-plm-production-chapter-id') ?? null,
+    chapterNumber: productionEvidenceRoot.getAttribute('data-plm-production-chapter-number') ?? null,
+    promptState: productionEvidenceRoot.getAttribute('data-plm-prompt-evidence') ?? null,
+    memoryState: productionEvidenceRoot.getAttribute('data-plm-memory-evidence') ?? null,
+    autopilotState: productionEvidenceRoot.getAttribute('data-plm-autopilot-evidence') ?? null,
+    itemCount: productionEvidenceItems.length,
+    items: productionEvidenceItems,
+    text: (productionEvidenceRoot.textContent ?? '').slice(0, 1200),
+  } : {
+    exists: false,
+    itemCount: 0,
+    items: [],
+  };
   const shellRect = shell ? (() => {
     const rect = shell.getBoundingClientRect();
     return { width: rect.width, height: rect.height, top: rect.top, left: rect.left };
@@ -192,6 +219,7 @@ try {
     elementCount: doc.querySelectorAll('*').length,
     scripts: [...doc.scripts].map((script) => script.src),
     stylesheets: [...doc.styleSheets].length,
+    productionEvidence,
 	    marks: doc.defaultView?.__DRAMA_PRODUCT_PATH_MARKS__ ?? null,
 	    events: doc.defaultView?.__DRAMA_PRODUCT_PATH_EVENTS__ ?? null,
 	    responsiveness: doc.defaultView?.__DRAMA_PRODUCT_PATH_RESPONSIVENESS__ ?? null,
@@ -850,6 +878,62 @@ def expected_shell_state_reasons(result, expected_state):
     return [f"Drama shell state was {actual_state!r}, expected {expected_state!r}."]
 
 
+def production_evidence_reasons(result, expect_production_evidence: bool):
+    if not expect_production_evidence:
+        return []
+
+    content = result.get("content") if isinstance(result, dict) else None
+    evidence = content.get("productionEvidence") if isinstance(content, dict) else None
+    reasons = []
+    if not isinstance(evidence, dict) or evidence.get("exists") is not True:
+        return ["PLM production evidence panel is missing."]
+
+    if not str(evidence.get("projectId") or "").strip():
+        reasons.append("PLM production evidence did not expose an active project id.")
+    if not str(evidence.get("chapterId") or "").strip():
+        reasons.append("PLM production evidence did not expose an active chapter id.")
+
+    items = evidence.get("items")
+    if not isinstance(items, list):
+        items = []
+    item_states = {
+        item.get("id"): item.get("state")
+        for item in items
+        if isinstance(item, dict)
+    }
+    required_items = {
+        "project",
+        "chapter",
+        "hosted-write",
+        "prompt",
+        "memory",
+        "autopilot",
+        "verification",
+    }
+    missing_items = sorted(required_items - set(item_states))
+    if missing_items:
+        reasons.append(f"PLM production evidence is missing items: {', '.join(missing_items)}.")
+
+    for ready_item in ("project", "chapter", "verification"):
+        if item_states.get(ready_item) != "ready":
+            reasons.append(f"PLM production evidence item {ready_item!r} is {item_states.get(ready_item)!r}, expected 'ready'.")
+
+    for present_item in ("prompt", "memory", "autopilot", "hosted-write"):
+        if item_states.get(present_item) == "blocked":
+            reasons.append(f"PLM production evidence item {present_item!r} is blocked.")
+
+    for attr_name, label in (
+        ("promptState", "prompt"),
+        ("memoryState", "memory"),
+        ("autopilotState", "autopilot"),
+    ):
+        state = evidence.get(attr_name)
+        if state not in ("ready", "partial"):
+            reasons.append(f"PLM production {label} marker is {state!r}, expected ready or partial.")
+
+    return reasons
+
+
 def main() -> int:
     args = parse_args()
     zen_app, zen_bin = resolve_zen_binary(args)
@@ -863,7 +947,7 @@ def main() -> int:
     process = None
     started_at = time.time()
     try:
-        write_profile(profile_dir, port, args.runtime_url, args.surface)
+        write_profile(profile_dir, port, args.runtime_url, args.surface, args.production_fixture)
         log_file = log_path.open("w", encoding="utf-8")
         process = subprocess.Popen(
             [
@@ -909,6 +993,7 @@ def main() -> int:
         reasons = (
             failure_reasons(inspected, args.surface)
             + expected_shell_state_reasons(inspected, args.expect_shell_state)
+            + production_evidence_reasons(inspected, args.expect_production_evidence)
             + performance_reasons
             + screenshot_reasons
             + launcher_reopen_reasons(launcher_reopen_result)
@@ -925,6 +1010,8 @@ def main() -> int:
             "zenBin": str(zen_bin),
             "runtimeUrl": args.runtime_url,
             "expectedShellState": args.expect_shell_state,
+            "productionFixture": args.production_fixture,
+            "expectedProductionEvidence": args.expect_production_evidence,
             "profile": str(profile_dir),
             "logPath": str(log_path),
             "durationMs": round((time.time() - started_at) * 1000),
@@ -950,6 +1037,8 @@ def main() -> int:
             "zenBin": str(zen_bin),
             "runtimeUrl": args.runtime_url,
             "expectedShellState": args.expect_shell_state,
+            "productionFixture": args.production_fixture,
+            "expectedProductionEvidence": args.expect_production_evidence,
             "profile": str(profile_dir),
             "logPath": str(log_path),
             "durationMs": round((time.time() - started_at) * 1000),

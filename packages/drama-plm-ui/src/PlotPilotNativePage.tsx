@@ -116,6 +116,30 @@ export interface PlotPilotParityCheck {
   evidence?: string
 }
 
+export type PlotPilotProductionEvidenceState = 'ready' | 'partial' | 'blocked'
+
+export interface PlotPilotProductionEvidenceItem {
+  id: string
+  label: string
+  state: PlotPilotProductionEvidenceState
+  detail: string
+  evidence?: string
+  updatedAt?: string
+}
+
+export interface PlotPilotProductionEvidenceSnapshot {
+  fixtureName?: string
+  fixtureId?: string
+  projectId?: string
+  projectTitle?: string
+  chapterId?: string
+  chapterNumber?: number
+  chapterTitle?: string
+  pathHints?: string[]
+  generatedAt: string
+  items: PlotPilotProductionEvidenceItem[]
+}
+
 export interface PlotPilotIntegrationStatus {
   surface: PlotPilotIntegrationSurface
   productPath: boolean
@@ -123,6 +147,7 @@ export interface PlotPilotIntegrationStatus {
   reason?: string
   tiers: PlotPilotReadinessStatus[]
   parityChecks?: PlotPilotParityCheck[]
+  productionEvidence?: PlotPilotProductionEvidenceSnapshot
   parityGaps?: string[]
   workspacePathHints?: string[]
 }
@@ -353,6 +378,8 @@ export interface PlotPilotNativeFeatureState {
   prompts?: Array<Record<string, unknown>>
   activeInvocation?: Record<string, unknown> | null
   postChapterMemorySync?: Record<string, unknown> | null
+  productionFixture?: Record<string, unknown> | null
+  productionEvidence?: PlotPilotProductionEvidenceSnapshot
   autopilotStatus?: Record<string, unknown> | null
   autopilotCircuitBreaker?: Record<string, unknown> | null
   autopilotEvents?: Array<Record<string, unknown>>
@@ -1230,6 +1257,7 @@ function ScriptStudioAdvancedWorkspace({
         </div>
         <div className="space-y-4 bg-[#f8f7f2] p-4">
           <ScriptStudioIntegrationPanel status={integrationStatus} />
+          <ScriptStudioProductionEvidencePanel snapshot={integrationStatus?.productionEvidence} />
           <ScriptStudioAdvancedOverview cards={cards} />
           <ScriptStudioAdvancedDetail
             workspaceMode={workspaceMode}
@@ -4161,6 +4189,8 @@ function ScriptStudioRightRail({
         </div>
       </ScriptStudioFloatingCard>
 
+      <ScriptStudioProductionEvidencePanel snapshot={integrationStatus?.productionEvidence} compact />
+
       <ScriptStudioIntegrationPanel status={integrationStatus} compact />
 
       <ScriptStudioStorageDeck
@@ -4915,6 +4945,12 @@ function parityStateClassName(state: PlotPilotParityCheckState): string {
   return 'border-[#ebc6bc] bg-[#fff2ee] text-[#7a3327]'
 }
 
+function productionEvidenceStateClassName(state: PlotPilotProductionEvidenceState): string {
+  if (state === 'ready') return 'border-[#bddbcf] bg-[#edf8f2] text-[#245342]'
+  if (state === 'partial') return 'border-[#ded2a2] bg-[#fff8df] text-[#6a5417]'
+  return 'border-[#ebc6bc] bg-[#fff2ee] text-[#7a3327]'
+}
+
 function IntegrationBadge({ status }: { status?: PlotPilotIntegrationStatus }) {
   if (!status) return null
   return (
@@ -5172,6 +5208,93 @@ function ScriptStudioLayerFailureBanner({
         )
       })}
     </div>
+  )
+}
+
+function ScriptStudioProductionEvidencePanel({
+  snapshot,
+  compact = false,
+}: {
+  snapshot?: PlotPilotProductionEvidenceSnapshot
+  compact?: boolean
+}) {
+  if (!snapshot) return null
+  const stateFor = (id: string) => snapshot.items.find((item) => item.id === id)?.state
+  const content = (
+    <div
+      data-plm-production-evidence="true"
+      data-plm-production-project-id={snapshot.projectId ?? ''}
+      data-plm-production-chapter-id={snapshot.chapterId ?? ''}
+      data-plm-production-chapter-number={snapshot.chapterNumber ?? ''}
+      data-plm-prompt-evidence={stateFor('prompt') ?? ''}
+      data-plm-memory-evidence={stateFor('memory') ?? ''}
+      data-plm-autopilot-evidence={stateFor('autopilot') ?? ''}
+      className="space-y-2"
+    >
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="min-w-0 rounded-[7px] border border-[#e3dfd4] bg-[#fbfaf6] px-2.5 py-2">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#817c73]">Project</div>
+          <div className="mt-1 truncate text-xs font-semibold text-[#30362f]">{snapshot.projectTitle ?? 'No project'}</div>
+          <div className="mt-1 truncate font-mono text-[10px] text-[#777268]">{snapshot.projectId ?? snapshot.fixtureId ?? 'pending'}</div>
+        </div>
+        <div className="min-w-0 rounded-[7px] border border-[#e3dfd4] bg-[#fbfaf6] px-2.5 py-2">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#817c73]">Chapter</div>
+          <div className="mt-1 truncate text-xs font-semibold text-[#30362f]">
+            {snapshot.chapterNumber ? `第${snapshot.chapterNumber}章` : 'No chapter'}
+          </div>
+          <div className="mt-1 truncate font-mono text-[10px] text-[#777268]">{snapshot.chapterId ?? 'pending'}</div>
+        </div>
+      </div>
+      <div className={compact ? 'space-y-1.5' : 'grid gap-2 md:grid-cols-2 xl:grid-cols-3'}>
+        {snapshot.items.map((item) => (
+          <div
+            key={item.id}
+            data-plm-production-evidence-item={item.id}
+            data-state={item.state}
+            className={cn('min-w-0 rounded-[7px] border px-2.5 py-2', productionEvidenceStateClassName(item.state))}
+          >
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <span className="truncate text-xs font-semibold">{item.label}</span>
+              <span className="font-mono text-[10px] uppercase">{item.state}</span>
+            </div>
+            <div className="mt-1 line-clamp-2 text-[11px] leading-4 opacity-80">{item.detail}</div>
+            {item.evidence ? (
+              <div className="mt-1 truncate font-mono text-[10px] opacity-70">{item.evidence}</div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      {snapshot.pathHints?.length ? (
+        <div className="space-y-1 rounded-[7px] border border-[#e3dfd4] bg-[#fbfaf6] px-2.5 py-2">
+          {snapshot.pathHints.slice(0, 3).map((path, index) => (
+            <div
+              key={`${path}-${index}`}
+              className="min-w-0 break-all font-mono text-[10px] leading-4 text-[#6f6a61]"
+            >
+              {path}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+
+  if (compact) {
+    return (
+      <ScriptStudioFloatingCard title="Production Evidence" icon={Activity}>
+        {content}
+      </ScriptStudioFloatingCard>
+    )
+  }
+
+  return (
+    <ScriptStudioLightPanel
+      icon={Activity}
+      title="PLM Production Evidence"
+      detail={snapshot.fixtureName ?? 'macOS happy path'}
+    >
+      {content}
+    </ScriptStudioLightPanel>
   )
 }
 

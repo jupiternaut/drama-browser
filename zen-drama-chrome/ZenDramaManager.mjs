@@ -22,6 +22,7 @@ const DRAMA_RUNTIME_LAUNCH_CWD_PREF = "zen.drama.runtime-launch.cwd";
 const DRAMA_RUNTIME_LAUNCH_TIMEOUT_MS_PREF = "zen.drama.runtime-launch.timeout-ms";
 const DRAMA_OPEN_ON_STARTUP_PREF = "zen.drama.open-on-startup";
 const DRAMA_START_SURFACE_PREF = "zen.drama.start-surface";
+const DRAMA_PRODUCTION_FIXTURE_ENABLED_PREF = "zen.drama.production-fixture.enabled";
 const DRAMA_LOCKED_URL = "about:blank";
 
 class nsZenDramaManager extends nsZenDOMOperatedFeature {
@@ -214,6 +215,9 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       runtime: this.runtimeUrl,
       surface: this.#surface,
     });
+    if (this.productionFixtureEnabled && this.#surface === "plm") {
+      params.set("productionFixture", "1");
+    }
 
     if (this.internalAppEnabled) {
       return `${this.internalAppUrl}?${params.toString()}`;
@@ -266,6 +270,14 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   get startSurface() {
     const surface = this.#getStringPref(DRAMA_START_SURFACE_PREF, "graph").trim();
     return surface === "plm" || surface === "crew" || surface === "graph" ? surface : "graph";
+  }
+
+  get productionFixtureEnabled() {
+    try {
+      return Services.prefs.getBoolPref(DRAMA_PRODUCTION_FIXTURE_ENABLED_PREF, false);
+    } catch {
+      return false;
+    }
   }
 
   get runtimeLaunchCommand() {
