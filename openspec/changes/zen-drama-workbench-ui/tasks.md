@@ -31,14 +31,14 @@
 
 - [x] 5.1 Add styled runtime-unavailable panel with retry and log actions
 - [x] 5.2 Add styled PLM-sidecar-down panel
-- [ ] 5.3 Add styled workspace-missing panel
+- [x] 5.3 Add styled workspace-missing panel
 - [x] 5.4 Ensure raw JSON, stack traces, and debug strings do not dominate the first viewport
 - [x] 5.5 Redirect runtime root `/` to the PLM workbench so users do not land on raw JSON
 
 ## 6. Verification
 
 - [x] 6.1 Add screenshot verification for Zen Graph, PLM, and Crew routes
-- [ ] 6.2 Add screenshot verification for runtime unavailable state
+- [x] 6.2 Add screenshot verification for runtime unavailable state
 - [x] 6.3 Run `bun run browser-shell:typecheck`
 - [x] 6.4 Run `bun run browser-shell:build`
 - [x] 6.5 Run Zen Drama panel verification script after implementation

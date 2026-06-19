@@ -86,6 +86,7 @@ def parse_args():
     parser.add_argument("--check-route-switches", action="store_true", help="Measure warm route switches inside the mounted shell.")
     parser.add_argument("--check-launcher-reopen", action="store_true", help="Verify the persistent chrome entry can reopen PLM after a normal tab hides the panel.")
     parser.add_argument("--check-lock-release", action="store_true", help="Verify the lock command releases the embedded browser surface and PLM can be restored.")
+    parser.add_argument("--expect-shell-state", default=None, help="Require documentElement.dataset.dramaShellState to equal this value.")
     parser.add_argument("--first-viewport-budget-ms", type=int, default=FIRST_VIEWPORT_BUDGET_MS)
     parser.add_argument("--runtime-budget-ms", type=int, default=RUNTIME_READY_BUDGET_MS)
     parser.add_argument("--sidecar-budget-ms", type=int, default=SIDECAR_READY_BUDGET_MS)
@@ -838,6 +839,17 @@ def failure_reasons(result, surface: str):
     return reasons
 
 
+def expected_shell_state_reasons(result, expected_state):
+    if not expected_state:
+        return []
+    content = result.get("content") if isinstance(result, dict) else None
+    dataset = content.get("dataset", {}) if isinstance(content, dict) else {}
+    actual_state = dataset.get("dramaShellState")
+    if actual_state == expected_state:
+        return []
+    return [f"Drama shell state was {actual_state!r}, expected {expected_state!r}."]
+
+
 def main() -> int:
     args = parse_args()
     zen_app, zen_bin = resolve_zen_binary(args)
@@ -896,6 +908,7 @@ def main() -> int:
         performance, performance_reasons = performance_report(inspected, args.surface, args, route_switch_result)
         reasons = (
             failure_reasons(inspected, args.surface)
+            + expected_shell_state_reasons(inspected, args.expect_shell_state)
             + performance_reasons
             + screenshot_reasons
             + launcher_reopen_reasons(launcher_reopen_result)
@@ -911,6 +924,7 @@ def main() -> int:
             "zenApp": str(zen_app) if zen_app else None,
             "zenBin": str(zen_bin),
             "runtimeUrl": args.runtime_url,
+            "expectedShellState": args.expect_shell_state,
             "profile": str(profile_dir),
             "logPath": str(log_path),
             "durationMs": round((time.time() - started_at) * 1000),
@@ -935,6 +949,7 @@ def main() -> int:
             "zenApp": str(zen_app) if zen_app else None,
             "zenBin": str(zen_bin),
             "runtimeUrl": args.runtime_url,
+            "expectedShellState": args.expect_shell_state,
             "profile": str(profile_dir),
             "logPath": str(log_path),
             "durationMs": round((time.time() - started_at) * 1000),

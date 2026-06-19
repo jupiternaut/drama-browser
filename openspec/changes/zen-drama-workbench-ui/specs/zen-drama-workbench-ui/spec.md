@@ -157,6 +157,16 @@ The system SHALL provide styled recovery states for unavailable local runtime se
 - **THEN** PLM-specific unavailable status appears inside the Drama PLM workbench
 - **AND** Graph and Skill Crew navigation remain usable
 
+#### Scenario: PLM workspace missing
+
+- **GIVEN** Drama PLM is open
+- **AND** the runtime is reachable
+- **AND** no active PlotPilot or Drama project workspace is selected
+- **WHEN** the PLM route renders project-dependent controls
+- **THEN** PLM shows a styled workspace-missing recovery panel
+- **AND** the panel exposes create/import/diagnostic actions
+- **AND** long project root and data directory paths remain contained as monospace metadata
+
 ### Requirement: Windows Workspace Metadata
 
 The system SHALL display Windows workspace paths as metadata without breaking layout.

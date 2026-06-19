@@ -17,6 +17,7 @@ import {
   type PlotPilotIntegrationStatus,
   type PlotPilotNativeFeatureState,
   type PlotPilotOnboardingDraft,
+  type PlotPilotParityCheck,
   type PlotPilotProjectGuardStatus,
   type PlotPilotLogEntry as PlotPilotUiLogEntry,
   type PlotPilotNativeHandlers,
@@ -309,6 +310,19 @@ function promptRecordKey(prompt: Record<string, unknown>): string {
   return String(prompt.id ?? prompt.key ?? prompt.name ?? prompt.title ?? '').trim()
 }
 
+function promptNodeKeyFromStorageCard(card: ScriptStudioStorageCardDraft, prompt: Record<string, unknown>): string {
+  const existing = String(card.sourceId ?? prompt.node_key ?? prompt.key ?? prompt.id ?? '').trim()
+  if (existing && !existing.startsWith('prompt-')) return existing
+  return `drama-${normalizeNovelId(storageCardTitle(card))}`
+}
+
+function uniqueStringList(values: Array<string | undefined | null>): string[] {
+  return values
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .filter((value, index, list) => list.indexOf(value) === index)
+}
+
 function toNovelCreateRequest(draft: PlotPilotOnboardingDraft) {
   return {
     novel_id: normalizeNovelId(draft.title),
@@ -525,11 +539,84 @@ function workspacePathHints(status: PlotPilotRuntimeStatus): string[] {
   ].filter((value): value is string => Boolean(value?.trim()))
 }
 
+function metricNumber(record: Record<string, unknown>, keys: string[]): number {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = Number(value)
+      if (Number.isFinite(parsed)) return parsed
+    }
+  }
+  return 0
+}
+
+function buildParityChecks(
+  runtimeReady: boolean,
+  selectedNovel: NovelDTO | null,
+  featureState: PlotPilotNativeFeatureState,
+): PlotPilotParityCheck[] {
+  const promptStats = asRecord(featureState.promptStats)
+  const nativePromptWrites = metricNumber(promptStats, ['dramaNativePromptWrites'])
+  const promptCount = featureState.prompts?.length ?? metricNumber(promptStats, ['total_nodes', 'total', 'count'])
+  const postSync = asRecord(featureState.postChapterMemorySync)
+  const postSyncChapter = metricNumber(postSync, ['chapterNumber', 'chapter_number'])
+  const knowledgeTripleCount = featureState.knowledgeTriples?.length ?? 0
+
+  return [
+    {
+      id: 'prompt-registry-writes',
+      label: 'Prompt registry writes',
+      state: nativePromptWrites > 0 ? 'ready' : runtimeReady ? 'partial' : 'blocked',
+      detail: nativePromptWrites > 0
+        ? 'Drama storage cards write through PlotPilot Prompt Plaza and keep a Graph event trail.'
+        : runtimeReady
+          ? 'PlotPilot Prompt Plaza write API is wired; save a prompt card to produce write evidence.'
+          : 'Waiting for PlotPilot runtime before native prompt writes can be verified.',
+      evidence: nativePromptWrites > 0
+        ? `${nativePromptWrites} native write${nativePromptWrites === 1 ? '' : 's'}`
+        : promptCount > 0
+          ? `${promptCount} prompt record${promptCount === 1 ? '' : 's'} visible`
+          : 'PUT/POST /llm-control/prompts',
+    },
+    {
+      id: 'post-chapter-memory-sync',
+      label: 'Post-chapter memory sync',
+      state: postSyncChapter > 0 ? 'ready' : knowledgeTripleCount > 0 ? 'partial' : 'blocked',
+      detail: postSyncChapter > 0
+        ? 'Chapter save/writeback refreshes Knowledge Graph stats and records sync evidence.'
+        : knowledgeTripleCount > 0
+          ? 'Knowledge Graph visualization exists; chapter-triggered evidence has not been produced yet.'
+          : 'No chapter-triggered memory sync evidence has been captured.',
+      evidence: postSyncChapter > 0
+        ? `chapter ${postSyncChapter}`
+        : knowledgeTripleCount > 0
+          ? `${knowledgeTripleCount} triples loaded`
+          : undefined,
+    },
+    {
+      id: 'agentos-crew-parity',
+      label: 'AgentOS / Crew parity',
+      state: 'partial',
+      detail: 'Crew surface, AgentOS-like queues, and Graph event writes are visible; full PlotPilot AgentOS parity remains a larger port.',
+      evidence: selectedNovel ? `project ${selectedNovel.id}` : 'Crew runtime preview',
+    },
+    {
+      id: 'advanced-graph-canvas-parity',
+      label: 'Advanced Graph canvas',
+      state: 'partial',
+      detail: 'Drama Graph restores canvas, minimap, inspector, and PLM writeback; advanced PlotPilot canvas affordances remain open.',
+      evidence: 'React Flow canvas + minimap + inspector',
+    },
+  ]
+}
+
 function resolveIntegrationStatus(
   baseStatus: PlotPilotIntegrationStatus | undefined,
   runtimeStatus: PlotPilotRuntimeStatus,
   codexStatus: PlotPilotCodexStatusResponse | null,
   selectedNovel: NovelDTO | null,
+  featureState: PlotPilotNativeFeatureState,
 ): PlotPilotIntegrationStatus | undefined {
   if (!baseStatus) return undefined
 
@@ -568,10 +655,14 @@ function resolveIntegrationStatus(
         : 'Waiting for runtime and workspace before workflow preview can be ready.',
   }
 
+  const parityChecks = buildParityChecks(runtimeReady, selectedNovel, featureState)
+  const openParityChecks = parityChecks.filter((check) => check.state !== 'ready')
   const parityStatus: PlotPilotReadinessStatus = {
     tier: 'plotpilot-parity-ready',
-    state: 'blocked',
-    message: 'Blocked until PlotPilot-native prompt registry writes and post-chapter memory sync visualization are complete.',
+    state: openParityChecks.length === 0 ? 'ready' : 'blocked',
+    message: openParityChecks.length === 0
+      ? 'PlotPilot parity checks are complete for the current bridge contract.'
+      : `Blocked by ${openParityChecks.map((check) => check.label).join(', ')}.`,
   }
 
   return {
@@ -588,11 +679,11 @@ function resolveIntegrationStatus(
         ...(baseStatus.workspacePathHints ?? []),
         ...workspacePathHints(runtimeStatus),
       ].filter((item, index, list) => list.indexOf(item) === index),
-    parityGaps: [
+    parityChecks,
+    parityGaps: uniqueStringList([
       ...(baseStatus.parityGaps ?? []),
-      'PlotPilot-native prompt registry writes',
-      'Post-chapter memory sync visualization',
-    ].filter((item, index, list) => list.indexOf(item) === index),
+      ...openParityChecks.map((check) => check.label),
+    ]),
   }
 }
 
@@ -1457,25 +1548,62 @@ export function PlotPilotNativeContainer({
         })
         await loadNovels()
       } else {
+        const activeClient = await ensureRuntimeClient()
         const promptRecord = promptRecordFromStorageCard(card)
+        const nodeKey = promptNodeKeyFromStorageCard(card, promptRecord)
+        const nativePromptPayload = {
+          name: storageCardTitle(card),
+          description: card.subtitle.trim() || 'Drama Script Studio prompt card',
+          user_template: storageCardBody(card),
+          system: '',
+          tags: uniqueStringList([
+            'drama-script-studio',
+            card.badge,
+            card.source,
+          ]),
+          change_summary: 'Saved from Drama Script Studio storage card.',
+        }
+        let nativePromptWrite: Record<string, unknown>
+        try {
+          nativePromptWrite = await activeClient.updatePrompt(nodeKey, nativePromptPayload) as unknown as Record<string, unknown>
+        } catch (error) {
+          if (!(error instanceof PlotPilotHttpError) || error.status !== 404) throw error
+          nativePromptWrite = await activeClient.createPromptNode({
+            node_key: nodeKey,
+            name: nativePromptPayload.name,
+            description: nativePromptPayload.description,
+            category: 'drama',
+            system: nativePromptPayload.system,
+            user_template: nativePromptPayload.user_template,
+          }) as unknown as Record<string, unknown>
+        }
+        const storedPromptRecord: Record<string, unknown> = {
+          ...promptRecord,
+          id: nodeKey,
+          key: nodeKey,
+          node_key: nodeKey,
+          nativeRegistry: 'plotpilot-prompt-plaza',
+          nativePromptWrite,
+        }
         setFeatureState((current) => {
           const prompts = [...(current.prompts ?? [])]
-          const sourceId = String(promptRecord.id ?? '')
+          const sourceId = nodeKey
           const existingIndex = prompts.findIndex((prompt) => {
             const record = asRecord(prompt)
-            return String(record.id ?? record.key ?? record.name ?? '') === sourceId ||
+            return String(record.node_key ?? record.id ?? record.key ?? record.name ?? '') === sourceId ||
               String(record.name ?? record.title ?? '') === storageCardTitle(card)
           })
-          if (existingIndex >= 0) prompts[existingIndex] = promptRecord
-          else prompts.unshift(promptRecord)
+          if (existingIndex >= 0) prompts[existingIndex] = storedPromptRecord
+          else prompts.unshift(storedPromptRecord)
           return {
             ...current,
             prompts,
             promptStats: {
               ...(current.promptStats ?? {}),
               dramaSavedPrompts: prompts.length,
+              dramaNativePromptWrites: metricNumber(asRecord(current.promptStats), ['dramaNativePromptWrites']) + 1,
             },
-            lastMessage: '提示词卡已写入 Drama project file。',
+            lastMessage: '提示词卡已写入 PlotPilot prompt registry。',
           }
         })
         await recordPlmProjectFile({
@@ -1484,10 +1612,11 @@ export function PlotPilotNativeContainer({
           title: storageCardTitle(card),
           summary: {
             cardKind: card.kind,
-            promptId: promptRecord.id,
-            scope: promptRecord.scope,
+            promptId: nodeKey,
+            scope: promptRecord['scope'],
+            nativeRegistry: 'plotpilot-prompt-plaza',
           },
-          payload: promptRecord,
+          payload: storedPromptRecord,
         })
         await recordPlmGraphEvent({
           type: 'plm.storageCard.prompt.saved',
@@ -1496,7 +1625,8 @@ export function PlotPilotNativeContainer({
           summary: `${storageCardTitle(card)} 提示词卡已写入 registry`,
           details: {
             novelId,
-            prompt: promptRecord,
+            prompt: storedPromptRecord,
+            nativeNodeKey: nodeKey,
           },
         })
       }
@@ -1511,6 +1641,62 @@ export function PlotPilotNativeContainer({
       setActiveJob(null)
     }
   }, [ensureRuntimeClient, loadNovels, recordPlmGraphEvent, recordPlmProjectFile, selectedBible])
+
+  const syncPostChapterMemoryEvidence = React.useCallback(async (args: {
+    novelId: string
+    chapter: ChapterDTO
+    source: 'manual-save' | 'plotpilot-writeback'
+  }) => {
+    try {
+      const activeClient = await ensureRuntimeClient()
+      const [stats, triples] = await Promise.all([
+        activeClient.getKnowledgeGraphStatistics(args.novelId).catch(() => null),
+        activeClient.getKnowledgeGraphTriples(args.novelId, { source_type: 'chapter_inferred' }).catch(() => null),
+      ])
+      const knowledgeTriples = recordArray(triples?.data, ['triples'])
+      const syncSummary = {
+        novelId: args.novelId,
+        chapterId: args.chapter.id,
+        chapterNumber: args.chapter.number,
+        title: args.chapter.title,
+        source: args.source,
+        tripleCount: knowledgeTriples.length,
+        stats: stats?.data ?? null,
+        refreshedAt: new Date().toISOString(),
+      }
+      setFeatureState((current) => ({
+        ...current,
+        postChapterMemorySync: syncSummary,
+        knowledgeStats: stats?.data ? asRecord(stats.data) : current.knowledgeStats,
+        knowledgeTriples: knowledgeTriples.length ? knowledgeTriples : current.knowledgeTriples,
+        lastMessage: `章节 ${args.chapter.number} 的 Memory Graph 同步证据已刷新。`,
+      }))
+      await recordPlmProjectFile({
+        novelId: args.novelId,
+        type: 'plm.memory.postChapterSync.visualized',
+        title: args.chapter.title,
+        summary: syncSummary,
+        payload: syncSummary,
+      })
+      await recordPlmGraphEvent({
+        type: 'plm.memory.postChapterSync.visualized',
+        actor: 'drama:plm-ui',
+        source: 'memory',
+        target: {
+          novelId: args.novelId,
+          chapterId: args.chapter.id,
+        },
+        status: 'refreshed',
+        summary: `第${args.chapter.number}章 Memory Graph 同步证据已刷新`,
+        details: syncSummary,
+      })
+    } catch (error) {
+      setFeatureState((current) => ({
+        ...current,
+        lastMessage: `Memory Graph 同步证据刷新失败：${errorMessage(error)}`,
+      }))
+    }
+  }, [ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile])
 
   const handleWritingSpecFailure = React.useCallback(async (
     error: unknown,
@@ -1639,6 +1825,11 @@ export function PlotPilotNativeContainer({
         summary: chapterRecordSummary(chapter),
         payload: chapter,
       })
+      await syncPostChapterMemoryEvidence({
+        novelId,
+        chapter,
+        source: 'manual-save',
+      })
     } catch (error) {
       await handleWritingSpecFailure(error, {
         novelId,
@@ -1649,7 +1840,7 @@ export function PlotPilotNativeContainer({
     } finally {
       setActiveJob(null)
     }
-  }, [dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, recordPlmProjectFile, writingSpec])
+  }, [dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, recordPlmProjectFile, syncPostChapterMemoryEvidence, writingSpec])
 
   const generateChapter = React.useCallback(async (novelId: string, chapterNumber?: number) => {
     const novel = novels.find((item) => item.id === novelId) ?? selectedNovel
@@ -2150,6 +2341,11 @@ export function PlotPilotNativeContainer({
       } catch {
         storyletMessage = '\nStorylet JSON 兼容写回未执行；Drama Graph 已作为主数据保存。'
       }
+      await syncPostChapterMemoryEvidence({
+        novelId,
+        chapter,
+        source: 'plotpilot-writeback',
+      })
       window.alert(wroteDramaGraph
         ? `已回写 Drama Graph。${storyletMessage}`
         : `没有找到匹配的 Drama 章节节点，未写入 Drama Graph。${storyletMessage}`)
@@ -2158,7 +2354,7 @@ export function PlotPilotNativeContainer({
     } finally {
       setActiveJob(null)
     }
-  }, [chapterEditor, dramaGraph, ensureRuntimeClient, loadCurrentDramaGraph])
+  }, [chapterEditor, dramaGraph, ensureRuntimeClient, loadCurrentDramaGraph, syncPostChapterMemoryEvidence])
 
   const generateBible = React.useCallback(async (novelId: string) => {
     setActiveJob({
@@ -4115,8 +4311,8 @@ export function PlotPilotNativeContainer({
   )
   const uiSelectedNovel = uiNovels.find((novel) => novel.id === selectedNovel?.id) ?? uiNovels[0] ?? null
   const resolvedIntegrationStatus = React.useMemo(
-    () => resolveIntegrationStatus(integrationStatus, runtimeStatus, codexStatus, selectedNovel),
-    [codexStatus, integrationStatus, runtimeStatus, selectedNovel],
+    () => resolveIntegrationStatus(integrationStatus, runtimeStatus, codexStatus, selectedNovel, featureState),
+    [codexStatus, featureState, integrationStatus, runtimeStatus, selectedNovel],
   )
 
   React.useEffect(() => {

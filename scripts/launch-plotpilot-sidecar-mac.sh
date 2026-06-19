@@ -19,6 +19,38 @@ STDERR_LOG="$LOG_DIR/plotpilot-${PLOTPILOT_PORT}.err.log"
 
 mkdir -p "$LOG_DIR" "$DATA_DIR/logs"
 
+prepend_user_tool_path() {
+  local entries=(
+    "$HOME/.local/bin"
+    "$HOME/.codex/plugins/.plugin-appserver"
+    "$HOME/.bun/bin"
+    "/opt/homebrew/bin"
+    "/usr/local/bin"
+    "/usr/bin"
+    "/bin"
+    "/usr/sbin"
+    "/sbin"
+  )
+  local result=""
+  local entry
+  for entry in "${entries[@]}"; do
+    [[ -d "$entry" ]] || continue
+    case ":$result:$PATH:" in
+      *":$entry:"*) ;;
+      *) result="${result:+$result:}$entry" ;;
+    esac
+  done
+  printf '%s\n' "${result:+$result:}$PATH"
+}
+
+find_codex() {
+  if [[ -n "${CODEX_CLI:-}" && -x "${CODEX_CLI:-}" ]]; then
+    printf '%s\n' "$CODEX_CLI"
+    return 0
+  fi
+  command -v codex 2>/dev/null || true
+}
+
 find_plotpilot_root() {
   local candidates=()
   [[ -n "${PLOTPILOT_PROJECT_ROOT:-}" ]] && candidates+=("$PLOTPILOT_PROJECT_ROOT")
@@ -108,6 +140,11 @@ if [[ ! -f "$BOOT_PATH/plotpilot_embedded_boot.py" ]]; then
   exit 1
 fi
 
+export PATH="$(prepend_user_tool_path)"
+if CODEX_CLI_PATH="$(find_codex)" && [[ -n "$CODEX_CLI_PATH" ]]; then
+  export CODEX_CLI="$CODEX_CLI_PATH"
+fi
+
 mkdir -p "$(dirname "$LAUNCH_PLIST")"
 LAUNCH_LABEL="$LAUNCH_LABEL" \
 LAUNCH_PLIST="$LAUNCH_PLIST" \
@@ -117,6 +154,8 @@ PLOTPILOT_PORT="$PLOTPILOT_PORT" \
 PLOTPILOT_HOST="$PLOTPILOT_HOST" \
 BOOT_PATH="$BOOT_PATH" \
 DATA_DIR="$DATA_DIR" \
+PATH="$PATH" \
+CODEX_CLI="${CODEX_CLI:-}" \
 STDOUT_LOG="$STDOUT_LOG" \
 STDERR_LOG="$STDERR_LOG" \
 python3 <<'PY'
@@ -126,6 +165,7 @@ import plistlib
 data_dir = os.environ["DATA_DIR"]
 env = {
     "PYTHONPATH": os.environ["BOOT_PATH"],
+    "PATH": os.environ["PATH"],
     "PYTHONIOENCODING": "utf-8",
     "PYTHONUNBUFFERED": "1",
     "HF_HUB_OFFLINE": "1",
@@ -138,6 +178,8 @@ env = {
     "AITEXT_PROD_DATA_DIR": data_dir,
     "LOG_FILE": os.path.join(data_dir, "logs", "plotpilot.log"),
 }
+if os.environ.get("CODEX_CLI"):
+    env["CODEX_CLI"] = os.environ["CODEX_CLI"]
 
 plist = {
     "Label": os.environ["LAUNCH_LABEL"],

@@ -19,6 +19,7 @@
 - [x] 3.3 Gate Codex-backed generation controls on Codex availability and authentication while leaving non-Codex PLM navigation usable.
 - [x] 3.4 Gate PlotPilot-backed controls on sidecar health while keeping project navigation and non-PlotPilot diagnostics usable.
 - [x] 3.5 Add a parity status field that prevents `plotpilot-parity-ready` until PlotPilot-native prompt registry writes and post-chapter memory sync visualization are implemented.
+- [x] 3.6 Add structured parity checks for prompt registry writes, post-chapter memory sync, AgentOS/Crew parity, and advanced Graph canvas parity, including native Prompt Plaza write and post-chapter memory evidence hooks.
 
 ## 4. Failure States
 
@@ -39,7 +40,7 @@
 ## 6. Product-Path Verification
 
 - [x] 6.1 Add Zen panel verification that records the active PLM document URI and fails unless it is `chrome://browser/content/drama/app/index.html?...&surface=plm`.
-- [ ] 6.2 Capture screenshot or equivalent visual evidence for product-path Zen PLM first viewport.
+- [x] 6.2 Capture screenshot or equivalent visual evidence for product-path Zen PLM first viewport.
 - [x] 6.3 Capture failure-state evidence for runtime unavailable, PlotPilot sidecar unavailable, Codex unavailable, workspace missing, and CSS/token bridge failure.
 - [x] 6.4 Add fallback verification output for localhost and Brave runs that explicitly labels them as `dev-localhost` or `browser-fallback`.
 - [x] 6.5 Add a release gate that compares user-facing readiness claims against the highest verified readiness tier.

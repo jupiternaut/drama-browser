@@ -489,6 +489,32 @@ export interface PlotPilotPromptListResponse {
   [key: string]: unknown
 }
 
+export interface PlotPilotPromptUpdateRequest {
+  system?: string | null
+  user_template?: string | null
+  name?: string | null
+  description?: string | null
+  tags?: string[] | null
+  change_summary?: string
+}
+
+export interface PlotPilotPromptCreateRequest {
+  template_id?: string
+  node_key?: string
+  name?: string
+  description?: string
+  category?: string
+  system?: string
+  user_template?: string
+}
+
+export interface PlotPilotPromptWriteResponse {
+  status?: string
+  node?: Record<string, unknown> | null
+  message?: string
+  [key: string]: unknown
+}
+
 export type PlotPilotLlmProtocol =
   | 'openai'
   | 'anthropic'

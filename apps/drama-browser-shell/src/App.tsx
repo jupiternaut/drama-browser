@@ -322,15 +322,49 @@ function toPlmIntegrationStatus(
   surfaceClassification: DramaPlmSurfaceClassificationResult,
   runtimeStatus: DramaRuntimeStatus,
 ): PlotPilotIntegrationStatus {
+  const runtimeReady = runtimeStatus.state === 'ready'
   return {
     surface: surfaceClassification.classification,
     productPath: surfaceClassification.productPath,
     currentUrl: surfaceClassification.currentUrl,
     reason: surfaceClassification.reason,
     tiers: createShellReadinessTiers(surfaceClassification, runtimeStatus),
+    parityChecks: [
+      {
+        id: 'prompt-registry-writes',
+        label: 'Prompt registry writes',
+        state: runtimeReady ? 'partial' : 'blocked',
+        detail: runtimeReady
+          ? 'PlotPilot Prompt Plaza write API is available through the PLM bridge; save a prompt card to produce write evidence.'
+          : 'Waiting for Drama runtime and PlotPilot sidecar.',
+        evidence: 'PUT/POST /llm-control/prompts',
+      },
+      {
+        id: 'post-chapter-memory-sync',
+        label: 'Post-chapter memory sync',
+        state: 'blocked',
+        detail: 'Chapter save/writeback must refresh Knowledge Graph evidence before this parity check is ready.',
+      },
+      {
+        id: 'agentos-crew-parity',
+        label: 'AgentOS / Crew parity',
+        state: 'partial',
+        detail: 'Crew surface and Graph event writes are visible; full PlotPilot AgentOS parity remains open.',
+        evidence: 'Crew runtime preview',
+      },
+      {
+        id: 'advanced-graph-canvas-parity',
+        label: 'Advanced Graph canvas',
+        state: 'partial',
+        detail: 'Drama Graph restores canvas, minimap, and inspector; advanced PlotPilot canvas affordances remain open.',
+        evidence: 'React Flow canvas + minimap + inspector',
+      },
+    ],
     parityGaps: [
-      'PlotPilot-native prompt registry writes',
-      'Post-chapter memory sync visualization',
+      'Prompt registry writes',
+      'Post-chapter memory sync',
+      'AgentOS / Crew parity',
+      'Advanced Graph canvas',
     ],
   }
 }

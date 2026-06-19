@@ -94,10 +94,18 @@ The system SHALL report PLM readiness as separate states instead of a single run
 
 #### Scenario: Full PlotPilot parity not yet reached
 
-- **GIVEN** PlotPilot-native prompt registry writes or post-chapter memory sync visualization are incomplete
+- **GIVEN** PlotPilot-native prompt registry writes, post-chapter memory sync visualization, AgentOS/Crew parity, or advanced Graph canvas parity are incomplete
 - **WHEN** the PLM panel is otherwise usable
 - **THEN** the system does not report `plotpilot-parity-ready`
 - **AND** release notes do not describe the PLM as full PlotPilot parity
+
+#### Scenario: Parity gaps are itemized
+
+- **GIVEN** the PLM panel reports integration readiness
+- **WHEN** the user opens the integration contract status
+- **THEN** PLM shows structured parity checks for prompt registry writes, post-chapter memory sync, AgentOS/Crew parity, and advanced Graph canvas parity
+- **AND** each check is marked as ready, partial, or blocked with concise evidence
+- **AND** `plotpilot-parity-ready` is reported only when every structured parity check is ready
 
 ### Requirement: Fallback Surface Classification
 

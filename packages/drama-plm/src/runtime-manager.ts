@@ -208,6 +208,39 @@ function prependPythonPath(pathEntry: string, current = process.env.PYTHONPATH ?
   return Array.from(new Set(entries)).join(delimiter)
 }
 
+function prependToolPath(current = process.env.PATH ?? ''): string {
+  const home = homedir()
+  const entries = [
+    join(home, '.local', 'bin'),
+    join(home, '.codex', 'plugins', '.plugin-appserver'),
+    join(home, '.bun', 'bin'),
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+    '/usr/sbin',
+    '/sbin',
+    ...current.split(delimiter),
+  ]
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+  return Array.from(new Set(entries)).join(delimiter)
+}
+
+function resolveCodexCli(): string | undefined {
+  const configured = process.env.CODEX_CLI
+  if (configured && existsSync(configured)) return configured
+
+  for (const candidate of [
+    join(homedir(), '.local', 'bin', process.platform === 'win32' ? 'codex.exe' : 'codex'),
+    join(homedir(), '.codex', 'plugins', '.plugin-appserver', process.platform === 'win32' ? 'codex.exe' : 'codex'),
+  ]) {
+    if (existsSync(candidate)) return candidate
+  }
+
+  return undefined
+}
+
 export function resolveDefaultPlotPilotPythonExe(projectRoot: string): string {
   if (process.env.PLOTPILOT_PYTHON_EXE) return process.env.PLOTPILOT_PYTHON_EXE
 
@@ -557,6 +590,11 @@ export class PlotPilotRuntimeManager {
       AITEXT_PROD_DATA_DIR: this.dataDir,
       LOG_FILE: logFile,
       PYTHONPATH: prependPythonPath(resolveEmbeddedBootPath()),
+      PATH: prependToolPath(),
+    }
+    const codexCli = resolveCodexCli()
+    if (codexCli) {
+      env.CODEX_CLI = codexCli
     }
     const spawnOptions: PlotPilotSpawnOptions = {
       cwd: this.projectRoot,

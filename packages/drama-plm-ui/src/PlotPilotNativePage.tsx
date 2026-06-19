@@ -106,12 +106,23 @@ export interface PlotPilotReadinessStatus {
   message: string
 }
 
+export type PlotPilotParityCheckState = 'ready' | 'partial' | 'blocked'
+
+export interface PlotPilotParityCheck {
+  id: string
+  label: string
+  state: PlotPilotParityCheckState
+  detail: string
+  evidence?: string
+}
+
 export interface PlotPilotIntegrationStatus {
   surface: PlotPilotIntegrationSurface
   productPath: boolean
   currentUrl?: string
   reason?: string
   tiers: PlotPilotReadinessStatus[]
+  parityChecks?: PlotPilotParityCheck[]
   parityGaps?: string[]
   workspacePathHints?: string[]
 }
@@ -341,6 +352,7 @@ export interface PlotPilotNativeFeatureState {
   promptStats?: Record<string, unknown> | null
   prompts?: Array<Record<string, unknown>>
   activeInvocation?: Record<string, unknown> | null
+  postChapterMemorySync?: Record<string, unknown> | null
   autopilotStatus?: Record<string, unknown> | null
   autopilotCircuitBreaker?: Record<string, unknown> | null
   autopilotEvents?: Array<Record<string, unknown>>
@@ -3513,6 +3525,7 @@ function ScriptStudioLightMemoryGraphPanel({
   const triples = featureState.knowledgeTriples ?? []
   const searchResults = featureState.knowledgeSearchResults ?? []
   const stats = asUiRecord(featureState.knowledgeStats)
+  const postSync = asUiRecord(featureState.postChapterMemorySync)
   const entities = extractMemoryEntities(triples)
   const canSearch = Boolean(novel && ready && !busy && query.trim() && handlers?.onSearchMemory)
 
@@ -3569,9 +3582,28 @@ function ScriptStudioLightMemoryGraphPanel({
             { label: '实体', value: String(entities.length) },
             { label: '关系', value: String(triples.length) },
             { label: '检索结果', value: String(searchResults.length) },
-            { label: '版本', value: readUiString(stats, ['version', 'updated_at', 'updatedAt']) || '-' },
+            { label: '章后同步', value: readUiString(postSync, ['chapterNumber', 'chapter_number']) || '-' },
           ]}
         />
+
+        {Object.keys(postSync).length ? (
+          <div
+            data-plm-post-chapter-memory-sync="true"
+            className="rounded-[8px] border border-[#dce5d6] bg-white px-3 py-2"
+          >
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="truncate text-xs font-semibold text-[#2f4f3a]">
+                最近章后同步
+              </div>
+              <div className="shrink-0 font-mono text-[10px] text-[#6b7867]">
+                {readUiString(postSync, ['source']) || 'chapter'}
+              </div>
+            </div>
+            <div className="mt-1 line-clamp-2 text-[11px] leading-5 text-[#687063]">
+              chapter {readUiString(postSync, ['chapterNumber', 'chapter_number']) || '-'} / triples {readUiString(postSync, ['tripleCount', 'triple_count']) || '0'} / {readUiString(stats, ['version', 'updated_at', 'updatedAt']) || 'stats refreshed'}
+            </div>
+          </div>
+        ) : null}
 
         <div>
           <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b8579]">实体索引</div>
@@ -4877,6 +4909,12 @@ function readinessStateClassName(state: PlotPilotReadinessState): string {
   return 'border-[#ebc6bc] bg-[#fff2ee] text-[#7a3327]'
 }
 
+function parityStateClassName(state: PlotPilotParityCheckState): string {
+  if (state === 'ready') return 'border-[#bddbcf] bg-[#edf8f2] text-[#245342]'
+  if (state === 'partial') return 'border-[#ded2a2] bg-[#fff8df] text-[#6a5417]'
+  return 'border-[#ebc6bc] bg-[#fff2ee] text-[#7a3327]'
+}
+
 function IntegrationBadge({ status }: { status?: PlotPilotIntegrationStatus }) {
   if (!status) return null
   return (
@@ -4925,6 +4963,7 @@ function ScriptStudioLayerFailureBanner({
     title: string
     body: string
     tone: 'red' | 'amber' | 'neutral'
+    className?: string
     actions?: React.ReactNode
     meta?: React.ReactNode
   }> = []
@@ -5032,13 +5071,69 @@ function ScriptStudioLayerFailureBanner({
       title: 'Workspace missing',
       body: workspaceTier?.message ?? '尚未选择可用项目，项目相关 PLM 面板保持锁定。',
       tone: 'neutral',
-      meta: pathHints.length ? (
-        <div className="mt-2 max-h-24 overflow-auto rounded-[6px] border border-[#ded9cd] bg-[#fbfaf6] p-2 font-mono text-[10px] leading-4 text-[#5b5d56]">
-          {pathHints.map((path) => (
-            <div key={path} className="break-all">{path}</div>
-          ))}
+      className: 'lg:col-span-2',
+      actions: (
+        <>
+          <button
+            type="button"
+            onClick={handlers?.onCreateNovel}
+            disabled={busy || !handlers?.onCreateNovel}
+            className="h-7 rounded-[6px] border border-[#d7d0c2] bg-white px-2 text-[11px] font-semibold text-[#353932] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            新建项目
+          </button>
+          <button
+            type="button"
+            onClick={handlers?.onImportStorylet}
+            disabled={busy || !handlers?.onImportStorylet}
+            className="h-7 rounded-[6px] border border-[#d7d0c2] bg-white px-2 text-[11px] font-semibold text-[#353932] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            从 Graph 导入
+          </button>
+          <button
+            type="button"
+            onClick={copyDiagnostics}
+            className="h-7 rounded-[6px] border border-[#d7d0c2] bg-white px-2 text-[11px] font-semibold text-[#353932]"
+          >
+            复制诊断
+          </button>
+        </>
+      ),
+      meta: (
+        <div
+          data-plm-workspace-missing-panel="true"
+          className="mt-3 grid gap-2 md:grid-cols-[1fr_1.2fr_1fr]"
+        >
+          <div className="rounded-[7px] border border-[#ded9cd] bg-[#fbfaf6] p-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#7c766b]">Blocked surfaces</div>
+            <ul className="mt-1.5 space-y-1 text-[11px] leading-4 text-[#4c5048]">
+              <li>Hosted Write / Autopilot</li>
+              <li>章节保存与回写</li>
+              <li>Memory Graph 写入</li>
+            </ul>
+          </div>
+          <div className="rounded-[7px] border border-[#ded9cd] bg-[#fbfaf6] p-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#7c766b]">Detected paths</div>
+            {pathHints.length ? (
+              <div className="mt-1.5 max-h-28 overflow-auto font-mono text-[10px] leading-4 text-[#5b5d56]">
+                {pathHints.map((path) => (
+                  <div key={path} className="break-all">{path}</div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-1.5 text-[11px] leading-4 text-[#5b5d56]">
+                runtime 未返回 projectRoot/dataDir；先重启 runtime 或创建项目。
+              </div>
+            )}
+          </div>
+          <div className="rounded-[7px] border border-[#ded9cd] bg-[#fbfaf6] p-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#7c766b]">Recovery</div>
+            <div className="mt-1.5 text-[11px] leading-4 text-[#4c5048]">
+              先新建或导入一个小说项目。完成后 Script Studio 会解锁章节纸张、storage cards 和生成链路。
+            </div>
+          </div>
         </div>
-      ) : null,
+      ),
     })
   }
 
@@ -5057,6 +5152,7 @@ function ScriptStudioLayerFailureBanner({
               card.tone === 'red' && 'border-[#e4bfb4] bg-[#fff1ed]/94 text-[#673026]',
               card.tone === 'amber' && 'border-[#e6d39a] bg-[#fff8df]/94 text-[#684f12]',
               card.tone === 'neutral' && 'border-[#d8d3c8] bg-[#fffefd]/94 text-[#343831]',
+              card.className,
             )}
           >
             <div className="flex items-start gap-2.5">
@@ -5122,6 +5218,28 @@ function ScriptStudioIntegrationPanel({
         <div className="rounded-[7px] border border-[#ded9cd] bg-[#f8f7f2] px-2.5 py-2 text-[11px] leading-5 text-[#68645d]">
           <span className="font-semibold text-[#343831]">Parity gaps:</span>{' '}
           {status.parityGaps.join(' / ')}
+        </div>
+      ) : null}
+      {status.parityChecks?.length ? (
+        <div
+          data-plm-parity-matrix="true"
+          className={compact ? 'space-y-1.5' : 'grid gap-2 md:grid-cols-2'}
+        >
+          {status.parityChecks.map((check) => (
+            <div
+              key={check.id}
+              className={cn('min-w-0 rounded-[7px] border px-2.5 py-2', parityStateClassName(check.state))}
+            >
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <span className="truncate text-xs font-semibold">{check.label}</span>
+                <span className="font-mono text-[10px] uppercase">{check.state}</span>
+              </div>
+              <div className="mt-1 line-clamp-2 text-[11px] leading-4 opacity-80">{check.detail}</div>
+              {check.evidence ? (
+                <div className="mt-1 truncate font-mono text-[10px] opacity-70">{check.evidence}</div>
+              ) : null}
+            </div>
+          ))}
         </div>
       ) : null}
       {blockedRows.length ? (

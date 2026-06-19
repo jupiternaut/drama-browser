@@ -20,6 +20,30 @@ LAUNCH_PLIST="$HOME/Library/LaunchAgents/${LAUNCH_LABEL}.plist"
 
 mkdir -p "$LOG_DIR"
 
+prepend_user_tool_path() {
+  local entries=(
+    "$HOME/.local/bin"
+    "$HOME/.codex/plugins/.plugin-appserver"
+    "$HOME/.bun/bin"
+    "/opt/homebrew/bin"
+    "/usr/local/bin"
+    "/usr/bin"
+    "/bin"
+    "/usr/sbin"
+    "/sbin"
+  )
+  local result=""
+  local entry
+  for entry in "${entries[@]}"; do
+    [[ -d "$entry" ]] || continue
+    case ":$result:$PATH:" in
+      *":$entry:"*) ;;
+      *) result="${result:+$result:}$entry" ;;
+    esac
+  done
+  printf '%s\n' "${result:+$result:}$PATH"
+}
+
 find_bun() {
   if [[ -n "${BUN_EXE:-}" && -x "${BUN_EXE}" ]]; then
     printf '%s\n' "$BUN_EXE"
@@ -30,6 +54,14 @@ find_bun() {
     return
   fi
   command -v bun
+}
+
+find_codex() {
+  if [[ -n "${CODEX_CLI:-}" && -x "${CODEX_CLI:-}" ]]; then
+    printf '%s\n' "$CODEX_CLI"
+    return 0
+  fi
+  command -v codex 2>/dev/null || true
 }
 
 runtime_ready() {
@@ -108,6 +140,10 @@ BUN_EXE="$(find_bun)"
 export DRAMA_RUNTIME_HOST="$RUNTIME_HOST"
 export DRAMA_RUNTIME_PORT="$RUNTIME_PORT"
 export DRAMA_BROWSER_SHELL_DIST="${DRAMA_BROWSER_SHELL_DIST:-$REPO_ROOT/apps/drama-browser-shell/dist}"
+export PATH="$(prepend_user_tool_path)"
+if CODEX_CLI_PATH="$(find_codex)" && [[ -n "$CODEX_CLI_PATH" ]]; then
+  export CODEX_CLI="$CODEX_CLI_PATH"
+fi
 
 if [[ ! -f "$DRAMA_BROWSER_SHELL_DIST/index.html" ]]; then
   (cd "$REPO_ROOT" && "$BUN_EXE" run browser-shell:build)
@@ -144,6 +180,8 @@ if [[ "$(uname -s)" == "Darwin" && -x /bin/launchctl ]]; then
   DRAMA_RUNTIME_PORT="$DRAMA_RUNTIME_PORT" \
   DRAMA_RUNTIME_URL="$RUNTIME_URL" \
   DRAMA_BROWSER_SHELL_DIST="$DRAMA_BROWSER_SHELL_DIST" \
+  PATH="$PATH" \
+  CODEX_CLI="${CODEX_CLI:-}" \
   PLOTPILOT_PROJECT_ROOT="${PLOTPILOT_PROJECT_ROOT:-}" \
   PLOTPILOT_PYTHON_EXE="${PLOTPILOT_PYTHON_EXE:-}" \
   python3 <<'PY'
@@ -155,8 +193,9 @@ env = {
     "DRAMA_RUNTIME_PORT": os.environ["DRAMA_RUNTIME_PORT"],
     "DRAMA_RUNTIME_URL": os.environ["DRAMA_RUNTIME_URL"],
     "DRAMA_BROWSER_SHELL_DIST": os.environ["DRAMA_BROWSER_SHELL_DIST"],
+    "PATH": os.environ["PATH"],
 }
-for key in ("PLOTPILOT_PROJECT_ROOT", "PLOTPILOT_PYTHON_EXE"):
+for key in ("CODEX_CLI", "PLOTPILOT_PROJECT_ROOT", "PLOTPILOT_PYTHON_EXE"):
     value = os.environ.get(key)
     if value:
         env[key] = value

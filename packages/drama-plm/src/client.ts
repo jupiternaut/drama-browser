@@ -50,7 +50,10 @@ import type {
   PlotPilotSuggestMainPlotOptionsResponse,
   PlotPilotPlotOutlineResponse,
   PlotPilotPromptListResponse,
+  PlotPilotPromptCreateRequest,
   PlotPilotPromptStatsResponse,
+  PlotPilotPromptUpdateRequest,
+  PlotPilotPromptWriteResponse,
   PlotPilotReaderSimulationListResponse,
   PlotPilotReaderSimulationResponse,
   PlotPilotReviewChapterResponse,
@@ -302,6 +305,15 @@ export interface PlotPilotClient {
   ): Promise<PlotPilotAiTraceTimelineResponse>
   getPromptStats(options?: PlotPilotRequestOptions): Promise<PlotPilotPromptStatsResponse>
   listPrompts(options?: PlotPilotRequestOptions): Promise<PlotPilotPromptListResponse>
+  updatePrompt(
+    nodeKey: string,
+    data: PlotPilotPromptUpdateRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotPromptWriteResponse>
+  createPromptNode(
+    data: PlotPilotPromptCreateRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotPromptWriteResponse>
 }
 
 export type PlotPilotCallOptions = PlotPilotClientOptions & PlotPilotRequestOptions
@@ -2712,6 +2724,32 @@ export function createPlotPilotClient(options: PlotPilotClientOptions = {}): Plo
         roots,
         '/llm-control/prompts',
         { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    updatePrompt(nodeKey, data, requestOptions) {
+      return requestJson<PlotPilotPromptWriteResponse>(
+        fetchImpl,
+        roots,
+        `/llm-control/prompts/${encodeSegment(nodeKey)}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    createPromptNode(data, requestOptions) {
+      return requestJson<PlotPilotPromptWriteResponse>(
+        fetchImpl,
+        roots,
+        '/llm-control/prompts/nodes',
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
         clientHeaders,
         requestOptions,
       )
