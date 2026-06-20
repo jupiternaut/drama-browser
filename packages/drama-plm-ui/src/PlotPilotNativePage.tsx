@@ -48,6 +48,7 @@ import {
   SkipForward,
   Terminal,
   Trash2,
+  Upload,
   UserRound,
   Users,
   Volume2,
@@ -271,6 +272,12 @@ export interface PlotPilotOnboardingDraft {
   targetWordsPerChapter: number
 }
 
+export interface PlotPilotWorkspaceUploadDraft {
+  fileName: string
+  mimeType?: string
+  content: string
+}
+
 export interface PlotPilotOutlineDraft {
   mainStoryOverview: string
   coreConflict: string
@@ -400,6 +407,7 @@ export interface PlotPilotNativeHandlers {
   onCreateNovelFromOnboarding?: (draft: PlotPilotOnboardingDraft) => void
   onSaveNovelSetup?: (novelId: string, draft: PlotPilotOnboardingDraft) => void
   onImportStorylet?: () => void
+  onImportWorkspaceFile?: (draft: PlotPilotWorkspaceUploadDraft) => void
   onSelectNovel?: (novelId: string) => void
   onGenerateBible?: (novelId: string) => void
   onSaveBible?: (novelId: string, bible: PlotPilotBibleEditorData) => void
@@ -919,6 +927,7 @@ function ScriptStudioPlmSurface({
   const [workspaceMode, setWorkspaceMode] = React.useState<ScriptStudioWorkspaceMode>('creation')
   const [activeNav, setActiveNav] = React.useState<ScriptStudioNavId>('script')
   const [draft, setDraft] = React.useState(chapterEditor?.content ?? '')
+  const workspaceUploadInputRef = React.useRef<HTMLInputElement | null>(null)
   const chapters = React.useMemo(
     () => createScriptStudioChapters(novel, chapterEditor),
     [novel, chapterEditor],
@@ -958,6 +967,7 @@ function ScriptStudioPlmSurface({
         ? Boolean(handlers?.onPrepareFirstChapter)
         : Boolean(handlers?.onGenerateChapter)
   )
+  const canImportWorkspaceFile = Boolean(ready && !busy && handlers?.onImportWorkspaceFile)
 
   React.useEffect(() => {
     setDraft(chapterEditor?.content ?? '')
@@ -983,6 +993,33 @@ function ScriptStudioPlmSurface({
     handlers?.onGenerateChapter?.(novel.id, activeChapterNumber)
   }
 
+  const openWorkspaceUpload = () => {
+    if (!canImportWorkspaceFile) return
+    workspaceUploadInputRef.current?.click()
+  }
+
+  const importWorkspaceUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+    if (!file) return
+
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    if (extension !== 'md' && extension !== 'markdown' && extension !== 'txt') {
+      window.alert('只支持 Markdown 或 TXT 文件。')
+      return
+    }
+
+    try {
+      handlers?.onImportWorkspaceFile?.({
+        fileName: file.name,
+        mimeType: file.type || undefined,
+        content: await file.text(),
+      })
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : String(error))
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -1002,9 +1039,16 @@ function ScriptStudioPlmSurface({
         autoResumeDelay={2000}
         opacity={1}
       />
+      <input
+        ref={workspaceUploadInputRef}
+        type="file"
+        accept=".md,.markdown,.txt,text/markdown,text/plain"
+        className="sr-only"
+        onChange={(event) => void importWorkspaceUpload(event)}
+      />
 
       <aside className="relative z-10 hidden min-h-0 w-[214px] shrink-0 flex-col border-r border-[#dedbd2] bg-[#f8f7f2]/90 text-[#22241f] shadow-[inset_-1px_0_0_rgba(255,255,255,0.7)] backdrop-blur-[2px] md:flex">
-        <div className="border-b border-[#e3e0d7] px-3 py-3">
+        <div className="space-y-1.5 border-b border-[#e3e0d7] px-3 py-3">
           <button
             type="button"
             onClick={handlers?.onImportStorylet}
@@ -1012,6 +1056,15 @@ function ScriptStudioPlmSurface({
           >
             <span className="truncate">《{novel?.title ?? '搜神记'}》</span>
             <ChevronDown className="size-3.5 text-[#737067]" />
+          </button>
+          <button
+            type="button"
+            onClick={openWorkspaceUpload}
+            disabled={!canImportWorkspaceFile}
+            className="flex h-8 w-full items-center gap-2 rounded-[7px] border border-[#d9d6cd] bg-white/55 px-2.5 text-left text-xs font-semibold text-[#315847] shadow-[0_1px_2px_rgba(36,32,24,0.04)] outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[#174a38]/20 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <Upload className="size-3.5 shrink-0" />
+            <span className="truncate">导入文稿</span>
           </button>
         </div>
 
@@ -1073,7 +1126,9 @@ function ScriptStudioPlmSurface({
             activeJob={activeJob}
             ready={ready}
             busy={busy}
+            canImportWorkspaceFile={canImportWorkspaceFile}
             onContinue={() => novel ? handlers?.onGenerateChapter?.(novel.id, activeChapterNumber) : handlers?.onCreateNovel?.()}
+            onImportWorkspaceFile={openWorkspaceUpload}
             onSave={() => novel ? handlers?.onSaveChapter?.(novel.id, activeChapterNumber, draft) : undefined}
             onCheck={() => novel ? handlers?.onReviewChapter?.(novel.id, activeChapterNumber) : undefined}
           />
@@ -1371,7 +1426,9 @@ function ScriptStudioLazySidebar({
   activeJob,
   ready,
   busy,
+  canImportWorkspaceFile,
   onContinue,
+  onImportWorkspaceFile,
   onSave,
   onCheck,
 }: {
@@ -1380,7 +1437,9 @@ function ScriptStudioLazySidebar({
   activeJob?: PlotPilotGenerationJob | null
   ready: boolean
   busy: boolean
+  canImportWorkspaceFile: boolean
   onContinue: () => void
+  onImportWorkspaceFile: () => void
   onSave: () => void
   onCheck: () => void
 }) {
@@ -1399,6 +1458,16 @@ function ScriptStudioLazySidebar({
         >
           <Sparkles className="size-3.5" />
           {novel ? '接着写' : '新建一本书'}
+        </button>
+        <button
+          type="button"
+          onClick={onImportWorkspaceFile}
+          disabled={!canImportWorkspaceFile}
+          className="flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-left text-xs font-semibold text-[#315847] outline-none transition hover:opacity-80 disabled:opacity-45"
+          style={{ backgroundColor: 'rgba(255,255,255,0.56)' }}
+        >
+          <Upload className="size-3.5" />
+          导入文稿
         </button>
         <button
           type="button"

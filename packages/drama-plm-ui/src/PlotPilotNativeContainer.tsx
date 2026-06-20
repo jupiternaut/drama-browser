@@ -29,6 +29,7 @@ import {
   type PlotPilotReadinessStatus,
   type PlotPilotRuntimeStatus as PlotPilotUiRuntimeStatus,
   type ScriptStudioStorageCardDraft,
+  type PlotPilotWorkspaceUploadDraft,
   type PlotPilotWritingSpecFailureView,
 } from './PlotPilotNativePage'
 import type {
@@ -114,6 +115,21 @@ interface PlmProjectFileRecordInput {
 interface PlotPilotResolvedRevisionContext {
   annotations: PlotPilotChapterAnnotation[]
   markdown: string
+}
+
+interface ParsedWorkspaceChapterImport {
+  number: number
+  title: string
+  content: string
+}
+
+interface ParsedWorkspaceFileImport {
+  fileName: string
+  sourceFormat: 'markdown' | 'text'
+  title: string
+  novelId: string
+  sourceText: string
+  chapters: ParsedWorkspaceChapterImport[]
 }
 
 export interface PlotPilotNativeApi {
@@ -456,6 +472,196 @@ function buildRevisionPromptMarkdown(context: PlotPilotResolvedRevisionContext):
     '',
     context.markdown,
   ].join('\n')
+}
+
+function workspaceUploadFileName(fileName: string): string {
+  const trimmed = fileName.trim()
+  const parts = trimmed.split(/[\\/]/)
+  return parts[parts.length - 1] || 'imported-workspace.txt'
+}
+
+function workspaceUploadBaseName(fileName: string): string {
+  return workspaceUploadFileName(fileName)
+    .replace(/\.(md|markdown|txt)$/i, '')
+    .trim() || '导入文稿'
+}
+
+function workspaceUploadSourceFormat(upload: PlotPilotWorkspaceUploadDraft): ParsedWorkspaceFileImport['sourceFormat'] {
+  const fileName = workspaceUploadFileName(upload.fileName)
+  if (/\.(md|markdown)$/i.test(fileName) || /markdown/i.test(upload.mimeType ?? '')) return 'markdown'
+  if (/\.txt$/i.test(fileName) || /text\/plain/i.test(upload.mimeType ?? '')) return 'text'
+  throw new Error('只支持 Markdown 或 TXT 文件。')
+}
+
+function normalizeWorkspaceUploadText(content: string): string {
+  return content
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n?/g, '\n')
+}
+
+function stripWorkspaceFrontMatter(content: string): string {
+  const trimmedStart = content.replace(/^\s+/, '')
+  if (!trimmedStart.startsWith('---\n')) return content
+  const endIndex = trimmedStart.indexOf('\n---', 4)
+  if (endIndex < 0) return content
+  const afterFence = trimmedStart.slice(endIndex + 4)
+  return afterFence.replace(/^\s*\n/, '')
+}
+
+function markdownHeadingTitle(line: string, level?: number): string | null {
+  const match = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/)
+  if (!match) return null
+  const marker = match[1]
+  const title = match[2]
+  if (!marker || !title) return null
+  if (level !== undefined && marker.length !== level) return null
+  return title.trim()
+}
+
+function workspaceChapterHeadingTitle(line: string): string | null {
+  const markdownTitle = markdownHeadingTitle(line)
+  const title = markdownTitle ?? line.trim()
+  if (!title) return null
+  if (/^第\s*[\d一二三四五六七八九十百千万零〇两]+\s*[章节回卷幕].*/.test(title)) return title
+  if (/^chapter\s+\d+\b.*/i.test(title)) return title
+  return null
+}
+
+function removeWorkspaceTitleHeading(content: string): { title: string | null; body: string } {
+  const lines = content.split('\n')
+  let title: string | null = null
+  const bodyLines: string[] = []
+  for (const line of lines) {
+    const heading = markdownHeadingTitle(line, 1)
+    if (!title && heading && !workspaceChapterHeadingTitle(line)) {
+      title = heading
+      continue
+    }
+    bodyLines.push(line)
+  }
+  return {
+    title,
+    body: bodyLines.join('\n').trim(),
+  }
+}
+
+function firstMeaningfulWorkspaceLine(content: string): string | null {
+  for (const rawLine of content.split('\n')) {
+    const heading = markdownHeadingTitle(rawLine)
+    const line = (heading ?? rawLine)
+      .replace(/^\s*[-*+]\s+/, '')
+      .replace(/^\s*\d+[.)]\s+/, '')
+      .trim()
+    if (line) return line
+  }
+  return null
+}
+
+function splitWorkspaceImportChapters(content: string): ParsedWorkspaceChapterImport[] {
+  const lines = content.split('\n')
+  const sections: Array<{ title: string; lines: string[] }> = []
+  const prefaceLines: string[] = []
+  let current: { title: string; lines: string[] } | null = null
+
+  for (const line of lines) {
+    const heading = workspaceChapterHeadingTitle(line)
+    if (heading) {
+      if (current) sections.push(current)
+      current = { title: heading, lines: [] }
+      if (sections.length === 0 && prefaceLines.some((item) => item.trim())) {
+        current.lines.push(...prefaceLines, '')
+      }
+      continue
+    }
+    if (current) current.lines.push(line)
+    else prefaceLines.push(line)
+  }
+
+  if (current) sections.push(current)
+  if (sections.length === 0) {
+    return [{
+      number: 1,
+      title: '第1章',
+      content: content.trim(),
+    }]
+  }
+
+  return sections.map((section, index) => ({
+    number: index + 1,
+    title: section.title || fallbackChapterTitle(index + 1),
+    content: section.lines.join('\n').trim(),
+  }))
+}
+
+function parseWorkspaceUploadDraft(upload: PlotPilotWorkspaceUploadDraft): ParsedWorkspaceFileImport {
+  const fileName = workspaceUploadFileName(upload.fileName)
+  const sourceFormat = workspaceUploadSourceFormat(upload)
+  const sourceText = normalizeWorkspaceUploadText(upload.content).trim()
+  if (!sourceText) throw new Error('导入文件是空的。')
+
+  const withoutFrontMatter = stripWorkspaceFrontMatter(sourceText)
+  const withoutTitle = removeWorkspaceTitleHeading(withoutFrontMatter)
+  const title = (
+    withoutTitle.title
+      ?? (sourceFormat === 'markdown' ? firstMeaningfulWorkspaceLine(withoutFrontMatter) : null)
+      ?? workspaceUploadBaseName(fileName)
+  ).slice(0, 80)
+  const body = withoutTitle.body || withoutFrontMatter.trim()
+  const chapters = splitWorkspaceImportChapters(body)
+    .filter((chapter) => chapter.content.trim() || chapter.title.trim())
+    .map((chapter, index) => ({
+      ...chapter,
+      number: index + 1,
+      title: chapter.title.trim() || fallbackChapterTitle(index + 1),
+      content: chapter.content.trim() || chapter.title.trim(),
+    }))
+
+  if (chapters.length === 0) {
+    chapters.push({
+      number: 1,
+      title: '第1章',
+      content: body.trim(),
+    })
+  }
+
+  return {
+    fileName,
+    sourceFormat,
+    title: title.trim() || workspaceUploadBaseName(fileName),
+    novelId: normalizeNovelId(title || workspaceUploadBaseName(fileName)),
+    sourceText,
+    chapters,
+  }
+}
+
+function buildWorkspaceImportMarkdown(input: ParsedWorkspaceFileImport, importedAt = new Date().toISOString()): string {
+  const lines = [
+    '# PLM Workspace Import',
+    '',
+    `- source_file: ${markdownInline(input.fileName)}`,
+    `- source_format: \`${input.sourceFormat}\``,
+    `- novel_id: \`${markdownInline(input.novelId)}\``,
+    `- title: ${markdownInline(input.title)}`,
+    `- chapter_count: \`${input.chapters.length}\``,
+    `- imported_at: \`${importedAt}\``,
+    '',
+    '## Chapters',
+    '',
+    ...input.chapters.flatMap((chapter) => [
+      `- ${chapter.number}. ${markdownInline(chapter.title)} (${countDraftText(chapter.content)} chars)`,
+    ]),
+    '',
+    '## Source',
+    '',
+  ]
+
+  if (input.sourceFormat === 'markdown') {
+    lines.push(input.sourceText.trim())
+  } else {
+    lines.push('````text', input.sourceText.trim(), '````')
+  }
+
+  return lines.join('\n').trimEnd()
 }
 
 function toNovelCreateRequest(draft: PlotPilotOnboardingDraft) {
@@ -3175,6 +3381,125 @@ export function PlotPilotNativeContainer({
     })
   }, [createNovelFromOnboarding])
 
+  const importWorkspaceFile = React.useCallback(async (upload: PlotPilotWorkspaceUploadDraft) => {
+    const parsed = parseWorkspaceUploadDraft(upload)
+    setActiveJob({
+      id: `workspace:import:${parsed.novelId}`,
+      label: '导入文稿',
+      phase: 'read_file',
+      detail: parsed.fileName,
+      progress: 5,
+    })
+    try {
+      const activeClient = await ensureRuntimeClient()
+      setActiveJob((current) => current ? {
+        ...current,
+        phase: 'create_novel',
+        detail: `构建《${parsed.title}》工作区`,
+        progress: 15,
+      } : current)
+
+      let novel: NovelDTO
+      try {
+        novel = await activeClient.createNovel({
+          novel_id: parsed.novelId,
+          title: parsed.title,
+          author: 'Drama',
+          target_chapters: Math.max(1, parsed.chapters.length),
+          premise: `从 ${parsed.fileName} 导入的 ${parsed.sourceFormat === 'markdown' ? 'Markdown' : 'TXT'} 文稿。`,
+          genre: '',
+          world_preset: '',
+          story_structure: parsed.chapters.length > 1 ? 'imported multi-chapter manuscript' : 'imported single-chapter manuscript',
+          pacing_control: '',
+          writing_style: '',
+          special_requirements: 'Preserve the imported manuscript continuity and use saved annotations as revision requirements.',
+          length_tier: parsed.chapters.length <= 3 ? 'short' : 'standard',
+          target_words_per_chapter: Math.min(
+            6000,
+            Math.max(
+              300,
+              Math.round(parsed.chapters.reduce((total, chapter) => total + countDraftText(chapter.content), 0) / parsed.chapters.length),
+            ),
+          ),
+        })
+      } catch (error) {
+        if (error instanceof PlotPilotHttpError && (error.status === 400 || error.status === 409)) {
+          novel = await activeClient.getNovel(parsed.novelId)
+        } else {
+          throw error
+        }
+      }
+
+      const savedChapters: ChapterDTO[] = []
+      for (const [index, sourceChapter] of parsed.chapters.entries()) {
+        setActiveJob((current) => current ? {
+          ...current,
+          phase: 'write_chapter',
+          detail: `写入第 ${sourceChapter.number} 章 / ${parsed.chapters.length}`,
+          progress: 20 + Math.round((index / Math.max(parsed.chapters.length, 1)) * 65),
+        } : current)
+        await activeClient.ensureChapter(novel.id, sourceChapter.number, { title: sourceChapter.title })
+        const savedChapter = await activeClient.updateChapter(novel.id, sourceChapter.number, {
+          content: sourceChapter.content,
+        })
+        savedChapters.push(savedChapter)
+      }
+
+      const refreshedChapters = await activeClient.listChapters(novel.id).catch(() => savedChapters)
+      const novelWithChapters = replaceNovelChapters(novel, refreshedChapters.length ? refreshedChapters : savedChapters)
+      const firstChapter = savedChapters[0] ?? novelWithChapters.chapters?.[0]
+
+      setNovels((current) => [novelWithChapters, ...current.filter((item) => item.id !== novelWithChapters.id)])
+      setSelectedNovelId(novelWithChapters.id)
+      if (firstChapter) {
+        setChapterEditor(toChapterEditor(firstChapter, { novelId: novelWithChapters.id }))
+        await writeChapterDraftToDramaGraph({
+          api,
+          graph: dramaGraph,
+          loadGraph: loadCurrentDramaGraph,
+          setGraph: setDramaGraph,
+          novelId: novelWithChapters.id,
+          chapter: firstChapter,
+          source: 'manual',
+        }).catch(() => false)
+      }
+
+      const importedAt = new Date().toISOString()
+      await recordPlmProjectFile({
+        novelId: novelWithChapters.id,
+        type: 'plm.workspace.imported',
+        title: `导入文稿：${parsed.fileName}`,
+        summary: {
+          ...novelRecordSummary(novelWithChapters),
+          sourceFile: parsed.fileName,
+          sourceFormat: parsed.sourceFormat,
+          importedChapterCount: savedChapters.length,
+          importedAt,
+        },
+        payload: {
+          schema: 'plotpilot.workspace_import.v1',
+          sourceFile: parsed.fileName,
+          sourceFormat: parsed.sourceFormat,
+          importedAt,
+          novel: novelRecordSummary(novelWithChapters),
+          chapters: savedChapters.map(chapterRecordSummary),
+        },
+        markdown: buildWorkspaceImportMarkdown(parsed, importedAt),
+      })
+
+      setFeatureState((current) => ({
+        ...current,
+        lastMessage: `已从 ${parsed.fileName} 构建《${parsed.title}》工作区。`,
+      }))
+      await loadSelectedBible(novelWithChapters.id).catch(() => undefined)
+      void loadNovels()
+    } catch (error) {
+      reportPlotPilotError(error)
+    } finally {
+      setActiveJob(null)
+    }
+  }, [api, dramaGraph, ensureRuntimeClient, loadCurrentDramaGraph, loadNovels, loadSelectedBible, recordPlmProjectFile])
+
   const saveNovelSetup = React.useCallback(async (novelId: string, draft: PlotPilotOnboardingDraft) => {
     setActiveJob({
       id: `novel:update:${novelId}`,
@@ -5135,6 +5460,7 @@ export function PlotPilotNativeContainer({
     onCreateNovelFromOnboarding: (draft) => void createNovelFromOnboarding(draft),
     onSaveNovelSetup: (novelId, draft) => void saveNovelSetup(novelId, draft),
     onImportStorylet: () => void importStorylet(),
+    onImportWorkspaceFile: (draft) => void importWorkspaceFile(draft),
     onSelectNovel: selectNovel,
     onGenerateBible: (novelId) => void generateBible(novelId),
     onSaveBible: (novelId, bible) => void saveBible(novelId, bible),
@@ -5219,6 +5545,7 @@ export function PlotPilotNativeContainer({
     hostedWrite,
     inferKnowledgeGraph,
     importStorylet,
+    importWorkspaceFile,
     loadInvocation,
     loadTraceTimeline,
     openChapter,
