@@ -23,6 +23,10 @@ const DRAMA_RUNTIME_LAUNCH_TIMEOUT_MS_PREF = "zen.drama.runtime-launch.timeout-m
 const DRAMA_OPEN_ON_STARTUP_PREF = "zen.drama.open-on-startup";
 const DRAMA_START_SURFACE_PREF = "zen.drama.start-surface";
 const DRAMA_PRODUCTION_FIXTURE_ENABLED_PREF = "zen.drama.production-fixture.enabled";
+const DRAMA_NATIVE_SIDEBAR_VISIBILITY_PREF = "sidebar.visibility";
+const DRAMA_NATIVE_SIDEBAR_EXPAND_ON_HOVER_PREF = "sidebar.expandOnHover";
+const DRAMA_ZEN_SIDEBAR_EXPANDED_PREF = "zen.view.sidebar-expanded";
+const DRAMA_PINNED_ENTRY_STYLE_PREF = "zen.drama.pinned-entry-style";
 const DRAMA_LOCKED_URL = "about:blank";
 
 class nsZenDramaManager extends nsZenDOMOperatedFeature {
@@ -32,47 +36,131 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   #tabSelectHandler = null;
   #panelOpenGeneration = 0;
   #isLocked = false;
+  #initialized = false;
+  #suppressBrowserTabHideUntil = 0;
+  #sidebarPinObserver = null;
+  #sidebarMountObserver = null;
+  #sidebarMountUpdatePending = false;
+  #startupOpenActive = false;
+  #startupOpenSettled = false;
 
   init() {
+    if (this.#initialized) {
+      return;
+    }
+    this.#initialized = true;
+
+    this.#prepareChromeShell();
+    this.#bindNativeSidebarPinning();
+    this.#bindSidebarMountObserver();
+    window.requestAnimationFrame(() => {
+      this.#prepareChromeShell();
+    });
+    window.setTimeout(() => {
+      this.#prepareChromeShell();
+    }, 1200);
+
+    window.addEventListener("focus", () => this.#sendTheme());
+    this.#bindTabSelection();
+
+    this.ensureStartupOpen();
+  }
+
+  ensureStartupOpen() {
+    if (!this.openOnStartup) {
+      return;
+    }
+
+    this.#scheduleStartupOpen();
+  }
+
+  #refreshElements() {
     this.panel = document.getElementById("zen-drama-panel");
     this.browser = document.getElementById("zen-drama-browser");
     this.status = document.getElementById("zen-drama-runtime-status");
     this.sidebarButton = document.getElementById("zen-drama-button");
     this.launcherButton = document.getElementById("zen-drama-launcher-button");
+  }
 
+  #prepareChromeShell() {
+    this.#refreshElements();
+    this.#dockPanelInsideAppContent();
+    this.#pinNativeSidebar();
+    this.#bindCommands();
+    this.#bindBrowserThemeBridge();
     this.#ensureLauncherButton();
+    this.#ensurePinnedPlmSidebarEntry();
     this.#ensureSidebarSurfaceButtons();
-    window.requestAnimationFrame(() => {
-      this.#ensureLauncherButton();
-      this.#ensureSidebarSurfaceButtons();
-      this.#updateActiveSurface();
-    });
-    window.setTimeout(() => {
-      this.#ensureLauncherButton();
-      this.#ensureSidebarSurfaceButtons();
-      this.#updateActiveSurface();
-    }, 1200);
+    this.#updateActiveSurface();
+  }
+
+  #bindCommands() {
     this.#bindCommand("cmd_zenDramaToggle", () => this.toggle());
     this.#bindCommand("cmd_zenDramaOpenGraph", () => this.open("graph"));
     this.#bindCommand("cmd_zenDramaOpenPlm", () => this.open("plm"));
     this.#bindCommand("cmd_zenDramaOpenCrew", () => this.open("crew"));
     this.#bindCommand("cmd_zenDramaOpenInTab", () => this.openInTab());
-
-    this.browser?.addEventListener("load", () => this.#sendTheme());
-    window.addEventListener("focus", () => this.#sendTheme());
-    this.#bindTabSelection();
-
-    if (this.openOnStartup) {
-      window.requestAnimationFrame(() => this.open(this.startSurface));
-    }
   }
 
   #bindCommand(id, handler) {
-    document.getElementById(id)?.addEventListener("command", event => {
+    const command = document.getElementById(id);
+    if (!command || command.getAttribute("zen-drama-command-bound") === "true") {
+      return;
+    }
+
+    command.addEventListener("command", event => {
       event.preventDefault();
       event.stopPropagation();
       handler();
     });
+    command.setAttribute("zen-drama-command-bound", "true");
+  }
+
+  #bindBrowserThemeBridge() {
+    if (!this.browser || this.browser.getAttribute("zen-drama-theme-bound") === "true") {
+      return;
+    }
+
+    this.browser.addEventListener("load", () => this.#sendTheme());
+    this.browser.setAttribute("zen-drama-theme-bound", "true");
+  }
+
+  #scheduleStartupOpen() {
+    if (this.#startupOpenActive || this.#startupOpenSettled) {
+      return;
+    }
+
+    this.#startupOpenActive = true;
+    const targetSurface = this.startSurface;
+    let attempts = 0;
+
+    const tryOpen = () => {
+      attempts += 1;
+      this.#suppressBrowserTabHideUntil = Math.max(this.#suppressBrowserTabHideUntil, Date.now() + 3500);
+      this.#prepareChromeShell();
+
+      if (this.panel && this.browser && !this.panel.hidden) {
+        this.#startupOpenSettled = true;
+        this.#startupOpenActive = false;
+        return;
+      }
+
+      this.open(targetSurface);
+      if (this.panel && !this.panel.hidden) {
+        this.#startupOpenSettled = true;
+        this.#startupOpenActive = false;
+        return;
+      }
+
+      if (attempts < 20) {
+        window.setTimeout(tryOpen, 250);
+      } else {
+        this.#startupOpenActive = false;
+      }
+    };
+
+    window.requestAnimationFrame(tryOpen);
+    window.setTimeout(tryOpen, 1200);
   }
 
   #ensureLauncherButton() {
@@ -106,6 +194,138 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
 
     this.launcherButton = button;
     return button;
+  }
+
+  #dockPanelInsideAppContent() {
+    const host = document.getElementById("zen-appcontent-wrapper");
+    if (!host || !this.panel || this.panel.parentElement === host) {
+      return;
+    }
+
+    host.appendChild(this.panel);
+  }
+
+  #pinNativeSidebar() {
+    try {
+      Services.prefs.setStringPref(DRAMA_NATIVE_SIDEBAR_VISIBILITY_PREF, "always-show");
+      Services.prefs.setBoolPref(DRAMA_NATIVE_SIDEBAR_EXPAND_ON_HOVER_PREF, false);
+      Services.prefs.setBoolPref(DRAMA_ZEN_SIDEBAR_EXPANDED_PREF, true);
+    } catch (error) {
+      console.warn("[ZenDrama] Failed to persist native sidebar state:", error);
+    }
+
+    document.documentElement.setAttribute("zen-sidebar-expanded", "true");
+    document.documentElement.setAttribute("zen-drama-sidebar-pinned", "true");
+  }
+
+  #bindNativeSidebarPinning() {
+    if (this.#sidebarPinObserver) {
+      return;
+    }
+
+    this.#sidebarPinObserver = new MutationObserver(() => {
+      if (document.documentElement.getAttribute("zen-sidebar-expanded") !== "true") {
+        window.requestAnimationFrame(() => this.#pinNativeSidebar());
+      }
+    });
+    this.#sidebarPinObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["zen-sidebar-expanded"],
+    });
+  }
+
+  #bindSidebarMountObserver() {
+    if (this.#sidebarMountObserver) {
+      return;
+    }
+
+    const scheduleSidebarMountUpdate = () => {
+      if (this.#sidebarMountUpdatePending) {
+        return;
+      }
+
+      this.#sidebarMountUpdatePending = true;
+      window.requestAnimationFrame(() => {
+        this.#sidebarMountUpdatePending = false;
+        this.#ensurePinnedPlmSidebarEntry();
+        this.#ensureSidebarSurfaceButtons();
+        this.#updatePinnedPlmActiveState();
+      });
+    };
+
+    this.#sidebarMountObserver = new MutationObserver(scheduleSidebarMountUpdate);
+    this.#sidebarMountObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+    scheduleSidebarMountUpdate();
+  }
+
+  #ensurePinnedPlmSidebarEntry() {
+    const tabs = document.getElementById("tabbrowser-tabs");
+    const tabWrapper = document.getElementById("zen-tabs-wrapper");
+    if (!tabs || !tabWrapper) {
+      return null;
+    }
+
+    const htmlNamespace = "http://www.w3.org/1999/xhtml";
+    let button = document.getElementById("zen-drama-plm-pinned-sidebar-entry");
+    if (!button || button.namespaceURI !== htmlNamespace || button.localName !== "button") {
+      button?.remove();
+      button = document.createElementNS(htmlNamespace, "button");
+      button.setAttribute("id", "zen-drama-plm-pinned-sidebar-entry");
+    }
+
+    if (!button.querySelector(".zen-drama-pinned-sidebar-entry-label")) {
+      const icon = document.createElementNS(htmlNamespace, "span");
+      icon.setAttribute("class", "zen-drama-pinned-sidebar-entry-icon");
+      icon.setAttribute("aria-hidden", "true");
+
+      const label = document.createElementNS(htmlNamespace, "span");
+      label.setAttribute("class", "zen-drama-pinned-sidebar-entry-label");
+      label.textContent = "Drama PLM";
+
+      button.replaceChildren(icon, label);
+    }
+
+    button.setAttribute("class", "zen-drama-pinned-sidebar-entry");
+    button.setAttribute("type", "button");
+    button.setAttribute("title", "Drama PLM");
+    button.setAttribute("aria-label", "Drama PLM");
+    button.setAttribute("zen-drama-pinned-style", this.pinnedEntryStyle);
+
+    if (button.getAttribute("zen-drama-pinned-entry-bound") !== "true") {
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.open("plm");
+      });
+      button.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this.open("plm");
+      });
+      button.setAttribute("zen-drama-pinned-entry-bound", "true");
+    }
+
+    if (button.parentElement !== tabs || tabWrapper.previousElementSibling !== button) {
+      tabs.insertBefore(button, tabWrapper);
+    }
+
+    return button;
+  }
+
+  #updatePinnedPlmActiveState() {
+    const pinnedEntry = document.getElementById("zen-drama-plm-pinned-sidebar-entry");
+    const panelVisible = Boolean(this.panel && !this.panel.hidden);
+    if (panelVisible && this.#surface === "plm") {
+      pinnedEntry?.setAttribute("zen-drama-active", "true");
+    } else {
+      pinnedEntry?.removeAttribute("zen-drama-active");
+    }
   }
 
   #ensureSidebarSurfaceButtons() {
@@ -280,6 +500,11 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     }
   }
 
+  get pinnedEntryStyle() {
+    const style = this.#getStringPref(DRAMA_PINNED_ENTRY_STYLE_PREF, "jade").trim().toLowerCase();
+    return style === "opal" ? "opal" : "jade";
+  }
+
   get runtimeLaunchCommand() {
     const configured = this.#getStringPref(DRAMA_RUNTIME_LAUNCH_COMMAND_PREF, "").trim();
     if (configured) {
@@ -341,12 +566,13 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   }
 
   open(surface = "graph") {
+    this.#prepareChromeShell();
     if (!this.panel || !this.browser) {
       return;
     }
 
-    this.#ensureLauncherButton();
-    this.#ensureSidebarSurfaceButtons();
+    this.#dockPanelInsideAppContent();
+    this.#pinNativeSidebar();
     this.#surface = surface;
     this.#panelOpenGeneration += 1;
     this.#isLocked = false;
@@ -388,6 +614,10 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   }
 
   #hideForBrowserTab() {
+    if (Date.now() < this.#suppressBrowserTabHideUntil) {
+      return;
+    }
+
     if (!this.panel || this.panel.hidden) {
       return;
     }
@@ -451,10 +681,11 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     const launcherButton = this.#ensureLauncherButton();
     launcherButton?.setAttribute("zen-drama-surface", this.#surface);
     launcherButton?.setAttribute("zen-drama-locked", this.#isLocked ? "true" : "false");
+    this.#ensurePinnedPlmSidebarEntry();
     this.#ensureSidebarSurfaceButtons();
     const ids = {
       graph: ["zen-drama-graph-button", "zen-drama-graph-sidebar-button"],
-      plm: ["zen-drama-plm-button", "zen-drama-plm-sidebar-button"],
+      plm: ["zen-drama-plm-button", "zen-drama-plm-sidebar-button", "zen-drama-plm-pinned-sidebar-entry"],
       crew: ["zen-drama-crew-button", "zen-drama-crew-sidebar-button"],
     };
     const panelVisible = Boolean(this.panel && !this.panel.hidden);
@@ -623,3 +854,14 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
 }
 
 window.gZenDramaManager = new nsZenDramaManager();
+const initializeZenDramaManager = () => window.gZenDramaManager?.init();
+const ensureZenDramaStartupOpen = () => window.gZenDramaManager?.ensureStartupOpen?.();
+if (document.readyState !== "loading") {
+  window.queueMicrotask(initializeZenDramaManager);
+} else {
+  document.addEventListener("DOMContentLoaded", initializeZenDramaManager, { once: true });
+}
+window.addEventListener("load", initializeZenDramaManager, { once: true });
+window.addEventListener("load", () => window.setTimeout(ensureZenDramaStartupOpen, 300), { once: true });
+window.setTimeout(ensureZenDramaStartupOpen, 1500);
+window.setTimeout(ensureZenDramaStartupOpen, 3000);

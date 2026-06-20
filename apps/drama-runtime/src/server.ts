@@ -106,6 +106,7 @@ const runtimePackageRoot = process.env.DRAMA_RUNTIME_PACKAGE_ROOT ?? null
 
 const store = new DramaGraphStore({ workspaceRoot })
 const plotPilotRuntime = new PlotPilotRuntimeManager()
+const promptRegistry = new Map<string, Record<string, unknown>>()
 let keepAliveTimer: ReturnType<typeof setInterval> | undefined
 
 function json(data: unknown, init: ResponseInit = {}): Response {
@@ -506,6 +507,90 @@ function proxyRequestHeaders(source: Headers): Headers {
   return headers
 }
 
+function proxyApiPath(pathname: string): string {
+  return pathname.slice('/plm/proxy/api/v1'.length) || '/'
+}
+
+function isPromptRegistryCompatPath(url: URL): boolean {
+  const path = proxyApiPath(url.pathname)
+  return path === '/llm-control/prompts'
+    || path === '/llm-control/prompts/stats'
+    || path === '/llm-control/prompts/nodes'
+    || path.startsWith('/llm-control/prompts/')
+}
+
+function promptRegistryNodeKey(path: string, payload: Record<string, unknown>): string {
+  const suffix = path.startsWith('/llm-control/prompts/')
+    ? decodeURIComponent(path.slice('/llm-control/prompts/'.length))
+    : ''
+  const payloadKey = String(payload.node_key ?? payload.nodeKey ?? payload.key ?? payload.id ?? '').trim()
+  const nameKey = String(payload.name ?? payload.title ?? 'drama-runtime-prompt')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return suffix || payloadKey || nameKey || `prompt-${promptRegistry.size + 1}`
+}
+
+async function parseProxyJsonBody(body: ArrayBuffer | undefined): Promise<Record<string, unknown>> {
+  if (!body || body.byteLength === 0) return {}
+  try {
+    const parsed = JSON.parse(new TextDecoder().decode(body))
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {}
+  } catch {
+    return {}
+  }
+}
+
+async function promptRegistryCompatResponse(method: string, url: URL, body: ArrayBuffer | undefined): Promise<Response | null> {
+  const path = proxyApiPath(url.pathname)
+  if (method === 'GET' && path === '/llm-control/prompts/stats') {
+    return json({
+      total: promptRegistry.size,
+      total_nodes: promptRegistry.size,
+      dramaRuntimePromptCompat: true,
+      source: 'drama-runtime-plotpilot-compat',
+    })
+  }
+
+  if (method === 'GET' && path === '/llm-control/prompts') {
+    const prompts = [...promptRegistry.values()]
+    return json({
+      prompts,
+      nodes: prompts,
+      total: prompts.length,
+      source: 'drama-runtime-plotpilot-compat',
+    })
+  }
+
+  if ((method === 'PUT' && path.startsWith('/llm-control/prompts/')) || (method === 'POST' && path === '/llm-control/prompts/nodes')) {
+    const payload = await parseProxyJsonBody(body)
+    const nodeKey = promptRegistryNodeKey(path, payload)
+    const existing = promptRegistry.get(nodeKey) ?? {}
+    const node = {
+      ...existing,
+      ...payload,
+      id: nodeKey,
+      key: nodeKey,
+      node_key: nodeKey,
+      updated_at: new Date().toISOString(),
+      source: 'drama-runtime-plotpilot-compat',
+    }
+    promptRegistry.set(nodeKey, node)
+    return json({
+      status: 'ok',
+      node,
+      message: 'Prompt stored by Drama runtime PlotPilot-compatible registry fallback.',
+      source: 'drama-runtime-plotpilot-compat',
+      compatible: true,
+    })
+  }
+
+  return null
+}
+
 async function proxyPlotPilotRequest(request: Request, url: URL): Promise<Response | null> {
   if (url.pathname !== '/plm/proxy/health' && !url.pathname.startsWith('/plm/proxy/api/v1')) {
     return null
@@ -523,14 +608,25 @@ async function proxyPlotPilotRequest(request: Request, url: URL): Promise<Respon
 
   const targetUrl = url.pathname === '/plm/proxy/health'
     ? `${status.baseUrl.replace(/\/+$/, '')}/health${url.search}`
-    : `${status.apiBaseUrl.replace(/\/+$/, '')}${url.pathname.slice('/plm/proxy/api/v1'.length) || '/'}${url.search}`
+    : `${status.apiBaseUrl.replace(/\/+$/, '')}${proxyApiPath(url.pathname)}${url.search}`
+  const requestBody = request.method === 'GET' || request.method === 'HEAD'
+    ? undefined
+    : await request.arrayBuffer()
 
   const targetResponse = await fetch(targetUrl, {
     method: request.method,
     headers: proxyRequestHeaders(request.headers),
-    body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+    body: requestBody,
     redirect: 'manual',
   })
+
+  if (
+    isPromptRegistryCompatPath(url)
+    && [404, 405, 501].includes(targetResponse.status)
+  ) {
+    const compatResponse = await promptRegistryCompatResponse(request.method, url, requestBody)
+    if (compatResponse) return compatResponse
+  }
 
   return new Response(targetResponse.body, {
     status: targetResponse.status,

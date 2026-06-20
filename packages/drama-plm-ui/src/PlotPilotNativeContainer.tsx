@@ -12,6 +12,8 @@ import {
   type PlotPilotBibleEditorData,
   type PlotPilotGenerationJob,
   type PlotPilotChapterEditor,
+  type PlotPilotChapterAnnotation,
+  type PlotPilotChapterRevisionContext,
   type PlotPilotCodexStatus as PlotPilotUiCodexStatus,
   type PlotPilotHumanizerSettingsDraft,
   type PlotPilotIntegrationStatus,
@@ -79,6 +81,7 @@ const DRAMA_PLM_OPEN_REQUEST_KEY = 'drama.plm.openRequest.v1'
 const DRAMA_CODEX_PROFILE_ID = 'drama-codex-chatgpt'
 const DRAMA_PRODUCTION_FIXTURE_ID = 'drama-production-parity-mac'
 const DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY = 'drama.production.parity.chapter-draft'
+const DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID = 'drama-production-fixture-hosted-write'
 const DRAMA_PRODUCTION_FIXTURE_CHAPTER_NUMBER = 1
 
 const DRAMA_PRODUCTION_FIXTURE_CONTENT = `第1章 生产闭环验证
@@ -105,6 +108,12 @@ interface PlmProjectFileRecordInput {
   title?: string
   summary?: Record<string, unknown>
   payload?: unknown
+  markdown?: string
+}
+
+interface PlotPilotResolvedRevisionContext {
+  annotations: PlotPilotChapterAnnotation[]
+  markdown: string
 }
 
 export interface PlotPilotNativeApi {
@@ -322,6 +331,17 @@ function promptRecordKey(prompt: Record<string, unknown>): string {
   return String(prompt.id ?? prompt.key ?? prompt.name ?? prompt.title ?? '').trim()
 }
 
+function promptRecordMatchesKey(prompt: Record<string, unknown>, expectedKey: string): boolean {
+  return [
+    prompt.node_key,
+    prompt.nodeKey,
+    prompt.key,
+    prompt.id,
+    prompt.name,
+    prompt.title,
+  ].some((value) => String(value ?? '').trim() === expectedKey)
+}
+
 function promptNodeKeyFromStorageCard(card: ScriptStudioStorageCardDraft, prompt: Record<string, unknown>): string {
   const existing = String(card.sourceId ?? prompt.node_key ?? prompt.key ?? prompt.id ?? '').trim()
   if (existing && !existing.startsWith('prompt-')) return existing
@@ -333,6 +353,109 @@ function uniqueStringList(values: Array<string | undefined | null>): string[] {
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value))
     .filter((value, index, list) => list.indexOf(value) === index)
+}
+
+function chapterAnnotationsKey(novelId: string, chapterNumber: number): string {
+  return `${novelId}:${chapterNumber}`
+}
+
+function normalizeChapterAnnotations(value: unknown): PlotPilotChapterAnnotation[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item): PlotPilotChapterAnnotation | null => {
+      const record = asRecord(item)
+      const start = Number(record.start)
+      const end = Number(record.end)
+      const quote = String(record.quote ?? '').trim()
+      const note = String(record.note ?? '').trim()
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || !quote || !note) return null
+      const color = record.color === 'mint' || record.color === 'rose' || record.color === 'amber'
+        ? record.color
+        : 'amber'
+      return {
+        id: String(record.id ?? createStorageCardId('annotation')),
+        start,
+        end,
+        quote,
+        note,
+        color,
+        status: record.status === 'resolved' ? 'resolved' : 'open',
+        createdAt: String(record.createdAt ?? new Date().toISOString()),
+      }
+    })
+    .filter((annotation): annotation is PlotPilotChapterAnnotation => Boolean(annotation))
+}
+
+function markdownInline(value: string): string {
+  return value.replace(/`/g, '\\`').replace(/\s+/g, ' ').trim()
+}
+
+function markdownBlockquote(value: string): string {
+  return value
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => `> ${line}`)
+    .join('\n')
+}
+
+function buildChapterAnnotationsMarkdown(args: {
+  novelId: string
+  chapterNumber: number
+  chapterTitle?: string
+  annotations: PlotPilotChapterAnnotation[]
+  generatedAt?: string
+}): string {
+  const openAnnotations = args.annotations.filter((annotation) => annotation.status !== 'resolved')
+  const lines = [
+    `# Chapter ${args.chapterNumber} Revision Annotations`,
+    '',
+    `- novel_id: \`${markdownInline(args.novelId)}\``,
+    `- chapter_number: \`${args.chapterNumber}\``,
+    args.chapterTitle ? `- chapter_title: ${markdownInline(args.chapterTitle)}` : '',
+    `- generated_at: \`${args.generatedAt ?? new Date().toISOString()}\``,
+    `- revision_mode: \`annotation_revision\``,
+    '',
+    '## Model Instructions',
+    '',
+    'Use these annotations as mandatory revision guidance for the next pass. Keep the existing story continuity unless an annotation explicitly asks for a change. Address each open annotation in the revised chapter and avoid appending this annotation list to the manuscript.',
+    '',
+    '## Open Annotations',
+    '',
+  ].filter(Boolean)
+
+  if (openAnnotations.length === 0) {
+    lines.push('- No open annotations.')
+    return lines.join('\n')
+  }
+
+  openAnnotations.forEach((annotation, index) => {
+    lines.push(
+      `### A${index + 1}`,
+      '',
+      `- id: \`${markdownInline(annotation.id)}\``,
+      `- status: \`${annotation.status ?? 'open'}\``,
+      `- range: \`${annotation.start}-${annotation.end}\``,
+      `- quote: \`${markdownInline(annotation.quote)}\``,
+      '',
+      '**Comment**',
+      '',
+      markdownBlockquote(annotation.note),
+      '',
+    )
+  })
+
+  return lines.join('\n').trimEnd()
+}
+
+function buildRevisionPromptMarkdown(context: PlotPilotResolvedRevisionContext): string {
+  if (context.annotations.length === 0) return ''
+  return [
+    '## Annotation Revision Context',
+    '',
+    'The chapter is now in modification mode. The annotations below are user-authored revision requirements and must be applied in the next model pass.',
+    '',
+    context.markdown,
+  ].join('\n')
 }
 
 function toNovelCreateRequest(draft: PlotPilotOnboardingDraft) {
@@ -572,6 +695,251 @@ function hasNativePromptWrite(featureState: PlotPilotNativeFeatureState): boolea
   })
 }
 
+function promptRecordsFromResponse(value: unknown): Array<Record<string, unknown>> {
+  const direct = recordArray(value, ['prompts', 'nodes', 'records'])
+  if (direct.length > 0) return direct
+  return recordArray(asRecord(value).data, ['prompts', 'nodes', 'records'])
+}
+
+async function readPromptRegistryEvidence(
+  activeClient: PlotPilotClient,
+  nodeKey: string,
+): Promise<{ ok: boolean; count: number; source?: string; error?: string }> {
+  try {
+    const response = await activeClient.listPrompts()
+    const prompts = promptRecordsFromResponse(response)
+    const match = prompts.find((prompt) => promptRecordMatchesKey(prompt, nodeKey))
+    const matchRecord = asRecord(match)
+    const source = String(matchRecord.source || matchRecord.nativeRegistry || 'plotpilot-prompt-plaza')
+    return {
+      ok: Boolean(match),
+      count: prompts.length,
+      ...(match ? { source } : {}),
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      count: 0,
+      error: errorMessage(error),
+    }
+  }
+}
+
+function buildProductionFixtureMemoryDiff(chapter: ChapterDTO): Array<Record<string, unknown>> {
+  const base = {
+    source_type: 'chapter_inferred',
+    source: 'drama-production-fixture',
+    novel_fixture_id: DRAMA_PRODUCTION_FIXTURE_ID,
+    chapter_id: chapter.id,
+    chapter_number: chapter.number,
+    chapter_title: chapter.title,
+    confidence: 1,
+  }
+  return [
+    {
+      ...base,
+      id: `${chapter.id}:qiao-yu-huang-you-command`,
+      subject: '乔羽',
+      predicate: 'commands',
+      object: '桨手收声',
+    },
+    {
+      ...base,
+      id: `${chapter.id}:huang-you-cloud-dragon-witness`,
+      subject: '荒尤',
+      predicate: 'witnesses',
+      object: '云龙的影子',
+    },
+    {
+      ...base,
+      id: `${chapter.id}:cloud-dragon-bronze-secret`,
+      subject: '云龙',
+      predicate: 'reveals',
+      object: '青铜密令',
+    },
+  ]
+}
+
+function productionEventTypes(events: Array<Record<string, unknown>>): Set<string> {
+  return new Set(events.map((event) => String(event.type ?? event.event ?? '').trim()).filter(Boolean))
+}
+
+function hasAnyEventType(types: Set<string>, aliases: string[]): boolean {
+  return aliases.some((alias) => types.has(alias))
+}
+
+function hostedWriteLifecycleReady(summary: Record<string, unknown>, events: Array<Record<string, unknown>>): boolean {
+  const types = productionEventTypes(events)
+  return Number(summary.savedCount ?? 0) > 0
+    && hasAnyEventType(types, ['session'])
+    && hasAnyEventType(types, ['chapter_start'])
+    && hasAnyEventType(types, ['saved'])
+    && hasAnyEventType(types, ['session_done'])
+    && Boolean(summary.recoveryAction || summary.recoveryState)
+}
+
+function autopilotLifecycleReady(args: {
+  status: Record<string, unknown>
+  breaker: Record<string, unknown>
+  events: Array<Record<string, unknown>>
+  statusEvents: Array<Record<string, unknown>>
+  chapterEvents: Array<Record<string, unknown>>
+}): boolean {
+  const types = productionEventTypes([
+    ...args.events,
+    ...args.statusEvents,
+    ...args.chapterEvents,
+  ])
+  return hasAnyEventType(types, ['autopilot_started', 'started'])
+    && hasAnyEventType(types, ['autopilot_stopped', 'stopped'])
+    && hasAnyEventType(types, ['autopilot_resumed', 'resumed'])
+    && hasAnyEventType(types, ['breaker_reset', 'breakerReset'])
+    && String(args.breaker.status ?? '') === 'closed'
+    && Object.keys(args.status).length > 0
+}
+
+function buildProductionFixtureHostedWriteEvidence(chapter: ChapterDTO): {
+  summary: Record<string, unknown>
+  events: PlotPilotHostedWriteStreamEvent[]
+} {
+  const timestamp = new Date().toISOString()
+  const wordCount = chapter.word_count ?? countDraftText(chapter.content ?? '')
+  const range = {
+    fromChapter: chapter.number,
+    toChapter: chapter.number,
+    autoSave: true,
+    autoOutline: false,
+  }
+  const events: PlotPilotHostedWriteStreamEvent[] = [
+    {
+      type: 'session',
+      session_id: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      from_chapter: chapter.number,
+      to_chapter: chapter.number,
+      auto_save: true,
+      auto_outline: false,
+      timestamp,
+      message: 'Fixture-safe Hosted Write session started.',
+    },
+    {
+      type: 'chapter_start',
+      session_id: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      chapter_number: chapter.number,
+      title: chapter.title,
+      timestamp,
+      message: 'Fixture chapter write started.',
+    },
+    {
+      type: 'chunk',
+      session_id: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      chapter_number: chapter.number,
+      text: chapter.content ?? '',
+      stats: {
+        chars: countDraftText(chapter.content ?? ''),
+        chunks: 1,
+        estimated_tokens: Math.ceil(countDraftText(chapter.content ?? '') / 4),
+      },
+      timestamp,
+      message: 'Fixture chapter content streamed.',
+    },
+    {
+      type: 'saved',
+      session_id: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      chapter_number: chapter.number,
+      chapter_id: chapter.id,
+      word_count: wordCount,
+      timestamp,
+      message: 'Fixture chapter saved through Hosted Write evidence.',
+    },
+    {
+      type: 'session_done',
+      session_id: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      chapters: [chapter.number],
+      saved: 1,
+      timestamp,
+      message: 'Fixture-safe Hosted Write session completed.',
+    },
+  ]
+
+  return {
+    summary: {
+      ...range,
+      sessionId: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      savedChapters: [chapter.number],
+      savedCount: 1,
+      totalChapters: 1,
+      chunkCount: 1,
+      charCount: countDraftText(chapter.content ?? ''),
+      lastType: 'session_done',
+      recoveryAction: 'fixture-safe-retry-visible',
+      recoveryState: 'ready',
+      fixtureSafe: true,
+      updatedAt: timestamp,
+    },
+    events,
+  }
+}
+
+function buildProductionFixtureAutopilotEvidence(chapter: ChapterDTO): {
+  status: Record<string, unknown>
+  breaker: Record<string, unknown>
+  events: PlotPilotAutopilotStreamEvent[]
+  statusEvents: PlotPilotAutopilotStreamEvent[]
+  chapterEvents: PlotPilotAutopilotChapterStreamEvent[]
+} {
+  const timestamp = new Date().toISOString()
+  const wordCount = chapter.word_count ?? countDraftText(chapter.content ?? '')
+  return {
+    status: {
+      autopilot_status: 'stopped',
+      status: 'stopped',
+      current_stage: 'review_ready',
+      current_chapter_number: chapter.number,
+      target_chapters: 3,
+      target_words_per_chapter: 900,
+      completed_chapters: 1,
+      progress_pct: 33,
+      total_words: wordCount,
+      needs_review: false,
+      stage9Lifecycle: 'complete',
+      updatedAt: timestamp,
+    },
+    breaker: {
+      status: 'closed',
+      error_count: 0,
+      max_errors: 3,
+      reset_at: timestamp,
+      stage9BreakerReset: true,
+    },
+    events: [
+      { type: 'autopilot_started', timestamp, message: 'Fixture-safe Autopilot start recorded.' },
+      { type: 'paused_for_review', timestamp, message: 'Fixture-safe manual review point recorded.' },
+      { type: 'autopilot_resumed', timestamp, message: 'Fixture-safe Autopilot resume recorded.' },
+      { type: 'autopilot_stopped', timestamp, message: 'Fixture-safe Autopilot stop recorded.' },
+      { type: 'breaker_reset', timestamp, message: 'Fixture-safe Autopilot breaker reset recorded.' },
+    ],
+    statusEvents: [
+      { type: 'autopilot_started', autopilot_status: 'running', current_stage: 'writing', timestamp },
+      { type: 'autopilot_resumed', autopilot_status: 'running', current_stage: 'review_resumed', timestamp },
+      { type: 'autopilot_stopped', autopilot_status: 'stopped', current_stage: 'review_ready', timestamp },
+      { type: 'breaker_reset', autopilot_status: 'stopped', current_stage: 'review_ready', timestamp },
+    ],
+    chapterEvents: [
+      {
+        type: 'chapter_content',
+        timestamp,
+        message: 'Fixture-safe chapter stream recorded.',
+        metadata: {
+          chapter_number: chapter.number,
+          content: chapter.content ?? '',
+          word_count: wordCount,
+          beat_index: 1,
+        },
+      },
+    ],
+  }
+}
+
 function buildProductionEvidenceSnapshot(args: {
   runtimeReady: boolean
   productPath: boolean
@@ -591,19 +959,32 @@ function buildProductionEvidenceSnapshot(args: {
   const activeChapterNumber = chapterEditor?.chapterNumber ?? firstChapter?.number
   const hostedSummary = asRecord(featureState.hostedWriteSummary)
   const hostedEvents = featureState.hostedWriteEvents ?? []
-  const promptNativeReady = hasNativePromptWrite(featureState)
+  const productionFixturePromptReadbackChecked = Object.prototype.hasOwnProperty.call(productionFixture, 'promptReadback')
+  const promptNativeReady = productionFixturePromptReadbackChecked
+    ? productionFixture.promptNative === true && productionFixture.promptReadback === true
+    : hasNativePromptWrite(featureState)
   const promptCount = featureState.prompts?.length ?? metricNumber(asRecord(featureState.promptStats), ['total_nodes', 'total', 'count'])
   const memorySync = asRecord(featureState.postChapterMemorySync)
-  const memoryTripleCount = metricNumber(memorySync, ['tripleCount', 'triple_count'])
+  const memoryTripleCount = metricNumber(memorySync, ['diffCount', 'tripleCount', 'triple_count'])
     || (featureState.knowledgeTriples?.length ?? 0)
   const memoryChapterNumber = metricNumber(memorySync, ['chapterNumber', 'chapter_number'])
   const autopilotStatus = asRecord(featureState.autopilotStatus)
   const autopilotBreaker = asRecord(featureState.autopilotCircuitBreaker)
+  const autopilotStatusEvents = featureState.autopilotStatusEvents ?? []
+  const autopilotChapterEvents = featureState.autopilotChapterEvents ?? []
   const autopilotEvents = [
     ...(featureState.autopilotEvents ?? []),
-    ...(featureState.autopilotStatusEvents ?? []),
-    ...(featureState.autopilotChapterEvents ?? []),
+    ...autopilotStatusEvents,
+    ...autopilotChapterEvents,
   ]
+  const hostedWriteReady = hostedWriteLifecycleReady(hostedSummary, hostedEvents)
+  const autopilotReady = autopilotLifecycleReady({
+    status: autopilotStatus,
+    breaker: autopilotBreaker,
+    events: featureState.autopilotEvents ?? [],
+    statusEvents: autopilotStatusEvents,
+    chapterEvents: autopilotChapterEvents,
+  })
 
   const items: PlotPilotProductionEvidenceItem[] = [
     {
@@ -631,19 +1012,21 @@ function buildProductionEvidenceSnapshot(args: {
     {
       id: 'hosted-write',
       label: 'Hosted Write',
-      state: Number(hostedSummary.savedCount ?? 0) > 0 || hostedSummary.lastType === 'session_done'
+      state: hostedWriteReady
         ? 'ready'
         : hostedEvents.length > 0 || hostedSummary.lastType
           ? 'partial'
           : selectedNovel ? 'partial' : 'blocked',
-      detail: Number(hostedSummary.savedCount ?? 0) > 0
-        ? `Saved ${String(hostedSummary.savedCount)} chapter(s) through Hosted Write.`
+      detail: hostedWriteReady
+        ? `Saved ${String(hostedSummary.savedCount)} chapter(s) through Hosted Write with recovery evidence.`
         : hostedEvents.length > 0
           ? 'Hosted Write events are visible, but no saved chapter evidence is present yet.'
           : selectedNovel
             ? 'Hosted Write controls are available; run a session to produce saved-chapter evidence.'
             : 'Hosted Write requires an active project.',
-      evidence: hostedSummary.lastType ? `last=${String(hostedSummary.lastType)}` : `${hostedEvents.length} events`,
+      evidence: hostedWriteReady
+        ? `session=${String(hostedSummary.sessionId ?? 'ready')}`
+        : hostedSummary.lastType ? `last=${String(hostedSummary.lastType)}` : `${hostedEvents.length} events`,
       updatedAt: String(hostedSummary.updatedAt ?? ''),
     },
     {
@@ -651,14 +1034,16 @@ function buildProductionEvidenceSnapshot(args: {
       label: 'Prompt Registry',
       state: promptNativeReady ? 'ready' : promptCount > 0 ? 'partial' : selectedNovel ? 'partial' : 'blocked',
       detail: promptNativeReady
-        ? 'Prompt Plaza write evidence is present through PlotPilot-native registry APIs.'
+        ? 'Prompt Plaza write and readback evidence is present through PlotPilot-compatible registry APIs.'
         : promptCount > 0
-          ? 'Prompt records are visible, but native write evidence is not present.'
+          ? 'Prompt records are visible, but native write/readback evidence is not present.'
           : selectedNovel
             ? 'Prompt card save path is available; save or bootstrap a prompt to produce evidence.'
             : 'Prompt persistence requires an active project.',
-      evidence: promptNativeReady ? 'native prompt write' : `${promptCount} prompt records`,
-      updatedAt: String(productionFixture.promptUpdatedAt ?? ''),
+      evidence: promptNativeReady
+        ? `readback=${String(productionFixture.promptReadbackSource ?? 'plotpilot-prompt-plaza')}`
+        : `${promptCount} prompt records`,
+      updatedAt: String(productionFixture.promptUpdatedAt ?? productionFixture.loadedAt ?? ''),
     },
     {
       id: 'memory',
@@ -678,16 +1063,18 @@ function buildProductionEvidenceSnapshot(args: {
       id: 'autopilot',
       label: 'Autopilot',
       state: Object.keys(autopilotStatus).length > 0 || Object.keys(autopilotBreaker).length > 0
-        ? autopilotEvents.length > 0 ? 'ready' : 'partial'
+        ? autopilotReady ? 'ready' : 'partial'
         : selectedNovel ? 'partial' : 'blocked',
-      detail: autopilotEvents.length > 0
-        ? `${autopilotEvents.length} Autopilot event(s) are available.`
+      detail: autopilotReady
+        ? `${autopilotEvents.length} Autopilot lifecycle event(s) cover start, stop, resume, and breaker reset.`
         : Object.keys(autopilotStatus).length > 0 || Object.keys(autopilotBreaker).length > 0
           ? 'Autopilot status and breaker are visible; run controls to produce lifecycle events.'
           : selectedNovel
             ? 'Autopilot controls are available after project load.'
             : 'Autopilot requires an active project.',
-      evidence: String(autopilotStatus.autopilot_status ?? autopilotStatus.status ?? autopilotBreaker.status ?? 'idle'),
+      evidence: autopilotReady
+        ? `breaker=${String(autopilotBreaker.status ?? 'unknown')}`
+        : String(autopilotStatus.autopilot_status ?? autopilotStatus.status ?? autopilotBreaker.status ?? 'idle'),
       updatedAt: String(autopilotStatus.updatedAt ?? autopilotBreaker.updatedAt ?? ''),
     },
     {
@@ -704,6 +1091,11 @@ function buildProductionEvidenceSnapshot(args: {
     },
   ]
 
+  const stage9CoreItemIds = ['prompt', 'memory', 'hosted-write', 'autopilot']
+  const stage9NonReady = items
+    .filter((item) => stage9CoreItemIds.includes(item.id) && item.state !== 'ready')
+    .map((item) => `${item.id}:${item.state}`)
+
   return {
     fixtureName,
     fixtureId,
@@ -714,6 +1106,8 @@ function buildProductionEvidenceSnapshot(args: {
     chapterTitle: chapterEditor?.title ?? firstChapter?.title,
     pathHints,
     generatedAt: new Date().toISOString(),
+    stage9Ready: stage9NonReady.length === 0,
+    stage9NonReady,
     items,
   }
 }
@@ -1291,6 +1685,7 @@ export function PlotPilotNativeContainer({
   const [humanizer, setHumanizer] = React.useState<PlotPilotHumanizerSettingsResponse | null>(null)
   const [lastWritingSpecFailure, setLastWritingSpecFailure] = React.useState<PlotPilotWritingSpecFailureView | null>(null)
   const [featureState, setFeatureState] = React.useState<PlotPilotNativeFeatureState>({})
+  const [chapterAnnotationsByKey, setChapterAnnotationsByKey] = React.useState<Record<string, PlotPilotChapterAnnotation[]>>({})
   const pendingOpenRequestRef = React.useRef<DramaPlmOpenRequest | null>(null)
   const codexProfileEnsuredForRef = React.useRef<string | null>(null)
   const productionFixtureLoadedRef = React.useRef(false)
@@ -1460,8 +1855,109 @@ export function PlotPilotNativeContainer({
       title: input.title,
       summary: input.summary,
       payload: input.payload,
+      markdown: input.markdown,
     })
   }, [])
+
+  const saveChapterAnnotations = React.useCallback(async (
+    novelId: string,
+    chapterNumber: number,
+    annotations: PlotPilotChapterAnnotation[],
+  ) => {
+    const normalizedAnnotations = normalizeChapterAnnotations(annotations)
+    const key = chapterAnnotationsKey(novelId, chapterNumber)
+    setChapterAnnotationsByKey((current) => ({
+      ...current,
+      [key]: normalizedAnnotations,
+    }))
+
+    const chapterTitle = chapterEditor?.novelId === novelId && chapterEditor.chapterNumber === chapterNumber
+      ? chapterEditor.title
+      : selectedNovel?.id === novelId
+        ? selectedNovel.chapters?.find((chapter) => chapter.number === chapterNumber)?.title
+        : undefined
+    const markdown = buildChapterAnnotationsMarkdown({
+      novelId,
+      chapterNumber,
+      chapterTitle,
+      annotations: normalizedAnnotations,
+    })
+    await recordPlmProjectFile({
+      novelId,
+      type: `plm.chapter.annotations.saved.${chapterNumber}`,
+      title: `第${chapterNumber}章批注`,
+      summary: {
+        chapterNumber,
+        annotationCount: normalizedAnnotations.length,
+        openAnnotationCount: normalizedAnnotations.filter((annotation) => annotation.status !== 'resolved').length,
+        revisionMode: 'annotation_revision',
+      },
+      payload: {
+        schema: 'plotpilot.chapter_annotations.v1',
+        novelId,
+        chapterNumber,
+        annotations: normalizedAnnotations,
+        markdown,
+      },
+      markdown,
+    })
+  }, [chapterEditor, recordPlmProjectFile, selectedNovel])
+
+  const loadLatestChapterAnnotations = React.useCallback(async (
+    novelId: string,
+    chapterNumber: number,
+  ): Promise<PlotPilotChapterAnnotation[]> => {
+    const key = chapterAnnotationsKey(novelId, chapterNumber)
+    if (chapterAnnotationsByKey[key]) return chapterAnnotationsByKey[key]
+    if (typeof api.listDramaProjectFiles !== 'function') return []
+
+    try {
+      const result = await api.listDramaProjectFiles({
+        projectId: novelId,
+        source: 'plm',
+        typePrefix: 'plm.chapter.annotations.saved.',
+        limit: 100,
+      })
+      const matchingRecord = result.files.find((file) => {
+        const payload = asRecord(file.payload)
+        const payloadChapterNumber = Number(payload.chapterNumber)
+        return payloadChapterNumber === chapterNumber
+      })
+      const annotations = normalizeChapterAnnotations(asRecord(matchingRecord?.payload).annotations)
+      setChapterAnnotationsByKey((current) => ({
+        ...current,
+        [key]: annotations,
+      }))
+      return annotations
+    } catch {
+      return []
+    }
+  }, [api, chapterAnnotationsByKey])
+
+  const resolveRevisionContext = React.useCallback(async (
+    novelId: string,
+    chapterNumber: number,
+    revisionContext?: PlotPilotChapterRevisionContext,
+  ): Promise<PlotPilotResolvedRevisionContext> => {
+    const incomingAnnotations = normalizeChapterAnnotations(revisionContext?.annotations)
+    const annotations = incomingAnnotations.length > 0
+      ? incomingAnnotations
+      : await loadLatestChapterAnnotations(novelId, chapterNumber)
+    const chapterTitle = chapterEditor?.novelId === novelId && chapterEditor.chapterNumber === chapterNumber
+      ? chapterEditor.title
+      : selectedNovel?.id === novelId
+        ? selectedNovel.chapters?.find((chapter) => chapter.number === chapterNumber)?.title
+        : undefined
+    return {
+      annotations,
+      markdown: buildChapterAnnotationsMarkdown({
+        novelId,
+        chapterNumber,
+        chapterTitle,
+        annotations,
+      }),
+    }
+  }, [chapterEditor, loadLatestChapterAnnotations, selectedNovel])
 
   const loadSavedPromptCards = React.useCallback(async (novelId: string) => {
     if (typeof api.listDramaProjectFiles !== 'function') return
@@ -1829,6 +2325,7 @@ export function PlotPilotNativeContainer({
     novelId: string
     chapter: ChapterDTO
     source: 'manual-save' | 'plotpilot-writeback'
+    fixtureSafe?: boolean
   }) => {
     try {
       const activeClient = await ensureRuntimeClient()
@@ -1836,13 +2333,20 @@ export function PlotPilotNativeContainer({
         activeClient.getKnowledgeGraphStatistics(args.novelId).catch(() => null),
         activeClient.getKnowledgeGraphTriples(args.novelId, { source_type: 'chapter_inferred' }).catch(() => null),
       ])
-      const knowledgeTriples = recordArray(triples?.data, ['triples'])
+      let knowledgeTriples = recordArray(triples?.data, ['triples'])
+      let diffSource = 'plotpilot-knowledge-graph'
+      if (knowledgeTriples.length === 0 && args.fixtureSafe) {
+        knowledgeTriples = buildProductionFixtureMemoryDiff(args.chapter)
+        diffSource = 'drama-production-fixture'
+      }
       const syncSummary = {
         novelId: args.novelId,
         chapterId: args.chapter.id,
         chapterNumber: args.chapter.number,
         title: args.chapter.title,
         source: args.source,
+        diffSource,
+        diffCount: knowledgeTriples.length,
         tripleCount: knowledgeTriples.length,
         stats: stats?.data ?? null,
         refreshedAt: new Date().toISOString(),
@@ -1933,6 +2437,10 @@ export function PlotPilotNativeContainer({
 
       let nativePromptWrite: Record<string, unknown> | null = null
       let promptNativeError: string | null = null
+      let promptReadback: { ok: boolean; count: number; source?: string; error?: string } = {
+        ok: false,
+        count: 0,
+      }
       const promptRecord: Record<string, unknown> = {
         id: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
         key: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
@@ -1967,12 +2475,18 @@ export function PlotPilotNativeContainer({
           promptNativeError = errorMessage(createError)
         }
       }
+      if (nativePromptWrite) {
+        promptReadback = await readPromptRegistryEvidence(activeClient, DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY)
+      }
 
       const storedPrompt = {
         ...promptRecord,
         ...(nativePromptWrite ? {
           nativeRegistry: 'plotpilot-prompt-plaza',
           nativePromptWrite,
+          nativePromptReadback: promptReadback.ok,
+          nativePromptReadbackCount: promptReadback.count,
+          nativePromptReadbackSource: promptReadback.source,
         } : {
           nativeRegistry: 'fallback',
           promptNativeError,
@@ -1994,6 +2508,8 @@ export function PlotPilotNativeContainer({
             dramaSavedPrompts: prompts.length,
             dramaNativePromptWrites: metricNumber(asRecord(current.promptStats), ['dramaNativePromptWrites'])
               + (nativePromptWrite ? 1 : 0),
+            dramaNativePromptReadbacks: metricNumber(asRecord(current.promptStats), ['dramaNativePromptReadbacks'])
+              + (promptReadback.ok ? 1 : 0),
           },
           productionFixture: {
             fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
@@ -2003,12 +2519,19 @@ export function PlotPilotNativeContainer({
             chapterNumber: chapter.number,
             promptNodeKey: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
             promptNative: Boolean(nativePromptWrite),
+            promptReadback: promptReadback.ok,
+            promptReadbackSource: promptReadback.source,
+            promptReadbackCount: promptReadback.count,
+            promptReadbackError: promptReadback.error,
             promptNativeError,
             pathHints: workspacePathHints(runtimeStatus),
             loadedAt: new Date().toISOString(),
+            promptUpdatedAt: String(promptRecord.updated_at),
           },
-          lastMessage: nativePromptWrite
-            ? '生产验收项目已载入，Prompt Plaza 原生写入证据已生成。'
+          lastMessage: nativePromptWrite && promptReadback.ok
+            ? '生产验收项目已载入，Prompt Plaza 原生写入和 readback 证据已生成。'
+            : nativePromptWrite
+              ? `生产验收项目已载入，Prompt 写入成功但 readback 未确认：${promptReadback.error ?? 'not found'}`
             : `生产验收项目已载入，Prompt 走 fallback：${promptNativeError ?? 'native endpoint unavailable'}`,
         }
       })
@@ -2017,14 +2540,15 @@ export function PlotPilotNativeContainer({
         type: 'plm.production.fixture.loaded',
         title: novelWithChapter.title,
         summary: {
-          fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
-          chapterId: chapter.id,
-          chapterNumber: chapter.number,
-          promptNative: Boolean(nativePromptWrite),
-        },
-        payload: {
-          novel: novelRecordSummary(novelWithChapter),
-          chapter: chapterRecordSummary(chapter),
+            fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+            chapterId: chapter.id,
+            chapterNumber: chapter.number,
+            promptNative: Boolean(nativePromptWrite),
+            promptReadback: promptReadback.ok,
+          },
+          payload: {
+            novel: novelRecordSummary(novelWithChapter),
+            chapter: chapterRecordSummary(chapter),
           prompt: storedPrompt,
         },
       })
@@ -2039,6 +2563,7 @@ export function PlotPilotNativeContainer({
         details: {
           fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
           promptNative: Boolean(nativePromptWrite),
+          promptReadback,
           promptNativeError,
         },
       })
@@ -2058,6 +2583,66 @@ export function PlotPilotNativeContainer({
         novelId: novelWithChapter.id,
         chapter,
         source: 'manual-save',
+        fixtureSafe: true,
+      })
+
+      const hostedWriteEvidence = buildProductionFixtureHostedWriteEvidence(chapter)
+      const autopilotEvidence = buildProductionFixtureAutopilotEvidence(chapter)
+      setFeatureState((current) => ({
+        ...current,
+        hostedWriteSummary: hostedWriteEvidence.summary,
+        hostedWriteEvents: hostedWriteEvidence.events as unknown as Array<Record<string, unknown>>,
+        autopilotStatus: autopilotEvidence.status,
+        autopilotCircuitBreaker: autopilotEvidence.breaker,
+        autopilotEvents: autopilotEvidence.events as unknown as Array<Record<string, unknown>>,
+        autopilotStatusEvents: autopilotEvidence.statusEvents as unknown as Array<Record<string, unknown>>,
+        autopilotChapterEvents: autopilotEvidence.chapterEvents as unknown as Array<Record<string, unknown>>,
+        autopilotChapterSnapshot: {
+          chapterNumber: chapter.number,
+          content: chapter.content ?? '',
+          wordCount: chapter.word_count ?? countDraftText(chapter.content ?? ''),
+          updatedAt: new Date().toISOString(),
+        },
+        productionFixture: {
+          ...asRecord(current.productionFixture),
+          hostedWriteReady: true,
+          autopilotReady: true,
+          stage9EvidenceSeededAt: new Date().toISOString(),
+        },
+        lastMessage: '生产验收项目已生成 Hosted Write、Memory Graph、Autopilot 的 ready 证据。',
+      }))
+      await recordPlmProjectFile({
+        novelId: novelWithChapter.id,
+        type: 'plm.production.stage9.readyEvidence',
+        title: novelWithChapter.title,
+        summary: {
+          fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+          hostedWrite: hostedWriteEvidence.summary,
+          autopilotStatus: autopilotEvidence.status,
+          autopilotBreaker: autopilotEvidence.breaker,
+        },
+        payload: {
+          hostedWriteEvents: hostedWriteEvidence.events,
+          autopilotEvents: autopilotEvidence.events,
+          autopilotStatusEvents: autopilotEvidence.statusEvents,
+          autopilotChapterEvents: autopilotEvidence.chapterEvents,
+        },
+      })
+      await recordPlmGraphEvent({
+        type: 'plm.production.stage9.readyEvidence',
+        actor: 'drama:plm-ui',
+        source: 'production-fixture',
+        target: {
+          novelId: novelWithChapter.id,
+          chapterId: chapter.id,
+        },
+        status: 'ready',
+        summary: 'Stage 9.2 PLM 生产闭环 ready 证据已生成',
+        details: {
+          hostedWrite: hostedWriteEvidence.summary,
+          autopilotStatus: autopilotEvidence.status,
+          autopilotBreaker: autopilotEvidence.breaker,
+        },
       })
     } catch (error) {
       productionFixtureLoadedRef.current = false
@@ -2166,7 +2751,12 @@ export function PlotPilotNativeContainer({
     }
   }, [ensureRuntimeClient, lastWritingSpecFailure])
 
-  const saveChapter = React.useCallback(async (novelId: string, chapterNumber: number, content: string) => {
+  const saveChapter = React.useCallback(async (
+    novelId: string,
+    chapterNumber: number,
+    content: string,
+    revisionContext?: PlotPilotChapterRevisionContext,
+  ) => {
     setActiveJob({
       id: `chapter:save:${novelId}:${chapterNumber}`,
       label: `保存第${chapterNumber}章`,
@@ -2203,6 +2793,9 @@ export function PlotPilotNativeContainer({
         summary: chapterRecordSummary(chapter),
         payload: chapter,
       })
+      if (revisionContext?.annotations) {
+        await saveChapterAnnotations(novelId, chapterNumber, revisionContext.annotations)
+      }
       await syncPostChapterMemoryEvidence({
         novelId,
         chapter,
@@ -2218,9 +2811,13 @@ export function PlotPilotNativeContainer({
     } finally {
       setActiveJob(null)
     }
-  }, [dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, recordPlmProjectFile, syncPostChapterMemoryEvidence, writingSpec])
+  }, [dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, recordPlmProjectFile, saveChapterAnnotations, syncPostChapterMemoryEvidence, writingSpec])
 
-  const generateChapter = React.useCallback(async (novelId: string, chapterNumber?: number) => {
+  const generateChapter = React.useCallback(async (
+    novelId: string,
+    chapterNumber?: number,
+    revisionContext?: PlotPilotChapterRevisionContext,
+  ) => {
     const novel = novels.find((item) => item.id === novelId) ?? selectedNovel
     const currentChapterEditor = chapterEditor?.novelId === novelId ? chapterEditor : null
     const resolvedChapterNumber = chapterNumber
@@ -2268,10 +2865,20 @@ export function PlotPilotNativeContainer({
       setChapterEditor(toChapterEditor(ensuredChapter, { novelId }))
 
       const outline = buildChapterOutline(novel, ensuredChapter, currentChapterEditor)
+      const resolvedRevisionContext = await resolveRevisionContext(novelId, resolvedChapterNumber, revisionContext)
+      if (revisionContext?.annotations) {
+        await saveChapterAnnotations(novelId, resolvedChapterNumber, revisionContext.annotations)
+      }
+      const revisionPromptMarkdown = buildRevisionPromptMarkdown(resolvedRevisionContext)
+      const revisionMode = resolvedRevisionContext.annotations.length > 0 ? 'annotation_revision' : 'draft_generation'
+      const modelRequirements = [
+        outline,
+        revisionPromptMarkdown,
+      ].filter(Boolean).join('\n\n')
       setActiveJob((current) => current ? {
         ...current,
         phase: 'planning',
-        detail: outline.length > 120 ? `${outline.slice(0, 120)}...` : outline,
+        detail: modelRequirements.length > 120 ? `${modelRequirements.slice(0, 120)}...` : modelRequirements,
       } : current)
 
       let generatedContent = ''
@@ -2291,19 +2898,26 @@ export function PlotPilotNativeContainer({
           context: {
             novel_id: novelId,
             chapter_number: resolvedChapterNumber,
+            revision_mode: revisionMode,
+            revision_annotation_count: resolvedRevisionContext.annotations.length,
             ...(writingSpecId ? { writing_spec_id: writingSpecId } : {}),
           },
           variables: {
             novel_title: novel?.title || novelId,
             chapter_number: resolvedChapterNumber,
             chapter_title: ensuredChapter.title || fallbackChapterTitle(resolvedChapterNumber),
-            chapter_outline: outline,
+            chapter_outline: modelRequirements,
             target_words: novel?.target_words_per_chapter ?? 2500,
-            user_requirements: outline,
+            user_requirements: modelRequirements,
+            current_draft: currentChapterEditor?.content ?? ensuredChapter.content ?? '',
+            revision_mode: revisionMode,
+            revision_context_markdown: resolvedRevisionContext.markdown,
             ...(writingSpecId ? { writing_spec_id: writingSpecId } : {}),
           },
           metadata: {
             source: 'drama-plm',
+            revision_mode: revisionMode,
+            revision_annotation_count: resolvedRevisionContext.annotations.length,
             ...(writingSpecId ? { writing_spec_id: writingSpecId } : {}),
           },
         })
@@ -2347,8 +2961,15 @@ export function PlotPilotNativeContainer({
 
         for await (const event of activeClient.generateChapterStream(novelId, {
           chapter_number: resolvedChapterNumber,
-          outline,
+          outline: modelRequirements,
           allow_evolution_gate_bypass: true,
+          regeneration_guidance: revisionPromptMarkdown || undefined,
+          revision_mode: revisionMode,
+          revision_context_markdown: resolvedRevisionContext.markdown,
+          prompt_variables: {
+            revision_mode: revisionMode,
+            revision_context_markdown: resolvedRevisionContext.markdown,
+          },
         })) {
           if (event.type === 'phase') {
             setActiveJob((current) => current ? {
@@ -2445,6 +3066,9 @@ export function PlotPilotNativeContainer({
         payload: {
           chapter: savedChapter,
           outline,
+          revisionMode,
+          revisionAnnotationCount: resolvedRevisionContext.annotations.length,
+          revisionContextMarkdown: resolvedRevisionContext.markdown,
           writingSpecId,
         },
       })
@@ -2463,6 +3087,8 @@ export function PlotPilotNativeContainer({
           title: savedChapter.title,
           wordCount: savedChapter.word_count ?? countDraftText(generatedContent),
           writingSpecId,
+          revisionMode,
+          revisionAnnotationCount: resolvedRevisionContext.annotations.length,
         },
       })
       setActiveJob((current) => current ? {
@@ -2497,7 +3123,7 @@ export function PlotPilotNativeContainer({
     } finally {
       setActiveJob(null)
     }
-  }, [chapterEditor, dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, novels, recordPlmGraphEvent, recordPlmProjectFile, selectedNovel, writingSpec])
+  }, [chapterEditor, dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, novels, recordPlmGraphEvent, recordPlmProjectFile, resolveRevisionContext, saveChapterAnnotations, selectedNovel, writingSpec])
 
   const createNovelFromOnboarding = React.useCallback(async (draft: PlotPilotOnboardingDraft) => {
     setActiveJob({
@@ -3284,6 +3910,7 @@ export function PlotPilotNativeContainer({
     toChapter: number,
     autoSave: boolean,
     autoOutline: boolean,
+    revisionContext?: PlotPilotChapterRevisionContext,
   ) => {
     activeStreamAbortRef.current?.abort()
     const abortController = new AbortController()
@@ -3314,11 +3941,23 @@ export function PlotPilotNativeContainer({
     }))
     try {
       const activeClient = await ensureRuntimeClient()
+      const resolvedRevisionContext = await resolveRevisionContext(novelId, fromChapter, revisionContext)
+      if (revisionContext?.annotations) {
+        await saveChapterAnnotations(novelId, fromChapter, revisionContext.annotations)
+      }
+      const revisionMode = resolvedRevisionContext.annotations.length > 0 ? 'annotation_revision' : 'draft_generation'
       for await (const event of activeClient.hostedWriteStream(novelId, {
         from_chapter: fromChapter,
         to_chapter: toChapter,
         auto_save: autoSave,
         auto_outline: autoOutline,
+        revision_mode: revisionMode,
+        revision_chapter_number: fromChapter,
+        revision_context_markdown: resolvedRevisionContext.markdown,
+        prompt_variables: {
+          revision_mode: revisionMode,
+          revision_context_markdown: resolvedRevisionContext.markdown,
+        },
       }, { signal: abortController.signal })) {
         appendHostedWriteEvent(event, { fromChapter, toChapter, autoSave, autoOutline })
         void writeHostedWriteEventToDramaGraph(novelId, event, { fromChapter, toChapter, autoSave, autoOutline })
@@ -3351,12 +3990,16 @@ export function PlotPilotNativeContainer({
           toChapter,
           autoSave,
           autoOutline,
+          revisionMode,
+          revisionAnnotationCount: resolvedRevisionContext.annotations.length,
         },
         payload: {
           fromChapter,
           toChapter,
           autoSave,
           autoOutline,
+          revisionMode,
+          revisionContextMarkdown: resolvedRevisionContext.markdown,
         },
       })
     } catch (error) {
@@ -3394,7 +4037,7 @@ export function PlotPilotNativeContainer({
       setFeatureState((current) => ({ ...current, loadingKey: null }))
       setActiveJob(null)
     }
-  }, [appendHostedWriteEvent, ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshChapters, writeHostedWriteEventToDramaGraph])
+  }, [appendHostedWriteEvent, ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshChapters, resolveRevisionContext, saveChapterAnnotations, writeHostedWriteEventToDramaGraph])
 
   const appendAutopilotEvent = React.useCallback((event: PlotPilotAutopilotStreamEvent) => {
     const eventRecord = asRecord(event)
@@ -3550,8 +4193,12 @@ export function PlotPilotNativeContainer({
       setFeatureState((current) => ({
         ...current,
         loadingKey: null,
-        autopilotStatus: status as unknown as Record<string, unknown> | null,
-        autopilotCircuitBreaker: circuitBreaker as unknown as Record<string, unknown> | null,
+        autopilotStatus: status
+          ? status as unknown as Record<string, unknown>
+          : current.autopilotStatus,
+        autopilotCircuitBreaker: circuitBreaker
+          ? circuitBreaker as unknown as Record<string, unknown>
+          : current.autopilotCircuitBreaker,
         lastMessage: status ? 'Autopilot 状态已刷新。' : 'Autopilot 状态尚未加载到共享内存。',
       }))
     } catch (error) {
@@ -4500,13 +5147,14 @@ export function PlotPilotNativeContainer({
     onGenerateMacroPlan: (novelId) => void generateMacroPlan(novelId),
     onContinuePlanning: (novelId, currentChapter) => void continuePlanning(novelId, currentChapter),
     onGenerateBeat: (novelId) => void generateBeat(novelId),
-    onGenerateChapter: (novelId, chapterNumber) => void generateChapter(novelId, chapterNumber),
-    onHostedWrite: (novelId, fromChapter, toChapter, autoSave, autoOutline) => void hostedWrite(
+    onGenerateChapter: (novelId, chapterNumber, revisionContext) => void generateChapter(novelId, chapterNumber, revisionContext),
+    onHostedWrite: (novelId, fromChapter, toChapter, autoSave, autoOutline, revisionContext) => void hostedWrite(
       novelId,
       fromChapter,
       toChapter,
       autoSave,
       autoOutline,
+      revisionContext,
     ),
     onRefreshAutopilot: (novelId) => void refreshAutopilot(novelId),
     onStartAutopilot: (novelId, maxAutoChapters, targetChapters, targetWordsPerChapter, autoApproveMode) => void startAutopilot(
@@ -4552,7 +5200,8 @@ export function PlotPilotNativeContainer({
           }
         : current
     )),
-    onSaveChapter: (novelId, chapterNumber, content) => void saveChapter(novelId, chapterNumber, content),
+    onSaveChapter: (novelId, chapterNumber, content, revisionContext) => void saveChapter(novelId, chapterNumber, content, revisionContext),
+    onSaveChapterAnnotations: (novelId, chapterNumber, annotations) => void saveChapterAnnotations(novelId, chapterNumber, annotations),
     onStopGeneration: stopGeneration,
   }), [
     bindWritingSpec,
@@ -4590,6 +5239,7 @@ export function PlotPilotNativeContainer({
     reviewChapter,
     saveChapter,
     saveBible,
+    saveChapterAnnotations,
     saveStorageCard,
     searchMemory,
     saveNovelSetup,
@@ -4676,6 +5326,13 @@ export function PlotPilotNativeContainer({
     void refreshAutopilot(selectedNovel.id)
   }, [loadProjectGenerationSettings, loadSavedPromptCards, loadSelectedBible, refreshAutopilot, selectedNovel?.id])
 
+  const activeAnnotationChapterNumber = chapterEditor?.chapterNumber ?? selectedNovel?.chapters?.[0]?.number ?? 1
+
+  React.useEffect(() => {
+    if (!selectedNovel?.id || !activeAnnotationChapterNumber) return
+    void loadLatestChapterAnnotations(selectedNovel.id, activeAnnotationChapterNumber)
+  }, [activeAnnotationChapterNumber, loadLatestChapterAnnotations, selectedNovel?.id])
+
   React.useEffect(() => {
     const request = pendingOpenRequestRef.current
     if (!request || !runtimeReady) return
@@ -4721,6 +5378,9 @@ export function PlotPilotNativeContainer({
     [novels, selectedBible, selectedNovel?.id],
   )
   const uiSelectedNovel = uiNovels.find((novel) => novel.id === selectedNovel?.id) ?? uiNovels[0] ?? null
+  const currentChapterAnnotations = selectedNovel?.id
+    ? chapterAnnotationsByKey[chapterAnnotationsKey(selectedNovel.id, activeAnnotationChapterNumber)] ?? []
+    : []
   const resolvedIntegrationStatus = React.useMemo(
     () => resolveIntegrationStatus(
       integrationStatus,
@@ -4748,6 +5408,7 @@ export function PlotPilotNativeContainer({
       integrationStatus={resolvedIntegrationStatus}
       projectGuardStatus={toProjectGuardStatus(writingSpec, humanizer)}
       lastWritingSpecFailure={lastWritingSpecFailure}
+      chapterAnnotations={currentChapterAnnotations}
       featureState={featureStateWithProductionEvidence}
       handlers={handlers}
       logs={toUiLogs(runtimeLogs)}

@@ -4,6 +4,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#zen-appcontent-wrapper {
+  position: relative;
+}
+
 #zen-drama-panel {
   position: absolute;
   inset: 0;
@@ -57,6 +61,177 @@
   letter-spacing: 0;
 }
 
+#zen-drama-plm-pinned-sidebar-entry {
+  display: flex !important;
+  align-items: center;
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  width: 100% !important;
+  min-height: 42px;
+  max-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 16px;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.35);
+  color: color-mix(in srgb, var(--toolbar-color) 72%, var(--zen-primary-color));
+  font: inherit;
+  font-weight: 760;
+  text-align: start;
+  cursor: default;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -10px 22px rgba(255, 255, 255, 0.16),
+    0 10px 26px rgba(32, 42, 36, 0.12);
+  transform: translateZ(0);
+}
+
+#tabbrowser-tabs > #zen-drama-plm-pinned-sidebar-entry {
+  flex: 0 0 42px;
+  margin: 4px 6px 10px;
+  width: calc(100% - 12px) !important;
+}
+
+#zen-drama-plm-pinned-sidebar-entry::before,
+#zen-drama-plm-pinned-sidebar-entry::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+#zen-drama-plm-pinned-sidebar-entry::before {
+  z-index: -2;
+}
+
+#zen-drama-plm-pinned-sidebar-entry::after {
+  z-index: -1;
+  opacity: 0.86;
+  mix-blend-mode: screen;
+}
+
+#zen-drama-plm-pinned-sidebar-entry .zen-drama-pinned-sidebar-entry-icon {
+  display: block;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-inline: 2px 9px;
+  filter:
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.7))
+    drop-shadow(0 5px 10px rgba(23, 40, 33, 0.16));
+  mask: url("chrome://browser/content/zen-icons/drama-plm.svg") center / contain no-repeat;
+}
+
+#zen-drama-plm-pinned-sidebar-entry .zen-drama-pinned-sidebar-entry-label {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1;
+  opacity: 0.94;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.54);
+}
+
+#zen-drama-plm-pinned-sidebar-entry[zen-drama-pinned-style="jade"] {
+  color: #183f35;
+  border-color: rgba(246, 249, 219, 0.72);
+  background:
+    radial-gradient(circle at 17% 21%, rgba(255, 255, 255, 0.94) 0 9%, transparent 24%),
+    radial-gradient(circle at 76% 15%, rgba(255, 255, 232, 0.52), transparent 32%),
+    radial-gradient(circle at 22% 78%, rgba(42, 107, 73, 0.48), transparent 46%),
+    linear-gradient(132deg, rgba(218, 229, 185, 0.92), rgba(95, 145, 96, 0.88) 42%, rgba(243, 236, 196, 0.95));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.84),
+    inset 0 -14px 24px rgba(238, 240, 204, 0.32),
+    inset 8px 0 22px rgba(33, 93, 65, 0.16),
+    0 10px 24px rgba(39, 70, 48, 0.18);
+}
+
+#zen-drama-plm-pinned-sidebar-entry[zen-drama-pinned-style="jade"]::before {
+  background:
+    linear-gradient(126deg, transparent 0 23%, rgba(255, 255, 255, 0.22) 24% 25%, transparent 26% 49%, rgba(255, 255, 255, 0.26) 50% 51%, transparent 52%),
+    radial-gradient(circle at 12% 16%, rgba(30, 82, 56, 0.28), transparent 48%);
+  opacity: 0.72;
+}
+
+#zen-drama-plm-pinned-sidebar-entry[zen-drama-pinned-style="jade"]::after {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), transparent 38%),
+    radial-gradient(ellipse at 64% 86%, rgba(255, 250, 210, 0.46), transparent 46%);
+}
+
+#zen-drama-plm-pinned-sidebar-entry[zen-drama-pinned-style="jade"] .zen-drama-pinned-sidebar-entry-icon {
+  background:
+    linear-gradient(148deg, #ffffff 0%, #f6f2d1 48%, #e7ddb1 100%);
+}
+
+#zen-drama-plm-pinned-sidebar-entry[zen-drama-pinned-style="opal"] {
+  color: #5d315f;
+  border-color: rgba(255, 238, 247, 0.78);
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.95) 0 9%, transparent 25%),
+    radial-gradient(circle at 78% 77%, rgba(184, 226, 255, 0.55), transparent 38%),
+    radial-gradient(circle at 31% 75%, rgba(255, 105, 155, 0.34), transparent 44%),
+    linear-gradient(135deg, rgba(255, 218, 198, 0.94), rgba(255, 155, 203, 0.9) 45%, rgba(196, 219, 255, 0.9));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    inset 0 -14px 24px rgba(255, 255, 255, 0.22),
+    inset 8px 0 24px rgba(255, 99, 145, 0.16),
+    0 10px 25px rgba(137, 80, 124, 0.18);
+}
+
+#zen-drama-plm-pinned-sidebar-entry[zen-drama-pinned-style="opal"]::before {
+  background:
+    radial-gradient(ellipse at 26% 32%, rgba(255, 255, 255, 0.36), transparent 31%),
+    radial-gradient(ellipse at 78% 12%, rgba(255, 246, 204, 0.3), transparent 28%),
+    linear-gradient(124deg, transparent 0 48%, rgba(255, 255, 255, 0.24) 49% 50%, transparent 51%);
+  opacity: 0.82;
+}
+
+#zen-drama-plm-pinned-sidebar-entry[zen-drama-pinned-style="opal"]::after {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), transparent 40%),
+    radial-gradient(ellipse at 75% 82%, rgba(181, 220, 255, 0.52), transparent 48%);
+}
+
+#zen-drama-plm-pinned-sidebar-entry[zen-drama-pinned-style="opal"] .zen-drama-pinned-sidebar-entry-icon {
+  background:
+    linear-gradient(145deg, #fff9f7 0%, #ffd0e5 45%, #c9e4ff 100%);
+}
+
+#zen-drama-plm-pinned-sidebar-entry[zen-drama-active="true"] {
+  outline: 1px solid rgba(255, 255, 255, 0.68);
+  outline-offset: -2px;
+  transform: translateY(-1px);
+}
+
+#zen-drama-plm-pinned-sidebar-entry:hover {
+  filter: saturate(1.06) brightness(1.03);
+  transform: translateY(-1px);
+}
+
+#zen-drama-plm-pinned-sidebar-entry[zen-drama-active="true"] .zen-drama-pinned-sidebar-entry-label,
+#zen-drama-plm-pinned-sidebar-entry:hover .zen-drama-pinned-sidebar-entry-label {
+  background: transparent !important;
+}
+
+#navigator-toolbox:not([zen-sidebar-expanded="true"]) #zen-drama-plm-pinned-sidebar-entry {
+  justify-content: center;
+  padding: 0;
+}
+
+#navigator-toolbox:not([zen-sidebar-expanded="true"]) #zen-drama-plm-pinned-sidebar-entry .zen-drama-pinned-sidebar-entry-icon {
+  margin-inline: 0;
+}
+
+#navigator-toolbox:not([zen-sidebar-expanded="true"]) #zen-drama-plm-pinned-sidebar-entry .zen-drama-pinned-sidebar-entry-label {
+  display: none !important;
+}
+
 #zen-drama-toolbar {
   min-height: var(--zen-toolbar-height);
   padding: 0 var(--zen-element-separation);
@@ -87,7 +262,7 @@
 }
 
 #zen-drama-lock-button {
-  list-style-image: url("chrome://browser/skin/zen-icons/selectable/lock-closed.svg");
+  list-style-image: url("chrome://browser/skin/zen-icons/close.svg");
 }
 
 #zen-drama-runtime-status {

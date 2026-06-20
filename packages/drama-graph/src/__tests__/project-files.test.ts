@@ -81,6 +81,26 @@ describe('recordDramaProjectFile', () => {
     expect(result.filePath.startsWith(join(result.projectDir, '..-graph'))).toBe(true)
   })
 
+  it('writes a markdown sidecar when markdown content is supplied', async () => {
+    const workspaceRoot = await tempWorkspace()
+
+    const result = await recordDramaProjectFile({
+      workspaceRoot,
+      now: () => 1400,
+      request: {
+        projectId: 'Novel One',
+        source: 'plm',
+        type: 'plm.chapter.annotations.saved',
+        title: 'Chapter annotations',
+        markdown: '# Revision Annotations\n\n- fix opening',
+      },
+    })
+
+    expect(result.markdownPath).toBeDefined()
+    expect(result.markdownPath).toBe(result.filePath.replace(/\.json$/, '.md'))
+    await expect(readFile(result.markdownPath!, 'utf8')).resolves.toBe('# Revision Annotations\n\n- fix opening\n')
+  })
+
   it('lists project files newest first with source, type prefix, and limit filters', async () => {
     const workspaceRoot = await tempWorkspace()
 

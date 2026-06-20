@@ -139,11 +139,13 @@ export interface DramaProjectFileRecordRequest {
   title?: string
   summary?: Record<string, unknown>
   payload?: unknown
+  markdown?: string
 }
 
 export interface DramaProjectFileRecordResult {
   projectDir: string
   filePath: string
+  markdownPath?: string
 }
 
 export interface DramaProjectFileListRequest {
@@ -155,6 +157,7 @@ export interface DramaProjectFileListRequest {
 
 export interface DramaProjectFileRecord {
   filePath: string
+  markdownPath?: string
   schema: 'drama.project_file_event.v1'
   projectId: string
   source?: DramaProjectFileSource

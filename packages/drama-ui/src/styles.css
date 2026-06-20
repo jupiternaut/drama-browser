@@ -1,4 +1,6 @@
-:root {
+:root,
+:root[data-drama-skin="drama-classic"],
+:root[data-drama-skin="zen-follow"] {
   color-scheme: dark;
   --drama-css-ready: ready;
   --drama-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -23,9 +25,18 @@
   --drama-accent-soft: rgba(155, 183, 255, 0.12);
   --drama-accent-strong: #e0d3ff;
   --drama-success: #56d69e;
+  --drama-success-text: rgba(187, 247, 208, 0.86);
   --drama-warning: #e5b85b;
+  --drama-warning-text: rgba(253, 230, 138, 0.88);
   --drama-danger: #ef7f8d;
+  --drama-danger-text: rgba(254, 202, 202, 0.88);
   --drama-info: #88b7f8;
+  --drama-info-text: rgba(191, 219, 254, 0.88);
+  --drama-control-bg: rgba(255, 255, 255, 0.038);
+  --drama-code-bg: rgba(0, 0, 0, 0.25);
+  --drama-sheen: rgba(255, 255, 255, 0.055);
+  --drama-sheen-weak: rgba(255, 255, 255, 0.028);
+  --drama-shadow-color: rgba(0, 0, 0, 0.30);
   --drama-radius-xs: 4px;
   --drama-radius-sm: 6px;
   --drama-radius-md: 8px;
@@ -37,20 +48,201 @@
   --drama-space-4: 16px;
   --drama-space-5: 20px;
   --drama-transition: 150ms ease;
-  --drama-shadow-panel: 0 18px 48px rgba(0, 0, 0, 0.30);
-  --drama-shadow-card: 0 14px 32px rgba(0, 0, 0, 0.24);
+  --drama-shadow-panel: 0 18px 48px var(--drama-shadow-color);
+  --drama-shadow-card: 0 14px 32px color-mix(in srgb, var(--drama-shadow-color) 80%, transparent);
   background: var(--drama-bg);
   color: var(--drama-text);
   font-family: var(--drama-font-sans);
 }
 
-:root[data-host="zen"] {
+:root[data-drama-skin="warp-midnight"] {
+  color-scheme: dark;
+  --drama-bg: #05070b;
+  --drama-bg-elevated: #0a0d13;
+  --drama-panel: #10141d;
+  --drama-panel-raised: #151b27;
+  --drama-surface: rgba(18, 24, 36, 0.84);
+  --drama-surface-strong: rgba(8, 11, 17, 0.96);
+  --drama-surface-soft: rgba(157, 184, 255, 0.065);
+  --drama-surface-hover: rgba(157, 184, 255, 0.105);
+  --drama-surface-selected: rgba(157, 184, 255, 0.16);
+  --drama-border: rgba(172, 190, 228, 0.12);
+  --drama-border-strong: rgba(185, 204, 245, 0.22);
+  --drama-border-soft: rgba(172, 190, 228, 0.075);
+  --drama-text: rgba(246, 248, 255, 0.95);
+  --drama-text-muted: rgba(222, 230, 247, 0.64);
+  --drama-text-subtle: rgba(222, 230, 247, 0.42);
+  --drama-text-faint: rgba(222, 230, 247, 0.30);
+  --drama-accent: #86a8ff;
+  --drama-accent-soft: rgba(134, 168, 255, 0.14);
+  --drama-accent-strong: #cfdcff;
+  --drama-success: #73e4ad;
+  --drama-warning: #f1c96d;
+  --drama-danger: #ff8a9b;
+  --drama-info: #7fc7ff;
+  --drama-control-bg: rgba(134, 168, 255, 0.055);
+  --drama-code-bg: rgba(0, 0, 0, 0.32);
+  --drama-sheen: rgba(157, 184, 255, 0.07);
+  --drama-sheen-weak: rgba(157, 184, 255, 0.035);
+  --drama-shadow-color: rgba(0, 0, 0, 0.42);
+}
+
+:root[data-drama-skin="solar-script"] {
+  color-scheme: dark;
+  --drama-bg: #11100b;
+  --drama-bg-elevated: #18150d;
+  --drama-panel: #211c12;
+  --drama-panel-raised: #2a2416;
+  --drama-surface: rgba(38, 31, 18, 0.86);
+  --drama-surface-strong: rgba(20, 17, 11, 0.96);
+  --drama-surface-soft: rgba(245, 196, 106, 0.075);
+  --drama-surface-hover: rgba(245, 196, 106, 0.12);
+  --drama-surface-selected: rgba(245, 196, 106, 0.18);
+  --drama-border: rgba(245, 215, 152, 0.13);
+  --drama-border-strong: rgba(250, 221, 164, 0.24);
+  --drama-border-soft: rgba(245, 215, 152, 0.08);
+  --drama-text: rgba(255, 249, 236, 0.94);
+  --drama-text-muted: rgba(245, 231, 203, 0.66);
+  --drama-text-subtle: rgba(245, 231, 203, 0.45);
+  --drama-text-faint: rgba(245, 231, 203, 0.31);
+  --drama-accent: #f4c76b;
+  --drama-accent-soft: rgba(244, 199, 107, 0.14);
+  --drama-accent-strong: #ffe2a3;
+  --drama-success: #87d68d;
+  --drama-warning: #f0b85a;
+  --drama-danger: #e88070;
+  --drama-info: #88bdd8;
+  --drama-control-bg: rgba(244, 199, 107, 0.055);
+  --drama-code-bg: rgba(0, 0, 0, 0.28);
+  --drama-sheen: rgba(255, 231, 184, 0.06);
+  --drama-sheen-weak: rgba(255, 231, 184, 0.032);
+  --drama-shadow-color: rgba(0, 0, 0, 0.36);
+}
+
+:root[data-drama-skin="paper-light"] {
+  color-scheme: light;
+  --drama-bg: #f5f3ee;
+  --drama-bg-elevated: #fffdf8;
+  --drama-panel: #ffffff;
+  --drama-panel-raised: #fbfaf6;
+  --drama-surface: rgba(255, 255, 255, 0.88);
+  --drama-surface-strong: rgba(255, 253, 248, 0.96);
+  --drama-surface-soft: rgba(28, 37, 52, 0.045);
+  --drama-surface-hover: rgba(28, 37, 52, 0.072);
+  --drama-surface-selected: rgba(58, 91, 145, 0.12);
+  --drama-border: rgba(36, 45, 60, 0.13);
+  --drama-border-strong: rgba(36, 45, 60, 0.22);
+  --drama-border-soft: rgba(36, 45, 60, 0.085);
+  --drama-text: rgba(25, 30, 39, 0.94);
+  --drama-text-muted: rgba(48, 57, 73, 0.66);
+  --drama-text-subtle: rgba(48, 57, 73, 0.46);
+  --drama-text-faint: rgba(48, 57, 73, 0.30);
+  --drama-accent: #3b6fb6;
+  --drama-accent-soft: rgba(59, 111, 182, 0.12);
+  --drama-accent-strong: #1f477b;
+  --drama-success: #237a52;
+  --drama-success-text: #16633f;
+  --drama-warning: #a66a1b;
+  --drama-warning-text: #7a4a0d;
+  --drama-danger: #b0444d;
+  --drama-danger-text: #8f2732;
+  --drama-info: #2e6f9e;
+  --drama-info-text: #24577d;
+  --drama-control-bg: rgba(28, 37, 52, 0.045);
+  --drama-code-bg: rgba(28, 37, 52, 0.07);
+  --drama-sheen: rgba(255, 255, 255, 0.72);
+  --drama-sheen-weak: rgba(255, 255, 255, 0.42);
+  --drama-shadow-color: rgba(30, 38, 52, 0.13);
+}
+
+:root[data-drama-skin="jade-glass"] {
+  color-scheme: light;
+  --drama-bg: #edf2e8;
+  --drama-bg-elevated: #fbfcf5;
+  --drama-panel: rgba(255, 255, 247, 0.94);
+  --drama-panel-raised: rgba(249, 252, 238, 0.97);
+  --drama-surface: rgba(255, 255, 247, 0.78);
+  --drama-surface-strong: rgba(245, 248, 235, 0.95);
+  --drama-surface-soft: rgba(51, 106, 74, 0.075);
+  --drama-surface-hover: rgba(51, 106, 74, 0.12);
+  --drama-surface-selected: rgba(89, 140, 92, 0.18);
+  --drama-border: rgba(48, 86, 66, 0.16);
+  --drama-border-strong: rgba(48, 86, 66, 0.28);
+  --drama-border-soft: rgba(48, 86, 66, 0.10);
+  --drama-text: rgba(25, 49, 40, 0.94);
+  --drama-text-muted: rgba(42, 71, 59, 0.66);
+  --drama-text-subtle: rgba(42, 71, 59, 0.46);
+  --drama-text-faint: rgba(42, 71, 59, 0.30);
+  --drama-accent: #5b8f62;
+  --drama-accent-soft: rgba(91, 143, 98, 0.14);
+  --drama-accent-strong: #244f3f;
+  --drama-success: #287a54;
+  --drama-success-text: #1f6445;
+  --drama-warning: #a27928;
+  --drama-warning-text: #765416;
+  --drama-danger: #b85c5e;
+  --drama-danger-text: #8b3439;
+  --drama-info: #4d7d93;
+  --drama-info-text: #2f5f73;
+  --drama-control-bg: rgba(51, 106, 74, 0.07);
+  --drama-code-bg: rgba(48, 86, 66, 0.08);
+  --drama-sheen: rgba(255, 255, 255, 0.76);
+  --drama-sheen-weak: rgba(255, 255, 255, 0.45);
+  --drama-shadow-color: rgba(39, 70, 48, 0.16);
+}
+
+:root[data-drama-skin="opal-bloom"] {
+  color-scheme: light;
+  --drama-bg: #f7eef5;
+  --drama-bg-elevated: #fff8fb;
+  --drama-panel: rgba(255, 250, 253, 0.94);
+  --drama-panel-raised: rgba(252, 247, 253, 0.97);
+  --drama-surface: rgba(255, 250, 253, 0.78);
+  --drama-surface-strong: rgba(253, 242, 250, 0.95);
+  --drama-surface-soft: rgba(153, 76, 130, 0.075);
+  --drama-surface-hover: rgba(153, 76, 130, 0.11);
+  --drama-surface-selected: rgba(224, 126, 175, 0.18);
+  --drama-border: rgba(109, 68, 112, 0.15);
+  --drama-border-strong: rgba(109, 68, 112, 0.26);
+  --drama-border-soft: rgba(109, 68, 112, 0.09);
+  --drama-text: rgba(64, 39, 66, 0.94);
+  --drama-text-muted: rgba(82, 57, 86, 0.66);
+  --drama-text-subtle: rgba(82, 57, 86, 0.46);
+  --drama-text-faint: rgba(82, 57, 86, 0.30);
+  --drama-accent: #d879ad;
+  --drama-accent-soft: rgba(216, 121, 173, 0.14);
+  --drama-accent-strong: #7e3f78;
+  --drama-success: #4c8a6f;
+  --drama-success-text: #2f6a54;
+  --drama-warning: #ad7b28;
+  --drama-warning-text: #7d5615;
+  --drama-danger: #c65776;
+  --drama-danger-text: #96324d;
+  --drama-info: #5d84ba;
+  --drama-info-text: #3b6090;
+  --drama-control-bg: rgba(153, 76, 130, 0.065);
+  --drama-code-bg: rgba(109, 68, 112, 0.07);
+  --drama-sheen: rgba(255, 255, 255, 0.78);
+  --drama-sheen-weak: rgba(255, 255, 255, 0.44);
+  --drama-shadow-color: rgba(137, 80, 124, 0.15);
+}
+
+:root[data-host="zen"][data-drama-skin="zen-follow"] {
   --drama-bg: var(--zen-main-browser-background, #101010);
+  --drama-bg-elevated: color-mix(in srgb, var(--zen-main-browser-background, #101010) 88%, white 8%);
+  --drama-panel: color-mix(in srgb, var(--zen-colors-tertiary, #151515) 88%, black 12%);
+  --drama-panel-raised: color-mix(in srgb, var(--zen-colors-tertiary, #151515) 82%, white 8%);
   --drama-surface: color-mix(in srgb, var(--zen-colors-tertiary, #151515) 78%, transparent);
   --drama-surface-strong: color-mix(in srgb, var(--zen-main-browser-background, #101010) 92%, transparent);
+  --drama-surface-soft: color-mix(in srgb, var(--zen-colors-tertiary, #151515) 68%, transparent);
+  --drama-surface-hover: color-mix(in srgb, var(--zen-primary-color, #8fb8ff) 11%, transparent);
+  --drama-surface-selected: color-mix(in srgb, var(--zen-primary-color, #8fb8ff) 16%, transparent);
   --drama-border: var(--zen-colors-border, rgba(255, 255, 255, 0.12));
   --drama-border-strong: color-mix(in srgb, var(--drama-border) 72%, white 16%);
+  --drama-border-soft: color-mix(in srgb, var(--drama-border) 62%, transparent);
   --drama-accent: var(--zen-primary-color, #8fb8ff);
+  --drama-accent-soft: color-mix(in srgb, var(--drama-accent) 14%, transparent);
+  --drama-accent-strong: color-mix(in srgb, var(--drama-accent) 72%, white 26%);
   --drama-radius-xs: max(4px, calc(var(--zen-border-radius, 7px) - 3px));
   --drama-radius-sm: max(5px, calc(var(--zen-border-radius, 7px) - 1px));
   --drama-radius-md: var(--zen-border-radius, 7px);
@@ -173,25 +365,25 @@ button {
 .drama-status-badge[data-tone="success"] {
   border-color: color-mix(in srgb, var(--drama-success) 22%, transparent);
   background: color-mix(in srgb, var(--drama-success) 8%, transparent);
-  color: rgba(187, 247, 208, 0.86);
+  color: var(--drama-success-text);
 }
 
 .drama-status-badge[data-tone="warning"] {
   border-color: color-mix(in srgb, var(--drama-warning) 24%, transparent);
   background: color-mix(in srgb, var(--drama-warning) 8%, transparent);
-  color: rgba(253, 230, 138, 0.88);
+  color: var(--drama-warning-text);
 }
 
 .drama-status-badge[data-tone="danger"] {
   border-color: color-mix(in srgb, var(--drama-danger) 24%, transparent);
   background: color-mix(in srgb, var(--drama-danger) 8%, transparent);
-  color: rgba(254, 202, 202, 0.88);
+  color: var(--drama-danger-text);
 }
 
 .drama-status-badge[data-tone="info"] {
   border-color: color-mix(in srgb, var(--drama-info) 24%, transparent);
   background: color-mix(in srgb, var(--drama-info) 8%, transparent);
-  color: rgba(191, 219, 254, 0.88);
+  color: var(--drama-info-text);
 }
 
 .drama-button,
@@ -241,7 +433,7 @@ button {
 
 .drama-button[data-variant="outline"] {
   border-color: var(--drama-border);
-  background: rgba(255, 255, 255, 0.038);
+  background: var(--drama-control-bg);
 }
 
 .drama-button[data-variant="ghost"],
@@ -252,7 +444,7 @@ button {
 .drama-button[data-variant="danger"] {
   border-color: color-mix(in srgb, var(--drama-danger) 28%, transparent);
   background: color-mix(in srgb, var(--drama-danger) 10%, transparent);
-  color: rgba(254, 202, 202, 0.9);
+  color: var(--drama-danger-text);
 }
 
 .drama-button:hover,

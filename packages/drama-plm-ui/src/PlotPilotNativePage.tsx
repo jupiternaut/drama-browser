@@ -137,6 +137,8 @@ export interface PlotPilotProductionEvidenceSnapshot {
   chapterTitle?: string
   pathHints?: string[]
   generatedAt: string
+  stage9Ready?: boolean
+  stage9NonReady?: string[]
   items: PlotPilotProductionEvidenceItem[]
 }
 
@@ -410,8 +412,15 @@ export interface PlotPilotNativeHandlers {
   onGenerateMacroPlan?: (novelId: string) => void
   onContinuePlanning?: (novelId: string, currentChapter: number) => void
   onGenerateBeat?: (novelId: string) => void
-  onGenerateChapter?: (novelId: string, chapterNumber?: number) => void
-  onHostedWrite?: (novelId: string, fromChapter: number, toChapter: number, autoSave: boolean, autoOutline: boolean) => void
+  onGenerateChapter?: (novelId: string, chapterNumber?: number, revisionContext?: PlotPilotChapterRevisionContext) => void
+  onHostedWrite?: (
+    novelId: string,
+    fromChapter: number,
+    toChapter: number,
+    autoSave: boolean,
+    autoOutline: boolean,
+    revisionContext?: PlotPilotChapterRevisionContext,
+  ) => void
   onRefreshAutopilot?: (novelId: string) => void
   onStartAutopilot?: (
     novelId: string,
@@ -441,7 +450,13 @@ export interface PlotPilotNativeHandlers {
   onRefreshChapters?: (novelId: string) => void
   onWriteBackChapter?: (novelId: string, chapterNumber?: number) => void
   onChangeChapterDraft?: (content: string) => void
-  onSaveChapter?: (novelId: string, chapterNumber: number, content: string) => void
+  onSaveChapter?: (
+    novelId: string,
+    chapterNumber: number,
+    content: string,
+    revisionContext?: PlotPilotChapterRevisionContext,
+  ) => void
+  onSaveChapterAnnotations?: (novelId: string, chapterNumber: number, annotations: PlotPilotChapterAnnotation[]) => void
   onBindWritingSpec?: (novelId: string, writingSpecId: string) => void
   onClearWritingSpec?: (novelId: string) => void
   onUpdateHumanizer?: (novelId: string, settings: PlotPilotHumanizerSettingsDraft) => void
@@ -510,6 +525,7 @@ export interface PlotPilotNativePageProps {
   integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+  chapterAnnotations?: PlotPilotChapterAnnotation[]
   featureState?: PlotPilotNativeFeatureState
   handlers?: PlotPilotNativeHandlers
   logs?: PlotPilotLogEntry[]
@@ -592,6 +608,7 @@ export function PlotPilotNativePage({
   integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
+  chapterAnnotations = [],
   featureState = {},
   handlers,
   logs = idleLogs,
@@ -612,6 +629,7 @@ export function PlotPilotNativePage({
       integrationStatus={integrationStatus}
       projectGuardStatus={projectGuardStatus}
       lastWritingSpecFailure={lastWritingSpecFailure}
+      chapterAnnotations={chapterAnnotations}
       featureState={featureState}
       handlers={handlers}
       logs={logs}
@@ -623,6 +641,9 @@ export function PlotPilotNativePage({
 }
 
 type ScriptStudioMode = 'script' | 'beats' | 'outline'
+type ScriptStudioExperienceMode = 'lazy' | 'pro'
+type ScriptStudioPaperMode = 'edit' | 'annotate'
+export type ScriptStudioAnnotationColor = 'amber' | 'mint' | 'rose'
 type ScriptStudioWorkspaceMode =
   | 'creation'
   | 'setup'
@@ -650,6 +671,27 @@ interface ScriptStudioChapterView {
   updatedAt?: string
   summary: string
   colorClassName: string
+}
+
+export interface PlotPilotChapterAnnotation {
+  id: string
+  start: number
+  end: number
+  quote: string
+  note: string
+  color: ScriptStudioAnnotationColor
+  status?: 'open' | 'resolved'
+  createdAt: string
+}
+
+export interface PlotPilotChapterRevisionContext {
+  annotations?: PlotPilotChapterAnnotation[]
+}
+
+interface ScriptStudioTextSelection {
+  start: number
+  end: number
+  quote: string
 }
 
 interface ScriptStudioStorageCardView {
@@ -698,17 +740,77 @@ const scriptStudioNavItems: Array<{
 ]
 
 const scriptStudioToolbarItems: Array<{
+  id: string
   label: string
   icon: React.ComponentType<{ className?: string }>
+  description: string
+  usage: string
+  snippet: string
 }> = [
-  { label: '场次', icon: Clapperboard },
-  { label: '动作', icon: Activity },
-  { label: '角色', icon: UserRound },
-  { label: '括号', icon: Quote },
-  { label: '对话', icon: MessageCircle },
-  { label: '转场', icon: Repeat2 },
-  { label: '注释', icon: MessageSquareText },
-  { label: '字幕', icon: Captions },
+  {
+    id: 'scene',
+    label: '场次',
+    icon: Clapperboard,
+    description: '新建一个剧本场景标题，标记内外景、地点和时间。',
+    usage: '点击后在光标处插入场景头。',
+    snippet: '\n\nEXT. 地点 - 日\n\n',
+  },
+  {
+    id: 'action',
+    label: '动作',
+    icon: Activity,
+    description: '写画面、人物动作、环境变化，不属于台词。',
+    usage: '用于补充镜头里发生了什么。',
+    snippet: '\n\n人物动作与画面描写。\n\n',
+  },
+  {
+    id: 'character',
+    label: '角色',
+    icon: UserRound,
+    description: '插入说话人，通常放在对白上一行。',
+    usage: '先点角色，再点对话。',
+    snippet: '\n\n                         角色名\n',
+  },
+  {
+    id: 'parenthetical',
+    label: '括号',
+    icon: Quote,
+    description: '给对白补充语气、停顿或小动作。',
+    usage: '放在角色名和对白之间。',
+    snippet: '                     （语气/动作）\n',
+  },
+  {
+    id: 'dialogue',
+    label: '对话',
+    icon: MessageCircle,
+    description: '插入角色真正说出口的话。',
+    usage: '用于角色名下方的对白正文。',
+    snippet: '              这里写对白。\n',
+  },
+  {
+    id: 'transition',
+    label: '转场',
+    icon: Repeat2,
+    description: '标记镜头或段落切换，例如 CUT TO。',
+    usage: '通常放在一个场景结束处。',
+    snippet: '\n                                                    CUT TO:\n\n',
+  },
+  {
+    id: 'note',
+    label: '注释',
+    icon: MessageSquareText,
+    description: '写给自己或协作者的改写备注，不属于正文。',
+    usage: '用于记录待补资料、修改意图。',
+    snippet: '\n\n[注释：这里记录改写意图或待补资料]\n\n',
+  },
+  {
+    id: 'caption',
+    label: '字幕',
+    icon: Captions,
+    description: '插入屏幕上出现的文字或旁白字幕。',
+    usage: '用于片头、信息牌、画外文字。',
+    snippet: '\n\n字幕：屏幕上出现的文字。\n\n',
+  },
 ]
 
 const scriptStudioFallbackDraft = `EXT. 东海海面 - 日
@@ -787,6 +889,7 @@ function ScriptStudioPlmSurface({
   integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
+  chapterAnnotations,
   featureState,
   handlers: rawHandlers,
   logs,
@@ -803,6 +906,7 @@ function ScriptStudioPlmSurface({
   integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+  chapterAnnotations?: PlotPilotChapterAnnotation[]
   featureState: PlotPilotNativeFeatureState
   handlers?: PlotPilotNativeHandlers
   logs: PlotPilotLogEntry[]
@@ -810,6 +914,7 @@ function ScriptStudioPlmSurface({
   busy: boolean
   className?: string
 }) {
+  const [experienceMode, setExperienceMode] = React.useState<ScriptStudioExperienceMode>('lazy')
   const [mode, setMode] = React.useState<ScriptStudioMode>('script')
   const [workspaceMode, setWorkspaceMode] = React.useState<ScriptStudioWorkspaceMode>('creation')
   const [activeNav, setActiveNav] = React.useState<ScriptStudioNavId>('script')
@@ -910,54 +1015,69 @@ function ScriptStudioPlmSurface({
           </button>
         </div>
 
-        <nav className="space-y-1 px-3 py-3" aria-label="PLM 工作模式">
-          <div className="mb-2 text-xs font-semibold text-[#68645d]">工作模式</div>
-          {scriptStudioWorkspaceModes.map((item) => {
-            const Icon = item.icon
-            const active = workspaceMode === item.id
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setWorkspaceMode(item.id)}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'flex w-full items-center gap-2 rounded-[6px] px-2 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
-                  active ? 'bg-[#e8e7e1] text-[#111411]' : 'text-[#3f433d] hover:bg-[#efeee8]',
-                )}
-              >
-                <Icon className="size-3.5 shrink-0" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-semibold">{item.label}</span>
-                  <span className="mt-0.5 block truncate text-[10px] text-[#817c73]">{item.detail}</span>
-                </span>
-              </button>
-            )
-          })}
-        </nav>
+        {experienceMode === 'pro' ? (
+          <>
+            <nav className="space-y-1 px-3 py-3" aria-label="PLM 工作模式">
+              <div className="mb-2 text-xs font-semibold text-[#68645d]">工作模式</div>
+              {scriptStudioWorkspaceModes.map((item) => {
+                const Icon = item.icon
+                const active = workspaceMode === item.id
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setWorkspaceMode(item.id)}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded-[6px] px-2 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                      active ? 'bg-[#e8e7e1] text-[#111411]' : 'text-[#3f433d] hover:bg-[#efeee8]',
+                    )}
+                  >
+                    <Icon className="size-3.5 shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold">{item.label}</span>
+                      <span className="mt-0.5 block truncate text-[10px] text-[#817c73]">{item.detail}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </nav>
 
-        <nav className="space-y-0.5 border-t border-[#e2ded4] px-3 py-3" aria-label="PLM 创作模块">
-          <div className="mb-2 text-xs font-semibold text-[#68645d]">创作模块</div>
-          {scriptStudioNavItems.map((item) => {
-            const Icon = item.icon
-            const active = workspaceMode === 'creation' && activeNav === item.id
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => selectNav(item.id)}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'flex h-8 w-full items-center gap-2 rounded-[6px] px-2 text-left text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
-                  active ? 'bg-[#e8e7e1] text-[#111411]' : 'text-[#3f433d] hover:bg-[#efeee8]',
-                )}
-              >
-                <Icon className="size-3.5 shrink-0" />
-                <span>{item.label}</span>
-              </button>
-            )
-          })}
-        </nav>
+            <nav className="space-y-0.5 border-t border-[#e2ded4] px-3 py-3" aria-label="PLM 创作模块">
+              <div className="mb-2 text-xs font-semibold text-[#68645d]">创作模块</div>
+              {scriptStudioNavItems.map((item) => {
+                const Icon = item.icon
+                const active = workspaceMode === 'creation' && activeNav === item.id
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => selectNav(item.id)}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'flex h-8 w-full items-center gap-2 rounded-[6px] px-2 text-left text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                      active ? 'bg-[#e8e7e1] text-[#111411]' : 'text-[#3f433d] hover:bg-[#efeee8]',
+                    )}
+                  >
+                    <Icon className="size-3.5 shrink-0" />
+                    <span>{item.label}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          </>
+        ) : (
+          <ScriptStudioLazySidebar
+            novel={novel}
+            activeChapterNumber={activeChapterNumber}
+            activeJob={activeJob}
+            ready={ready}
+            busy={busy}
+            onContinue={() => novel ? handlers?.onGenerateChapter?.(novel.id, activeChapterNumber) : handlers?.onCreateNovel?.()}
+            onSave={() => novel ? handlers?.onSaveChapter?.(novel.id, activeChapterNumber, draft) : undefined}
+            onCheck={() => novel ? handlers?.onReviewChapter?.(novel.id, activeChapterNumber) : undefined}
+          />
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           <div className="mb-2 mt-1 text-xs font-semibold text-[#68645d]">节拍</div>
@@ -983,6 +1103,7 @@ function ScriptStudioPlmSurface({
         </div>
 
         <div className="border-t border-[#e2ded4] px-3 py-3">
+          <ScriptStudioExperienceSwitch value={experienceMode} onChange={setExperienceMode} />
           <div className="flex items-center gap-2">
             <div className="grid size-8 place-items-center rounded-full bg-[#d9d3c6] text-xs font-bold text-[#284235]">
               诗
@@ -1007,54 +1128,63 @@ function ScriptStudioPlmSurface({
             </div>
           </div>
 
-          <div className="hidden max-w-[680px] items-center gap-1 overflow-x-auto rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] sm:flex">
-            {scriptStudioWorkspaceModes.map((item) => {
-              const Icon = item.icon
-              return (
+          {experienceMode === 'pro' ? (
+            <div className="hidden max-w-[680px] items-center gap-1 overflow-x-auto rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] sm:flex">
+              {scriptStudioWorkspaceModes.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setWorkspaceMode(item.id)}
+                    aria-pressed={workspaceMode === item.id}
+                    className={cn(
+                      'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                      workspaceMode === item.id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
+                    )}
+                  >
+                    <Icon className="size-3.5" />
+                    {item.label}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="hidden items-center gap-2 rounded-full border border-[#dfe3d8] px-3 py-1 text-xs font-semibold text-[#315847] shadow-[0_1px_2px_rgba(36,32,24,0.04)] sm:flex" style={{ backgroundColor: 'rgba(255,255,255,0.48)' }}>
+              <WandSparkles className="size-3.5" />
+              写作模式
+            </div>
+          )}
+
+          {experienceMode === 'pro' ? (
+            <div className={cn(
+              'hidden items-center gap-1 rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] lg:flex',
+              workspaceMode !== 'creation' && 'opacity-50',
+            )}>
+              {([
+                ['script', '编辑', PenLine],
+                ['beats', '节拍', ListChecks],
+                ['outline', '大纲', ScrollText],
+              ] as const).map(([id, label, Icon]) => (
                 <button
-                  key={item.id}
+                  key={id}
                   type="button"
-                  onClick={() => setWorkspaceMode(item.id)}
-                  aria-pressed={workspaceMode === item.id}
+                  onClick={() => {
+                    setWorkspaceMode('creation')
+                    setMode(id)
+                  }}
+                  aria-pressed={workspaceMode === 'creation' && mode === id}
                   className={cn(
                     'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
-                    workspaceMode === item.id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
+                    workspaceMode === 'creation' && mode === id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
                   )}
                 >
                   <Icon className="size-3.5" />
-                  {item.label}
+                  {label}
                 </button>
-              )
-            })}
-          </div>
-
-          <div className={cn(
-            'hidden items-center gap-1 rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] lg:flex',
-            workspaceMode !== 'creation' && 'opacity-50',
-          )}>
-            {([
-              ['script', '编辑', PenLine],
-              ['beats', '节拍', ListChecks],
-              ['outline', '大纲', ScrollText],
-            ] as const).map(([id, label, Icon]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => {
-                  setWorkspaceMode('creation')
-                  setMode(id)
-                }}
-                aria-pressed={workspaceMode === 'creation' && mode === id}
-                className={cn(
-                  'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
-                  workspaceMode === 'creation' && mode === id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
-                )}
-              >
-                <Icon className="size-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : null}
 
           <div className="flex items-center gap-2">
             <IntegrationBadge status={integrationStatus} />
@@ -1071,7 +1201,7 @@ function ScriptStudioPlmSurface({
           </div>
         </header>
 
-        <section className="min-h-0 flex-1 overflow-auto bg-transparent px-3 py-4 lg:px-5">
+        <section className="min-h-0 flex-1 overflow-auto bg-transparent px-3 py-4 lg:px-6">
           <ScriptStudioLayerFailureBanner
             runtimeStatus={runtimeStatus}
             integrationStatus={integrationStatus}
@@ -1079,56 +1209,76 @@ function ScriptStudioPlmSurface({
             handlers={rawHandlers}
             busy={busy}
           />
-          {workspaceMode === 'creation' ? (
-            <div className="grid min-h-full w-full min-w-[720px] grid-cols-[minmax(0,1fr)_264px] gap-4">
-            <div className="min-w-0">
-              {mode === 'script' ? (
-                <ScriptStudioPaper
-                  title="剧本"
-                  subtitle={chapterEditor?.title ?? activeChapter?.title ?? novel?.title ?? '新剧本'}
-                  draft={draft}
-                  placeholder={scriptStudioFallbackDraft}
-                  onDraftChange={setDraft}
-                  novel={novel}
-                  chapterNumber={activeChapterNumber}
-                  ready={ready}
-                  busy={busy}
-                  handlers={handlers}
-                />
-              ) : null}
+          {experienceMode === 'lazy' ? (
+            <ScriptStudioLazyWorkspace
+              novel={novel}
+              activeChapterNumber={activeChapterNumber}
+              activeChapterTitle={chapterEditor?.title ?? activeChapter?.title ?? novel?.title ?? '新剧本'}
+              draft={draft}
+              onDraftChange={setDraft}
+              ready={ready}
+              busy={busy}
+              handlers={handlers}
+              activeJob={activeJob}
+              completedChapters={completedChapters}
+              totalChapters={totalChapters}
+              progressPct={progressPct}
+              codexStatus={codexStatus}
+              projectGuardStatus={projectGuardStatus}
+              lastWritingSpecFailure={lastWritingSpecFailure}
+              chapterAnnotations={chapterAnnotations}
+              onOpenPro={() => setExperienceMode('pro')}
+            />
+          ) : workspaceMode === 'creation' ? (
+            <div className="grid min-h-full w-full min-w-[720px] grid-cols-[minmax(0,1fr)_264px] gap-5 xl:grid-cols-[minmax(0,1fr)_284px]">
+              <div className="min-w-0">
+                {mode === 'script' ? (
+                  <ScriptStudioPaper
+                    title="剧本"
+                    subtitle={chapterEditor?.title ?? activeChapter?.title ?? novel?.title ?? '新剧本'}
+                    draft={draft}
+                    placeholder={scriptStudioFallbackDraft}
+                    onDraftChange={setDraft}
+                    novel={novel}
+                    chapterNumber={activeChapterNumber}
+                    ready={ready}
+                    busy={busy}
+                    handlers={handlers}
+                  />
+                ) : null}
 
-              {mode === 'beats' ? (
-                <ScriptStudioBeatPaper
-                  novel={novel}
-                  chapters={chapters}
-                  activeChapterNumber={activeChapterNumber}
-                  onOpenChapter={(chapterNumber) => novel ? handlers?.onOpenChapter?.(novel.id, chapterNumber) : undefined}
-                />
-              ) : null}
+                {mode === 'beats' ? (
+                  <ScriptStudioBeatPaper
+                    novel={novel}
+                    chapters={chapters}
+                    activeChapterNumber={activeChapterNumber}
+                    onOpenChapter={(chapterNumber) => novel ? handlers?.onOpenChapter?.(novel.id, chapterNumber) : undefined}
+                  />
+                ) : null}
 
-              {mode === 'outline' ? (
-                <ScriptStudioOutlinePaper
-                  novel={novel}
-                  outlineLines={outlineLines}
-                  featureState={featureState}
-                  ready={ready}
-                  busy={busy}
-                  handlers={handlers}
-                />
-              ) : null}
+                {mode === 'outline' ? (
+                  <ScriptStudioOutlinePaper
+                    novel={novel}
+                    outlineLines={outlineLines}
+                    featureState={featureState}
+                    ready={ready}
+                    busy={busy}
+                    handlers={handlers}
+                  />
+                ) : null}
 
-              <div className="mt-4 flex items-center gap-3 text-sm font-semibold text-[#315847]">
-                <span className={mode === 'outline' ? 'text-[#174a38]' : 'text-[#8a867c]'}>大纲</span>
-                <span className="text-[#b4afa5]">→</span>
-                <span className={mode === 'beats' ? 'text-[#174a38]' : 'text-[#8a867c]'}>节拍</span>
-                <span className="text-[#b4afa5]">→</span>
-                <span className={mode === 'script' ? 'text-[#174a38]' : 'text-[#8a867c]'}>剧本</span>
-                <span className="h-px min-w-12 flex-1 bg-[#dad6cc]" />
-                <span className="font-mono text-lg text-[#315847]">
-                  {String(Math.min(activeChapterNumber, 99)).padStart(2, '0')} / {String(Math.max(totalChapters, 1)).padStart(2, '0')}
-                </span>
+                <div className="mx-auto mt-4 flex max-w-[420px] items-center gap-3 text-sm font-semibold text-[#315847]">
+                  <span className={mode === 'outline' ? 'text-[#174a38]' : 'text-[#8a867c]'}>大纲</span>
+                  <span className="text-[#b4afa5]">→</span>
+                  <span className={mode === 'beats' ? 'text-[#174a38]' : 'text-[#8a867c]'}>节拍</span>
+                  <span className="text-[#b4afa5]">→</span>
+                  <span className={mode === 'script' ? 'text-[#174a38]' : 'text-[#8a867c]'}>剧本</span>
+                  <span className="h-px min-w-12 flex-1 bg-[#dad6cc]" />
+                  <span className="font-mono text-lg text-[#315847]">
+                    {String(Math.min(activeChapterNumber, 99)).padStart(2, '0')} / {String(Math.max(totalChapters, 1)).padStart(2, '0')}
+                  </span>
+                </div>
               </div>
-            </div>
 
             <ScriptStudioRightRail
               mode={mode}
@@ -1173,6 +1323,716 @@ function ScriptStudioPlmSurface({
           )}
         </section>
       </main>
+    </div>
+  )
+}
+
+function ScriptStudioExperienceSwitch({
+  value,
+  onChange,
+}: {
+  value: ScriptStudioExperienceMode
+  onChange: (value: ScriptStudioExperienceMode) => void
+}) {
+  return (
+    <div className="mb-3 rounded-[9px] border border-[#dedbd2] p-1" style={{ backgroundColor: 'rgba(255,255,255,0.48)' }}>
+      <div className="grid grid-cols-2 gap-1">
+        {([
+          ['lazy', '写作', WandSparkles],
+          ['pro', '工具', SlidersHorizontal],
+        ] as const).map(([id, label, Icon]) => {
+          const active = value === id
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onChange(id)}
+              aria-pressed={active}
+              className="flex h-7 items-center justify-center gap-1 rounded-[7px] text-[11px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
+              style={{
+                backgroundColor: active ? 'rgba(23,74,56,0.9)' : 'transparent',
+                color: active ? '#fff' : '#555a51',
+                boxShadow: active ? '0 5px 14px rgba(23,74,56,0.18)' : 'none',
+              }}
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioLazySidebar({
+  novel,
+  activeChapterNumber,
+  activeJob,
+  ready,
+  busy,
+  onContinue,
+  onSave,
+  onCheck,
+}: {
+  novel: PlotPilotNovel | null
+  activeChapterNumber: number
+  activeJob?: PlotPilotGenerationJob | null
+  ready: boolean
+  busy: boolean
+  onContinue: () => void
+  onSave: () => void
+  onCheck: () => void
+}) {
+  const disabled = !ready || busy
+
+  return (
+    <div className="border-b border-[#e2ded4] px-3 py-3">
+      <div className="mb-2 text-xs font-semibold text-[#68645d]">写作</div>
+      <div className="space-y-1.5">
+        <button
+          type="button"
+          onClick={onContinue}
+          disabled={busy || (!novel && !ready)}
+          className="flex h-9 w-full items-center gap-2 rounded-[8px] px-2 text-left text-xs font-semibold outline-none transition disabled:opacity-45"
+          style={{ backgroundColor: 'rgba(23,74,56,0.9)', color: '#fff' }}
+        >
+          <Sparkles className="size-3.5" />
+          {novel ? '接着写' : '新建一本书'}
+        </button>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={disabled || !novel}
+          className="flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-left text-xs font-semibold text-[#343832] outline-none transition hover:opacity-80 disabled:opacity-45"
+          style={{ backgroundColor: 'rgba(255,255,255,0.56)' }}
+        >
+          <Save className="size-3.5" />
+          保存
+        </button>
+        <button
+          type="button"
+          onClick={onCheck}
+          disabled={disabled || !novel}
+          className="flex h-8 w-full items-center gap-2 rounded-[7px] px-2 text-left text-xs font-semibold text-[#343832] outline-none transition hover:opacity-80 disabled:opacity-45"
+          style={{ backgroundColor: 'rgba(255,255,255,0.56)' }}
+        >
+          <ShieldCheck className="size-3.5" />
+          给我建议
+        </button>
+      </div>
+      <div className="mt-3 rounded-[8px] border border-[#e1ddd2] px-2.5 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.38)' }}>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7c766b]">当前</div>
+        <div className="mt-1 truncate text-xs font-semibold text-[#2a2d27]">
+          第 {activeChapterNumber} 章
+        </div>
+        <div className="mt-1 truncate text-[11px] text-[#6f6b63]">
+          {activeJob?.label ?? (ready ? '准备好了' : '正在准备')}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioLazyWorkspace({
+  novel,
+  activeChapterNumber,
+  activeChapterTitle,
+  draft,
+  onDraftChange,
+  ready,
+  busy,
+  handlers,
+  activeJob,
+  codexStatus,
+  projectGuardStatus,
+  lastWritingSpecFailure,
+  chapterAnnotations,
+  onOpenPro,
+}: {
+  novel: PlotPilotNovel | null
+  activeChapterNumber: number
+  activeChapterTitle: string
+  draft: string
+  onDraftChange: (value: string) => void
+  ready: boolean
+  busy: boolean
+  handlers?: PlotPilotNativeHandlers
+  activeJob?: PlotPilotGenerationJob | null
+  completedChapters: number
+  totalChapters: number
+  progressPct: number
+  codexStatus?: PlotPilotCodexStatus | null
+  projectGuardStatus?: PlotPilotProjectGuardStatus | null
+  lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+  chapterAnnotations?: PlotPilotChapterAnnotation[]
+  onOpenPro: () => void
+}) {
+  const [brief, setBrief] = React.useState('')
+  const [annotations, setAnnotations] = React.useState<PlotPilotChapterAnnotation[]>(chapterAnnotations ?? [])
+  const canUseNovel = Boolean(novel && ready && !busy)
+  const canSave = Boolean(canUseNovel && handlers?.onSaveChapter)
+  const canContinue = Boolean((novel && ready && !busy && handlers?.onGenerateChapter) || (!novel && !busy && handlers?.onCreateNovel))
+  const canCheck = Boolean(canUseNovel && handlers?.onReviewChapter)
+  const wordCount = countDraftText(draft)
+  const revisionContext = React.useMemo<PlotPilotChapterRevisionContext>(() => ({
+    annotations,
+  }), [annotations])
+
+  React.useEffect(() => {
+    setAnnotations(chapterAnnotations ?? [])
+  }, [chapterAnnotations, novel?.id, activeChapterNumber])
+
+  const updateAnnotations = React.useCallback((nextAnnotations: PlotPilotChapterAnnotation[]) => {
+    setAnnotations(nextAnnotations)
+    if (novel) {
+      handlers?.onSaveChapterAnnotations?.(novel.id, activeChapterNumber, nextAnnotations)
+    }
+  }, [activeChapterNumber, handlers, novel])
+
+  const saveDraft = () => {
+    if (!novel) return
+    handlers?.onSaveChapter?.(novel.id, activeChapterNumber, draft, revisionContext)
+  }
+
+  const continueWriting = () => {
+    if (!novel) {
+      handlers?.onCreateNovel?.()
+      return
+    }
+    handlers?.onGenerateChapter?.(novel.id, activeChapterNumber, revisionContext)
+  }
+
+  const addRewriteBrief = () => {
+    const instruction = brief.trim() || '冲突更清楚，对白更短，动作更具体。'
+    const nextDraft = `${draft.trimEnd()}\n\n[修改意见：${instruction}]\n`
+    onDraftChange(nextDraft)
+    handlers?.onChangeChapterDraft?.(nextDraft)
+    setBrief('')
+  }
+
+  const checkChapter = () => {
+    if (!novel) return
+    handlers?.onReviewChapter?.(novel.id, activeChapterNumber)
+  }
+
+  return (
+    <div
+      data-plm-lazy-layout="reader-left-controls-right"
+      className="mx-auto grid min-h-full w-full max-w-[1180px] gap-5 lg:grid-cols-[minmax(0,1fr)_320px]"
+    >
+      <ScriptStudioLazyPaper
+        title={activeChapterTitle}
+        chapterNumber={activeChapterNumber}
+        draft={draft}
+        placeholder={scriptStudioFallbackDraft}
+        annotations={annotations}
+        onAnnotationsChange={updateAnnotations}
+        onDraftChange={(value) => {
+          onDraftChange(value)
+          handlers?.onChangeChapterDraft?.(value)
+        }}
+      />
+
+      <aside
+        data-plm-control-rail="true"
+        className="h-fit rounded-[20px] border p-4 shadow-[0_24px_70px_rgba(43,38,27,0.14)] backdrop-blur-2xl lg:sticky lg:top-4 lg:max-h-[calc(100vh-132px)] lg:overflow-y-auto"
+        style={{
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.62), rgba(246,244,238,0.28))',
+          borderColor: 'rgba(255,255,255,0.62)',
+          WebkitBackdropFilter: 'blur(26px) saturate(1.32)',
+          backdropFilter: 'blur(26px) saturate(1.32)',
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#315847]">
+              <WandSparkles className="size-3.5" />
+              固定控制栏
+            </div>
+            <h2 className="mt-2 text-xl font-semibold text-[#20241f]">写作菜单</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenPro}
+            className="flex h-8 items-center gap-1.5 rounded-[8px] border border-[#ded9cd] px-2 text-xs font-semibold text-[#555a51] outline-none transition hover:opacity-80"
+            style={{ backgroundColor: 'rgba(255,255,255,0.5)' }}
+          >
+            <SlidersHorizontal className="size-3.5" />
+            更多工具
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <ScriptStudioLazyMetric label="当前章节" value={`第 ${activeChapterNumber} 章`} />
+          <ScriptStudioLazyMetric label="本章字数" value={`${wordCount || novel?.wordCount || 0} 字`} />
+          <ScriptStudioLazyMetric label="批注" value={`${annotations.length} 条`} />
+        </div>
+
+        <div className="mt-4 rounded-[12px] border border-[#e2ddd2] px-3 py-2.5" style={{ backgroundColor: 'rgba(255,255,255,0.42)' }}>
+          <div className="text-xs font-semibold text-[#2f332d]">{activeJob?.label ?? (ready ? '可以开始写' : '正在准备写作环境')}</div>
+          <div className="mt-1 text-[11px] leading-5 text-[#6f6b63]">
+            AI {codexStatus?.authenticated ? '已连接' : '未连接'} · 写作要求 {projectGuardStatus?.writingSpecId ? '已设置' : '未设置'}
+          </div>
+        </div>
+
+        {lastWritingSpecFailure ? (
+          <div className="mt-3 rounded-[10px] border border-[#ead7a0] px-3 py-2 text-xs leading-5 text-[#6d540b]" style={{ backgroundColor: 'rgba(255,249,232,0.72)' }}>
+            {lastWritingSpecFailure.message}
+          </div>
+        ) : null}
+
+        <div className="mt-4 grid gap-2">
+          <ScriptStudioLazyActionButton
+            icon={Sparkles}
+            label={novel ? '接着写' : '新建一本书'}
+            detail={novel ? '从当前章继续生成正文' : '先创建一个可写的项目'}
+            primary
+            onClick={continueWriting}
+            disabled={!canContinue}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <ScriptStudioLazyActionButton icon={WandSparkles} label="按我的话改" detail="先写一句要求" onClick={addRewriteBrief} disabled={!ready || busy} />
+            <ScriptStudioLazyActionButton icon={ShieldCheck} label="给我建议" detail="看节奏和问题" onClick={checkChapter} disabled={!canCheck} />
+            <ScriptStudioLazyActionButton icon={Save} label="保存" detail="保存当前草稿" onClick={saveDraft} disabled={!canSave} />
+            <ScriptStudioLazyActionButton icon={SlidersHorizontal} label="更多工具" detail="大纲、连写、调试" onClick={onOpenPro} disabled={busy} />
+          </div>
+        </div>
+
+        <label className="mt-4 block">
+          <span className="text-xs font-semibold text-[#555a51]">你想让它怎么改？</span>
+          <textarea
+            value={brief}
+            onChange={(event) => setBrief(event.currentTarget.value)}
+            placeholder="比如：这一段更紧张；对白短一点；补一个动作"
+            className="mt-2 min-h-20 w-full resize-none rounded-[10px] border border-[#ded9cd] px-3 py-2 text-sm leading-6 text-[#28241e] outline-none placeholder:text-[#9a948a] focus:border-[#174a38]/45"
+            style={{ backgroundColor: 'rgba(255,255,255,0.54)' }}
+          />
+        </label>
+        <div className="mt-3 rounded-[10px] border border-[#e4dfd4] px-3 py-2 text-[11px] leading-5 text-[#706b61]" style={{ backgroundColor: 'rgba(255,255,255,0.34)' }}>
+          选中正文可以写批注；下一次“按我的话改”会把这些批注一起带给 AI。
+        </div>
+      </aside>
+    </div>
+  )
+}
+
+function ScriptStudioLazyMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[10px] border border-[#e2ddd2] px-3 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.42)' }}>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#8a867c]">{label}</div>
+      <div className="mt-1 truncate text-sm font-semibold text-[#252822]">{value}</div>
+    </div>
+  )
+}
+
+function ScriptStudioLazyActionButton({
+  icon: Icon,
+  label,
+  detail,
+  onClick,
+  disabled,
+  primary = false,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  detail?: string
+  onClick: () => void
+  disabled?: boolean
+  primary?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex min-h-10 items-center justify-center gap-2 rounded-[10px] border px-3 py-2 text-sm font-semibold outline-none transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45"
+      style={{
+        backgroundColor: primary ? '#174a38' : 'rgba(255,255,255,0.52)',
+        borderColor: primary ? '#174a38' : '#ded9cd',
+        color: primary ? '#fff' : '#30342e',
+        boxShadow: primary ? '0 12px 26px rgba(23,74,56,0.18)' : '0 8px 18px rgba(43,38,27,0.06)',
+      }}
+    >
+      <Icon className="size-4" />
+      <span className="min-w-0 text-left leading-tight">
+        <span className="block truncate">{label}</span>
+        {detail ? <span className={primary ? 'block truncate text-[11px] font-medium text-white/72' : 'block truncate text-[11px] font-medium text-[#7b766c]'}>{detail}</span> : null}
+      </span>
+    </button>
+  )
+}
+
+const scriptStudioAnnotationColorClassNames: Record<ScriptStudioAnnotationColor, string> = {
+  amber: 'bg-[#f8d676]/50 ring-[#d9aa2b]/22',
+  mint: 'bg-[#9edfc4]/42 ring-[#2f8b68]/22',
+  rose: 'bg-[#f4a4a4]/38 ring-[#b95252]/22',
+}
+
+const scriptStudioAnnotationColors: ScriptStudioAnnotationColor[] = ['amber', 'mint', 'rose']
+
+function createScriptStudioAnnotationId() {
+  return `ann-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function getScriptStudioTextSelection(container: HTMLElement): ScriptStudioTextSelection | null {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null
+
+  const range = selection.getRangeAt(0)
+  if (!container.contains(range.startContainer) || !container.contains(range.endContainer)) return null
+
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  let runningOffset = 0
+  let start = -1
+  let end = -1
+  let node = walker.nextNode()
+
+  while (node) {
+    const textLength = node.textContent?.length ?? 0
+    if (node === range.startContainer) start = runningOffset + range.startOffset
+    if (node === range.endContainer) end = runningOffset + range.endOffset
+    runningOffset += textLength
+    if (start >= 0 && end >= 0) break
+    node = walker.nextNode()
+  }
+
+  if (start < 0 || end < 0) return null
+
+  const selectionStart = Math.min(start, end)
+  const selectionEnd = Math.max(start, end)
+  const quote = container.textContent?.slice(selectionStart, selectionEnd) ?? range.toString()
+
+  if (!quote.trim()) return null
+
+  return {
+    start: selectionStart,
+    end: selectionEnd,
+    quote,
+  }
+}
+
+function renderScriptStudioAnnotatedText({
+  text,
+  annotations,
+  activeAnnotationId,
+  onSelectAnnotation,
+}: {
+  text: string
+  annotations: PlotPilotChapterAnnotation[]
+  activeAnnotationId: string | null
+  onSelectAnnotation: (id: string) => void
+}) {
+  const sortedAnnotations = annotations
+    .filter((annotation) => annotation.start >= 0 && annotation.end <= text.length && annotation.end > annotation.start)
+    .sort((a, b) => a.start - b.start)
+  const nodes: React.ReactNode[] = []
+  let cursor = 0
+
+  for (const annotation of sortedAnnotations) {
+    if (annotation.end <= cursor) continue
+    const start = Math.max(annotation.start, cursor)
+    if (start > cursor) nodes.push(text.slice(cursor, start))
+
+    const selectedText = text.slice(start, annotation.end)
+    const active = activeAnnotationId === annotation.id
+    nodes.push(
+      <mark
+        key={annotation.id}
+        role="button"
+        tabIndex={0}
+        title={annotation.note}
+        onClick={() => onSelectAnnotation(annotation.id)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onSelectAnnotation(annotation.id)
+          }
+        }}
+        className={cn(
+          'cursor-pointer rounded-[5px] px-0.5 text-[#272923] ring-1 transition hover:ring-[#174a38]/30 focus:outline-none focus:ring-2 focus:ring-[#174a38]/34',
+          scriptStudioAnnotationColorClassNames[annotation.color],
+          active && 'shadow-[0_0_0_2px_rgba(23,74,56,0.16)]',
+        )}
+      >
+        {selectedText}
+      </mark>,
+    )
+    cursor = annotation.end
+  }
+
+  if (cursor < text.length) nodes.push(text.slice(cursor))
+
+  return nodes.length ? nodes : text
+}
+
+function ScriptStudioLazyPaper({
+  title,
+  chapterNumber,
+  draft,
+  placeholder,
+  annotations,
+  onAnnotationsChange,
+  onDraftChange,
+}: {
+  title: string
+  chapterNumber: number
+  draft: string
+  placeholder: string
+  annotations: PlotPilotChapterAnnotation[]
+  onAnnotationsChange: (annotations: PlotPilotChapterAnnotation[]) => void
+  onDraftChange: (value: string) => void
+}) {
+  const [paperMode, setPaperMode] = React.useState<ScriptStudioPaperMode>('edit')
+  const [selectionDraft, setSelectionDraft] = React.useState<ScriptStudioTextSelection | null>(null)
+  const [annotationNote, setAnnotationNote] = React.useState('')
+  const [activeAnnotationId, setActiveAnnotationId] = React.useState<string | null>(null)
+  const textLayerRef = React.useRef<HTMLDivElement | null>(null)
+  const visibleText = draft.trim().length > 0 ? draft : placeholder
+  const canAnnotate = visibleText.trim().length > 0
+  const activeAnnotation = activeAnnotationId ? annotations.find((annotation) => annotation.id === activeAnnotationId) ?? null : null
+
+  React.useEffect(() => {
+    const filteredAnnotations = annotations.filter((annotation) => (
+      annotation.end <= visibleText.length && visibleText.slice(annotation.start, annotation.end) === annotation.quote
+    ))
+    if (filteredAnnotations.length !== annotations.length) {
+      onAnnotationsChange(filteredAnnotations)
+    }
+  }, [annotations, onAnnotationsChange, visibleText])
+
+  const captureAnnotationSelection = React.useCallback(() => {
+    if (!canAnnotate || paperMode !== 'annotate') return
+
+    const container = textLayerRef.current
+    if (!container) return
+
+    const nextSelection = getScriptStudioTextSelection(container)
+    if (!nextSelection) return
+
+    setSelectionDraft(nextSelection)
+    setActiveAnnotationId(null)
+  }, [canAnnotate, paperMode])
+
+  const saveAnnotation = React.useCallback(() => {
+    const note = annotationNote.trim()
+    if (!selectionDraft || !note) return
+
+    const id = createScriptStudioAnnotationId()
+    onAnnotationsChange([
+      ...annotations,
+      {
+        id,
+        start: selectionDraft.start,
+        end: selectionDraft.end,
+        quote: selectionDraft.quote,
+        note,
+        color: scriptStudioAnnotationColors[annotations.length % scriptStudioAnnotationColors.length] ?? 'amber',
+        status: 'open',
+        createdAt: new Date().toISOString(),
+      },
+    ])
+    setActiveAnnotationId(id)
+    setSelectionDraft(null)
+    setAnnotationNote('')
+    window.getSelection()?.removeAllRanges()
+  }, [annotationNote, annotations, onAnnotationsChange, selectionDraft])
+
+  const removeAnnotation = React.useCallback((annotationId: string) => {
+    onAnnotationsChange(annotations.filter((annotation) => annotation.id !== annotationId))
+    setActiveAnnotationId((current) => current === annotationId ? null : current)
+  }, [annotations, onAnnotationsChange])
+
+  return (
+    <div
+      data-plm-reader-module="true"
+      className="mx-auto flex w-full max-w-[748px] flex-col items-center gap-3 xl:flex-row xl:items-start xl:justify-center"
+    >
+      <article
+        className="w-full max-w-[430px] overflow-hidden rounded-[18px] border border-[#dedbd2]/88 shadow-[0_26px_72px_rgba(43,38,27,0.15)]"
+        style={{ backgroundColor: 'rgba(253,252,248,0.94)' }}
+      >
+        <div className="flex min-h-[72px] items-center justify-between gap-3 border-b border-[#e5e1d8] px-5 py-3">
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-[#8b867d]">第 {chapterNumber} 章</div>
+            <h2 className="mt-1 truncate text-base font-semibold text-[#252822]">{title}</h2>
+          </div>
+          <div
+            className="flex shrink-0 items-center gap-1 rounded-[10px] border border-white/60 p-1 backdrop-blur-2xl"
+            style={{
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.58), rgba(248,246,240,0.28))',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.76), 0 8px 20px rgba(43,38,27,0.08)',
+            }}
+          >
+            {([
+              ['edit', '编辑', PenLine],
+              ['annotate', '批注', MessageSquareText],
+            ] as const).map(([mode, label, Icon]) => {
+              const active = paperMode === mode
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setPaperMode(mode)}
+                  className={cn(
+                    'flex h-7 items-center gap-1 rounded-[7px] px-2 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                    active ? 'text-[#242821]' : 'text-[#777268] hover:text-[#242821]',
+                  )}
+                  style={{ backgroundColor: active ? 'rgba(255,255,255,0.76)' : 'transparent' }}
+                >
+                  <Icon className="size-3.5" />
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {paperMode === 'edit' ? (
+          <textarea
+            value={draft}
+            onChange={(event) => onDraftChange(event.currentTarget.value)}
+            placeholder={placeholder}
+            spellCheck={false}
+            className={cn(
+              'min-h-[760px] w-full resize-none px-8 py-7',
+              'font-serif text-[14px] leading-[2.08] text-[#28241e] outline-none',
+              'placeholder:whitespace-pre-wrap placeholder:text-[#2f2b25]/72',
+            )}
+            style={{ backgroundColor: 'transparent' }}
+          />
+        ) : (
+          <div className="min-h-[760px] px-8 py-7">
+            <div
+              ref={textLayerRef}
+              role="document"
+              aria-label="章节批注文本"
+              onMouseUp={captureAnnotationSelection}
+              onKeyUp={captureAnnotationSelection}
+              className={cn(
+                'min-h-[704px] select-text whitespace-pre-wrap font-serif text-[14px] leading-[2.08] outline-none',
+                canAnnotate ? 'text-[#28241e]' : 'text-[#2f2b25]/42',
+              )}
+              tabIndex={0}
+            >
+              {canAnnotate
+                ? renderScriptStudioAnnotatedText({
+                    text: visibleText,
+                    annotations,
+                    activeAnnotationId,
+                    onSelectAnnotation: setActiveAnnotationId,
+                  })
+                : visibleText}
+            </div>
+          </div>
+        )}
+      </article>
+
+      {paperMode === 'annotate' ? (
+        <aside
+          className="w-full max-w-[270px] rounded-[18px] border border-white/58 p-3 shadow-[0_22px_58px_rgba(43,38,27,0.14)] backdrop-blur-2xl"
+          style={{
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.44), rgba(246,244,238,0.22))',
+            WebkitBackdropFilter: 'blur(26px) saturate(1.42)',
+            backdropFilter: 'blur(26px) saturate(1.42)',
+          }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#252822]">
+              <MessageSquareText className="size-4" />
+              批注
+            </div>
+            <span className="rounded-full border border-white/48 px-2 py-1 text-[11px] font-semibold text-[#60655d]">
+              {annotations.length}
+            </span>
+          </div>
+
+          <div className="mt-3 rounded-[12px] border border-white/52 p-3" style={{ backgroundColor: 'rgba(255,255,255,0.42)' }}>
+            {selectionDraft ? (
+              <>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777268]">Selected</div>
+                <blockquote className="mt-2 line-clamp-4 rounded-[9px] bg-[#fffdf7]/62 px-3 py-2 text-xs leading-5 text-[#343831]">
+                  {selectionDraft.quote}
+                </blockquote>
+                <textarea
+                  value={annotationNote}
+                  onChange={(event) => setAnnotationNote(event.currentTarget.value)}
+                  placeholder="写批注..."
+                  className="mt-3 min-h-24 w-full resize-none rounded-[10px] border border-[#ded9cd]/82 bg-white/58 px-3 py-2 text-xs leading-5 text-[#28241e] outline-none placeholder:text-[#9a948a] focus:border-[#174a38]/42"
+                />
+                <button
+                  type="button"
+                  onClick={saveAnnotation}
+                  disabled={!annotationNote.trim()}
+                  className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-[9px] bg-[#174a38] px-3 text-xs font-semibold text-white outline-none transition hover:bg-[#1f5b46] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <Save className="size-3.5" />
+                  保存批注
+                </button>
+              </>
+            ) : activeAnnotation ? (
+              <>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777268]">Active</div>
+                <blockquote className="mt-2 line-clamp-4 rounded-[9px] bg-[#fffdf7]/62 px-3 py-2 text-xs leading-5 text-[#343831]">
+                  {activeAnnotation.quote}
+                </blockquote>
+                <p className="mt-3 rounded-[9px] bg-white/48 px-3 py-2 text-xs leading-5 text-[#30342e]">{activeAnnotation.note}</p>
+              </>
+            ) : (
+              <div className="rounded-[10px] bg-white/42 px-3 py-5 text-center text-xs leading-5 text-[#6e746b]">
+                {canAnnotate ? '选择正文后写批注' : '先写入正文'}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {annotations.map((annotation) => (
+              <div
+                key={annotation.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setActiveAnnotationId(annotation.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    setActiveAnnotationId(annotation.id)
+                  }
+                }}
+                className={cn(
+                  'group w-full rounded-[12px] border p-3 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                  activeAnnotationId === annotation.id ? 'border-[#174a38]/30 bg-white/62' : 'border-white/44 bg-white/34 hover:bg-white/52',
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className={cn('mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-1', scriptStudioAnnotationColorClassNames[annotation.color])} />
+                  <div className="min-w-0 flex-1">
+                    <div className="line-clamp-2 text-xs font-semibold leading-5 text-[#30342e]">{annotation.quote}</div>
+                    <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-[#687068]">{annotation.note}</div>
+                  </div>
+                  <button
+                    type="button"
+                    title="删除批注"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      removeAnnotation(annotation.id)
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        removeAnnotation(annotation.id)
+                      }
+                    }}
+                    className="grid size-7 shrink-0 place-items-center rounded-[8px] text-[#8a867d] opacity-0 transition hover:bg-[#fff8f2] hover:text-[#8e3b2f] group-hover:opacity-100"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+      ) : null}
     </div>
   )
 }
@@ -3869,71 +4729,163 @@ function ScriptStudioPaper({
   handlers?: PlotPilotNativeHandlers
 }) {
   const disabled = !novel || !ready || busy
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
+  const [activeToolId, setActiveToolId] = React.useState<string | null>(null)
+  const activeTool = activeToolId ? scriptStudioToolbarItems.find((item) => item.id === activeToolId) : null
+
+  const insertScriptSnippet = React.useCallback((snippet: string) => {
+    const textarea = textareaRef.current
+    const selectionStart = textarea?.selectionStart ?? draft.length
+    const selectionEnd = textarea?.selectionEnd ?? draft.length
+    const prefix = draft.slice(0, selectionStart)
+    const suffix = draft.slice(selectionEnd)
+    const nextDraft = `${prefix}${snippet}${suffix}`
+    const nextCursor = selectionStart + snippet.length
+
+    onDraftChange(nextDraft)
+    handlers?.onChangeChapterDraft?.(nextDraft)
+    globalThis.requestAnimationFrame?.(() => {
+      textarea?.focus()
+      textarea?.setSelectionRange(nextCursor, nextCursor)
+    })
+  }, [draft, handlers, onDraftChange])
 
   return (
-    <article className="rounded-[12px] border border-[#dedbd2] bg-[#fdfcf8] shadow-[0_22px_54px_rgba(43,38,27,0.14)]">
-      <div className="flex min-h-12 items-center justify-between border-b border-[#e5e1d8] px-5">
-        <h1 className="text-sm font-semibold text-[#252822]">{title}</h1>
-        <div className="flex items-center gap-1 rounded-[7px] border border-[#e5e1d8] bg-[#f7f6f1] p-1">
-          <button type="button" className="flex h-7 items-center gap-1.5 rounded-[5px] bg-white px-2.5 text-xs font-semibold text-[#2e332d] shadow-[0_1px_2px_rgba(36,32,24,0.06)]">
-            <FileText className="size-3.5" />
-            剧本
-          </button>
-          <button type="button" className="flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-semibold text-[#9a948a]">
-            <Image className="size-3.5" />
-            封面
-          </button>
-        </div>
-      </div>
-
-      <div className="px-5 pb-5 pt-3">
-        <div className="mx-auto mb-6 flex w-fit max-w-full items-center gap-2 rounded-[16px] border border-[#e0ddd4] bg-white px-5 py-3 shadow-[0_10px_24px_rgba(43,38,27,0.12)]">
+    <>
+      <div
+        className="sticky top-3 z-20 mx-auto mb-3 flex w-full max-w-[420px] justify-center px-2"
+        onMouseLeave={() => setActiveToolId(null)}
+      >
+        <div
+          role="toolbar"
+          aria-label="剧本结构插入工具"
+          className="relative flex w-fit max-w-full items-center gap-1 overflow-visible rounded-[22px] border px-2 py-2 backdrop-blur-2xl"
+          style={{
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.34), rgba(246,244,238,0.16))',
+            borderColor: 'rgba(255,255,255,0.64)',
+            boxShadow: '0 22px 54px rgba(38,34,25,0.16), inset 0 1px 0 rgba(255,255,255,0.78), inset 0 -1px 0 rgba(255,255,255,0.24)',
+            WebkitBackdropFilter: 'blur(28px) saturate(1.46)',
+            backdropFilter: 'blur(28px) saturate(1.46)',
+          }}
+        >
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-4 top-1 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.92), transparent)' }}
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-8 top-0 h-full w-16 -skew-x-12"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent)' }}
+          />
           {scriptStudioToolbarItems.map((item) => {
             const Icon = item.icon
+            const active = activeToolId === item.id
             return (
               <button
-                key={item.label}
+                key={item.id}
                 type="button"
                 aria-label={`插入${item.label}`}
-                className="grid h-11 min-w-12 place-items-center gap-1 rounded-[8px] px-1.5 text-[11px] font-semibold text-[#252822] outline-none transition hover:bg-[#f2f0ea] focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
+                title={`${item.label}：${item.description}`}
+                onClick={() => insertScriptSnippet(item.snippet)}
+                onFocus={() => setActiveToolId(item.id)}
+                onMouseEnter={() => setActiveToolId(item.id)}
+                className="relative grid h-10 min-w-10 place-items-center gap-0.5 rounded-[13px] border px-1 text-[10px] font-semibold text-[#252822] outline-none transition duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
+                style={{
+                  backgroundColor: active ? 'rgba(255,255,255,0.54)' : 'rgba(255,255,255,0.14)',
+                  borderColor: active ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.28)',
+                  boxShadow: active
+                    ? '0 10px 22px rgba(37,40,34,0.13), inset 0 1px 0 rgba(255,255,255,0.82)'
+                    : 'inset 0 1px 0 rgba(255,255,255,0.42)',
+                }}
               >
-                <Icon className="size-4" />
+                <Icon className="size-3.5" />
                 <span>{item.label}</span>
               </button>
             )
           })}
+          {activeTool ? (
+            <div
+              className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-30 w-[320px] -translate-x-1/2 rounded-[14px] border px-3 py-2 text-left shadow-[0_18px_42px_rgba(38,34,25,0.16)]"
+              style={{
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.72), rgba(248,246,240,0.42))',
+                borderColor: 'rgba(255,255,255,0.64)',
+                WebkitBackdropFilter: 'blur(24px) saturate(1.35)',
+                backdropFilter: 'blur(24px) saturate(1.35)',
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-[#252822]">{activeTool.label}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6b7167]">插入</span>
+              </div>
+              <div className="mt-1 text-[11px] leading-4 text-[#444941]">{activeTool.description}</div>
+              <div className="mt-1 text-[10px] leading-4 text-[#73786f]">{activeTool.usage}</div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <article
+        className="mx-auto w-full max-w-[420px] overflow-hidden rounded-[16px] border border-[#dedbd2]/88 shadow-[0_24px_64px_rgba(43,38,27,0.16)] backdrop-blur-[1px]"
+        style={{ backgroundColor: 'rgba(253, 252, 248, 0.94)' }}
+      >
+        <div className="flex min-h-11 items-center justify-between gap-2 border-b border-[#e5e1d8] px-4">
+          <h1 className="text-sm font-semibold text-[#252822]">{title}</h1>
+          <div
+            className="flex shrink-0 items-center gap-1 rounded-[7px] border border-[#e5e1d8] p-1"
+            style={{ backgroundColor: 'rgba(247,246,241,0.72)' }}
+          >
+            <button
+              type="button"
+              className="flex h-7 items-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold text-[#2e332d] shadow-[0_1px_2px_rgba(36,32,24,0.06)]"
+              style={{ backgroundColor: 'rgba(255,255,255,0.72)' }}
+            >
+              <FileText className="size-3.5" />
+              剧本
+            </button>
+            <button type="button" className="flex h-7 items-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold text-[#9a948a]">
+              <Image className="size-3.5" />
+              封面
+            </button>
+          </div>
         </div>
 
-        <div className="mx-auto max-w-[760px]">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mx-auto max-w-[352px] px-4 pb-5 pt-5">
+          <div className="mb-3 flex flex-col gap-3">
             <div className="min-w-0">
               <div className="truncate text-xs font-semibold text-[#8b867d]">第 {chapterNumber} 章</div>
-              <div className="mt-0.5 truncate text-base font-semibold text-[#252822]">{subtitle}</div>
+              <div className="mt-0.5 truncate text-sm font-semibold text-[#252822]">{subtitle}</div>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center justify-end gap-1.5">
               <button
                 type="button"
+                title="根据当前大纲、节拍和项目设定生成本章草稿。"
                 onClick={() => novel ? handlers?.onGenerateChapter?.(novel.id, chapterNumber) : undefined}
                 disabled={disabled || !handlers?.onGenerateChapter}
-                className="flex h-8 items-center gap-1.5 rounded-[7px] border border-[#d9d5ca] bg-white px-2.5 text-xs font-semibold text-[#353832] outline-none transition hover:bg-[#f7f6f1] disabled:opacity-45"
+                className="flex h-8 items-center gap-1 rounded-[7px] border border-[#d9d5ca] px-2 text-xs font-semibold text-[#353832] outline-none transition hover:opacity-80 disabled:opacity-45"
+                style={{ backgroundColor: 'rgba(255,255,255,0.72)' }}
               >
                 <Sparkles className="size-3.5" />
                 生成
               </button>
               <button
                 type="button"
+                title="保存当前章节草稿到 PlotPilot 项目。"
                 onClick={() => novel ? handlers?.onSaveChapter?.(novel.id, chapterNumber, draft) : undefined}
                 disabled={disabled || !handlers?.onSaveChapter}
-                className="flex h-8 items-center gap-1.5 rounded-[7px] border border-[#d9d5ca] bg-white px-2.5 text-xs font-semibold text-[#353832] outline-none transition hover:bg-[#f7f6f1] disabled:opacity-45"
+                className="flex h-8 items-center gap-1 rounded-[7px] border border-[#d9d5ca] px-2 text-xs font-semibold text-[#353832] outline-none transition hover:opacity-80 disabled:opacity-45"
+                style={{ backgroundColor: 'rgba(255,255,255,0.72)' }}
               >
                 <Save className="size-3.5" />
                 保存
               </button>
               <button
                 type="button"
+                title="把当前章节写回生产链路，用于后续证据、记忆和项目文件同步。"
                 onClick={() => novel ? handlers?.onWriteBackChapter?.(novel.id, chapterNumber) : undefined}
                 disabled={disabled || !handlers?.onWriteBackChapter}
-                className="flex h-8 items-center gap-1.5 rounded-[7px] bg-[#174a38] px-2.5 text-xs font-semibold text-white outline-none transition hover:bg-[#113d2f] disabled:opacity-45"
+                className="flex h-8 items-center gap-1 rounded-[7px] px-2 text-xs font-semibold outline-none transition hover:opacity-90 disabled:opacity-45"
+                style={{ backgroundColor: '#174a38', color: '#fff' }}
               >
                 <GitBranch className="size-3.5" />
                 回写
@@ -3942,6 +4894,7 @@ function ScriptStudioPaper({
           </div>
 
           <textarea
+            ref={textareaRef}
             value={draft}
             onChange={(event) => {
               onDraftChange(event.currentTarget.value)
@@ -3950,14 +4903,15 @@ function ScriptStudioPaper({
             placeholder={placeholder}
             spellCheck={false}
             className={cn(
-              'min-h-[650px] w-full resize-none rounded-[8px] border border-[#ebe7dc] bg-[#fffefd] px-8 py-8',
-              'font-serif text-[16px] leading-[2.05] text-[#28241e] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] outline-none',
-              'placeholder:whitespace-pre-wrap placeholder:text-[#2f2b25]/72 focus:border-[#cfc8b9]',
+              'min-h-[720px] w-full resize-none px-6 pb-8 pt-4',
+              'font-serif text-[14px] leading-[2.05] text-[#28241e] outline-none',
+              'placeholder:whitespace-pre-wrap placeholder:text-[#2f2b25]/72',
             )}
+            style={{ backgroundColor: 'transparent' }}
           />
         </div>
-      </div>
-    </article>
+      </article>
+    </>
   )
 }
 
@@ -5226,6 +6180,9 @@ function ScriptStudioProductionEvidencePanel({
       data-plm-production-project-id={snapshot.projectId ?? ''}
       data-plm-production-chapter-id={snapshot.chapterId ?? ''}
       data-plm-production-chapter-number={snapshot.chapterNumber ?? ''}
+      data-plm-stage9-ready={snapshot.stage9Ready ? 'true' : 'false'}
+      data-plm-stage9-non-ready={(snapshot.stage9NonReady ?? []).join(',')}
+      data-plm-hosted-write-evidence={stateFor('hosted-write') ?? ''}
       data-plm-prompt-evidence={stateFor('prompt') ?? ''}
       data-plm-memory-evidence={stateFor('memory') ?? ''}
       data-plm-autopilot-evidence={stateFor('autopilot') ?? ''}

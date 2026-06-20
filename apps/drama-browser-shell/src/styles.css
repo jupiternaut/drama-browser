@@ -149,10 +149,10 @@
   border-top: 0;
   border-radius: 0 0 var(--drama-radius-md) var(--drama-radius-md);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    linear-gradient(180deg, var(--drama-sheen), transparent),
     var(--drama-surface-strong);
   padding-inline: 8px 10px;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.025);
+  box-shadow: 0 1px 0 var(--drama-sheen-weak);
 }
 
 .drama-workbench-left {
@@ -255,7 +255,7 @@
   gap: var(--drama-space-1);
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-lg);
-  background: rgba(255, 255, 255, 0.028);
+  background: var(--drama-control-bg);
   padding: 4px;
 }
 
@@ -351,6 +351,65 @@
   gap: var(--drama-space-2);
 }
 
+.drama-skin-control {
+  position: relative;
+  display: inline-flex;
+  height: 23px;
+  max-width: 132px;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  border: 1px solid var(--drama-border);
+  border-radius: var(--drama-radius-md);
+  background: var(--drama-control-bg);
+  color: var(--drama-text-muted);
+  padding: 0 7px;
+}
+
+.drama-skin-control:focus-within {
+  border-color: color-mix(in srgb, var(--drama-accent) 38%, var(--drama-border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--drama-accent) 18%, transparent);
+}
+
+.drama-skin-control-icon {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  color: var(--drama-accent);
+}
+
+.drama-skin-control-label {
+  overflow: hidden;
+  color: var(--drama-text-subtle);
+  font-family: var(--drama-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drama-skin-select {
+  min-width: 52px;
+  max-width: 76px;
+  flex: 1 1 auto;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  color: var(--drama-text);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+  outline: none;
+  padding: 0;
+}
+
+.drama-skin-select option {
+  background: var(--drama-panel);
+  color: var(--drama-text);
+}
+
 .drama-host-badge {
   display: inline-flex;
   height: 23px;
@@ -359,7 +418,7 @@
   overflow: hidden;
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-md);
-  background: rgba(255, 255, 255, 0.032);
+  background: var(--drama-control-bg);
   color: var(--drama-text-subtle);
   font-family: var(--drama-font-mono);
   font-size: 10px;
@@ -413,36 +472,36 @@
   height: 7px;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: #94a3b8;
+  background: var(--drama-text-subtle);
 }
 
 .runtime-status-dot-ready {
   background: var(--drama-success);
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--drama-success) 18%, transparent);
 }
 
 .runtime-status-dot-offline,
 .runtime-status-dot-error {
   background: var(--drama-danger);
-  box-shadow: 0 0 0 3px rgba(251, 113, 133, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--drama-danger) 18%, transparent);
 }
 
 .runtime-status-dot-starting {
   background: var(--drama-warning);
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--drama-warning) 18%, transparent);
 }
 
 .runtime-status-ready {
-  color: rgba(209, 250, 229, 0.86);
+  color: var(--drama-success-text);
 }
 
 .runtime-status-offline,
 .runtime-status-error {
-  color: rgba(254, 226, 226, 0.86);
+  color: var(--drama-danger-text);
 }
 
 .runtime-status-starting {
-  color: rgba(254, 243, 199, 0.86);
+  color: var(--drama-warning-text);
 }
 
 .drama-surface-frame {
@@ -463,7 +522,7 @@
 
 .drama-graph-surface {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 118px),
+    linear-gradient(180deg, var(--drama-sheen-weak), transparent 118px),
     var(--drama-bg);
 }
 
@@ -471,7 +530,7 @@
   height: 44px !important;
   border-bottom: 1px solid var(--drama-border) !important;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    linear-gradient(180deg, var(--drama-sheen-weak), transparent),
     color-mix(in srgb, var(--drama-surface-strong) 92%, black 8%) !important;
 }
 
@@ -496,7 +555,7 @@
 
 .drama-surface-frame .react-flow {
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018), transparent 36%),
+    linear-gradient(90deg, var(--drama-sheen-weak), transparent 36%),
     var(--drama-bg);
 }
 
@@ -516,7 +575,7 @@
   border-color: var(--drama-border-soft) !important;
   border-radius: var(--drama-radius-lg) !important;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    linear-gradient(180deg, var(--drama-sheen), var(--drama-sheen-weak)),
     color-mix(in srgb, var(--drama-panel) 88%, black 12%) !important;
   box-shadow: var(--drama-shadow-card) !important;
 }
@@ -530,13 +589,13 @@
   border-color: color-mix(in srgb, var(--drama-accent) 54%, white 8%) !important;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--drama-accent) 42%, transparent),
-    0 22px 54px rgba(0, 0, 0, 0.40) !important;
+    0 22px 54px var(--drama-shadow-color) !important;
 }
 
 .drama-graph-node-icon,
 .drama-graph-node-field {
   border-color: var(--drama-border-soft) !important;
-  background: rgba(255, 255, 255, 0.038) !important;
+  background: var(--drama-control-bg) !important;
 }
 
 .drama-graph-node-id {
@@ -547,7 +606,7 @@
   border-color: color-mix(in srgb, var(--drama-accent) 58%, white 12%) !important;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--drama-accent) 46%, transparent),
-    0 18px 44px rgba(0, 0, 0, 0.34);
+    0 18px 44px var(--drama-shadow-color);
 }
 
 .drama-surface-frame .react-flow__edge.selected path,
@@ -575,7 +634,7 @@
 .drama-graph-search {
   border-radius: var(--drama-radius-lg) !important;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)),
+    linear-gradient(180deg, var(--drama-sheen), var(--drama-sheen-weak)),
     color-mix(in srgb, var(--drama-bg-elevated) 88%, black 12%) !important;
   box-shadow: var(--drama-shadow-panel) !important;
 }
@@ -583,12 +642,12 @@
 .drama-graph-runtime-pill {
   border-color: color-mix(in srgb, var(--drama-success) 24%, transparent) !important;
   background: color-mix(in srgb, var(--drama-success) 10%, transparent) !important;
-  color: rgba(220, 252, 231, 0.86) !important;
+  color: var(--drama-success-text) !important;
 }
 
 .drama-graph-search-field {
   border-radius: var(--drama-radius-md) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  background: var(--drama-control-bg) !important;
 }
 
 .drama-surface-frame .react-flow__controls {
@@ -596,7 +655,7 @@
   border: 1px solid var(--drama-border) !important;
   border-radius: var(--drama-radius-lg);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02)),
+    linear-gradient(180deg, var(--drama-sheen), var(--drama-sheen-weak)),
     color-mix(in srgb, var(--drama-bg-elevated) 88%, black 12%) !important;
   box-shadow: var(--drama-shadow-panel);
 }
@@ -620,14 +679,14 @@
   border: 1px solid var(--drama-border) !important;
   border-radius: var(--drama-radius-lg);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    linear-gradient(180deg, var(--drama-sheen), var(--drama-sheen-weak)),
     color-mix(in srgb, var(--drama-bg-elevated) 88%, black 12%) !important;
   box-shadow: var(--drama-shadow-panel);
 }
 
 .drama-graph-inspector {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.028), transparent 180px),
+    linear-gradient(180deg, var(--drama-sheen-weak), transparent 180px),
     color-mix(in srgb, var(--drama-surface-strong) 90%, black 10%) !important;
 }
 
@@ -649,7 +708,7 @@
   min-height: 0;
   grid-template-columns: 280px minmax(420px, 1fr) 340px;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025), transparent 28%),
+    linear-gradient(90deg, var(--drama-sheen-weak), transparent 28%),
     var(--drama-bg);
 }
 
@@ -678,7 +737,7 @@
   gap: 8px;
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-md);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--drama-control-bg);
   color: var(--drama-text);
   cursor: pointer;
   font-size: 13px;
@@ -742,11 +801,11 @@
 }
 
 .drama-crew-channel[data-tone="warn"] {
-  color: rgba(251, 191, 36, 0.9);
+  color: var(--drama-warning-text);
 }
 
 .drama-crew-channel[data-tone="done"] {
-  color: rgba(52, 211, 153, 0.9);
+  color: var(--drama-success-text);
 }
 
 .drama-crew-source-row {
@@ -781,7 +840,7 @@
   gap: var(--drama-space-2);
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-md);
-  background: rgba(255, 255, 255, 0.032);
+  background: var(--drama-control-bg);
   color: inherit;
   cursor: pointer;
   padding: 8px;
@@ -832,7 +891,7 @@
   flex-direction: column;
   overflow: auto;
   border-right: 1px solid var(--drama-border);
-  background: rgba(5, 6, 9, 0.72);
+  background: color-mix(in srgb, var(--drama-bg) 84%, var(--drama-surface-strong) 16%);
 }
 
 .drama-crew-stage-header {
@@ -884,7 +943,7 @@
   gap: 7px;
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-sm);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--drama-control-bg);
   color: var(--drama-text);
   cursor: pointer;
   padding: 0 10px;
@@ -930,7 +989,7 @@
   gap: var(--drama-space-3);
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-md);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--drama-surface-soft);
   padding: var(--drama-space-3);
 }
 
@@ -945,7 +1004,7 @@
   place-items: center;
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-md);
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--drama-control-bg);
   color: var(--drama-text-muted);
 }
 
@@ -1006,7 +1065,7 @@
   overflow: hidden;
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-sm);
-  background: rgba(0, 0, 0, 0.18);
+  background: var(--drama-code-bg);
   color: var(--drama-text-subtle);
   font-family:
     "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
@@ -1025,9 +1084,9 @@
 .drama-crew-event-field {
   display: grid;
   gap: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--drama-border-soft);
   border-radius: var(--drama-radius-sm);
-  background: rgba(0, 0, 0, 0.18);
+  background: var(--drama-code-bg);
   padding: 8px;
 }
 
@@ -1054,7 +1113,7 @@
 .drama-crew-chip-row span {
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-xs);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--drama-control-bg);
   color: var(--drama-text-subtle);
   font-family:
     "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
@@ -1117,7 +1176,7 @@
   gap: 8px;
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-sm);
-  background: rgba(0, 0, 0, 0.18);
+  background: var(--drama-code-bg);
   color: var(--drama-text-muted);
   padding: 8px;
 }
@@ -1205,7 +1264,7 @@
   gap: var(--drama-space-3);
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-lg);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035)), var(--drama-surface);
+  background: linear-gradient(180deg, var(--drama-sheen), var(--drama-sheen-weak)), var(--drama-surface);
   box-shadow: var(--drama-shadow-panel);
   padding: var(--drama-space-4);
 }
@@ -1257,7 +1316,7 @@
   margin-top: var(--drama-space-3);
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-sm);
-  background: rgba(0, 0, 0, 0.18);
+  background: var(--drama-code-bg);
   color: var(--drama-text-muted);
   padding: 5px 8px;
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
@@ -1317,10 +1376,82 @@
   overflow: auto;
   border: 1px solid var(--drama-border);
   border-radius: var(--drama-radius-md);
-  background: rgba(0, 0, 0, 0.24);
+  background: var(--drama-code-bg);
   color: var(--drama-text-muted);
   font: 11px/1.55 "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   padding: var(--drama-space-3);
+}
+
+:root:is(
+  [data-drama-skin="paper-light"],
+  [data-drama-skin="jade-glass"],
+  [data-drama-skin="opal-bloom"]
+) .drama-surface-frame [class~="text-white"] {
+  color: var(--drama-text) !important;
+}
+
+:root:is(
+  [data-drama-skin="paper-light"],
+  [data-drama-skin="jade-glass"],
+  [data-drama-skin="opal-bloom"]
+) .drama-surface-frame [class*="text-white/"] {
+  color: var(--drama-text-muted) !important;
+}
+
+:root:is(
+  [data-drama-skin="paper-light"],
+  [data-drama-skin="jade-glass"],
+  [data-drama-skin="opal-bloom"]
+) .drama-surface-frame [class*="border-white"] {
+  border-color: var(--drama-border) !important;
+}
+
+:root:is(
+  [data-drama-skin="paper-light"],
+  [data-drama-skin="jade-glass"],
+  [data-drama-skin="opal-bloom"]
+) .drama-surface-frame [class*="bg-white"] {
+  background-color: var(--drama-surface-soft) !important;
+}
+
+:root:is(
+  [data-drama-skin="paper-light"],
+  [data-drama-skin="jade-glass"],
+  [data-drama-skin="opal-bloom"]
+) .drama-surface-frame [class*="bg-black"],
+:root:is(
+  [data-drama-skin="paper-light"],
+  [data-drama-skin="jade-glass"],
+  [data-drama-skin="opal-bloom"]
+) .drama-surface-frame [class*="bg-[#"] {
+  background-color: var(--drama-code-bg) !important;
+}
+
+:root:is(
+  [data-drama-skin="paper-light"],
+  [data-drama-skin="jade-glass"],
+  [data-drama-skin="opal-bloom"]
+) .drama-surface-frame [class*="ring-white"] {
+  --tw-ring-color: color-mix(in srgb, var(--drama-accent) 34%, transparent) !important;
+}
+
+:root:is(
+  [data-drama-skin="paper-light"],
+  [data-drama-skin="jade-glass"],
+  [data-drama-skin="opal-bloom"]
+) .drama-surface-frame [class*="ring-offset-"] {
+  --tw-ring-offset-color: var(--drama-bg) !important;
+}
+
+@media (max-width: 1180px) {
+  .drama-skin-control {
+    max-width: 98px;
+  }
+
+  .drama-skin-control-label,
+  .drama-surface-classification-badge {
+    display: none;
+  }
 }
 
 @media (max-width: 1020px) {

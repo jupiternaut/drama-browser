@@ -10,6 +10,7 @@ import {
   ListChecks,
   MessageSquareText,
   Network,
+  Palette,
   Radio,
   RefreshCw,
   RotateCcw,
@@ -40,6 +41,15 @@ import { Button, StatusBadge, WorkbenchToolButton, type StatusTone } from '@dram
 import { fallbackGraphApi } from './fallback-graph-api'
 import { markProductPath, setDramaReadySignal } from './performance'
 import { createRuntimeBackedGraphApi } from './runtime-graph-api'
+import {
+  applyDramaSkin,
+  DRAMA_SKINS,
+  getInitialDramaSkinId,
+  persistDramaSkinId,
+  resolveDramaSkinId,
+  type DramaSkin,
+  type DramaSkinId,
+} from './skins'
 
 type Surface = 'graph' | 'plm' | 'crew'
 type StyleReadiness = 'checking' | 'ready' | 'missing'
@@ -534,10 +544,43 @@ function SurfaceButton({
   )
 }
 
+function SkinSwitcher({
+  skins,
+  activeSkinId,
+  onSkinChange,
+}: {
+  skins: DramaSkin[]
+  activeSkinId: DramaSkinId
+  onSkinChange: (skinId: DramaSkinId) => void
+}) {
+  const activeSkin = skins.find((skin) => skin.id === activeSkinId) ?? skins[0]
+
+  return (
+    <label className="drama-skin-control" title={activeSkin?.description ?? 'Drama skin'}>
+      <Palette className="drama-skin-control-icon" aria-hidden="true" />
+      <span className="drama-skin-control-label">Skin</span>
+      <select
+        className="drama-skin-select"
+        aria-label="Drama skin"
+        value={activeSkinId}
+        onChange={(event) => onSkinChange(resolveDramaSkinId(event.currentTarget.value))}
+      >
+        {skins.map((skin) => (
+          <option key={skin.id} value={skin.id}>
+            {skin.shortLabel}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
 function DramaWorkbenchShell({
   surface,
   surfaces,
+  skins,
   activeSurface,
+  activeSkinId,
   zenHost,
   hostKind,
   surfaceClassification,
@@ -545,11 +588,14 @@ function DramaWorkbenchShell({
   runtimeStateLabel,
   shellState,
   onSwitchSurface,
+  onSkinChange,
   children,
 }: {
   surface: Surface
   surfaces: SurfaceDescriptor[]
+  skins: DramaSkin[]
   activeSurface: SurfaceDescriptor
+  activeSkinId: DramaSkinId
   zenHost: boolean
   hostKind: string
   surfaceClassification: DramaPlmSurfaceClassificationResult
@@ -557,6 +603,7 @@ function DramaWorkbenchShell({
   runtimeStateLabel: string
   shellState: ShellState
   onSwitchSurface: (surface: Surface) => void
+  onSkinChange: (skinId: DramaSkinId) => void
   children: React.ReactNode
 }) {
   const surfaceIcon = activeSurface.Icon
@@ -567,6 +614,7 @@ function DramaWorkbenchShell({
       className={['drama-shell', zenHost ? 'zen-host' : ''].filter(Boolean).join(' ')}
       data-drama-shell="workbench"
       data-drama-shell-state={shellState.id}
+      data-drama-active-skin={activeSkinId}
       data-host={zenHost ? 'zen' : 'browser'}
     >
       {!zenHost ? (
@@ -625,6 +673,11 @@ function DramaWorkbenchShell({
           </div>
 
           <div className="drama-workbench-meta">
+            <SkinSwitcher
+              skins={skins}
+              activeSkinId={activeSkinId}
+              onSkinChange={onSkinChange}
+            />
             <StatusBadge
               className="drama-surface-classification-badge"
               tone={surfaceClassificationTone(surfaceClassification)}
@@ -658,6 +711,14 @@ function DramaWorkbenchShell({
 export function App() {
   const [surface, setSurface] = React.useState<Surface>(getInitialSurface)
   const [zenHost, setZenHost] = React.useState(isZenHost)
+  const [activeSkinId, setActiveSkinId] = React.useState<DramaSkinId>(() => (
+    getInitialDramaSkinId(isZenHost() ? 'zen-follow' : 'drama-classic')
+  ))
+  React.useLayoutEffect(() => {
+    applyDramaSkin(activeSkinId)
+    persistDramaSkinId(activeSkinId)
+    setDramaReadySignal('dramaActiveSkin', activeSkinId)
+  }, [activeSkinId])
   const { cssProbeRef, tailwindProbeRef, styleReadiness } = useStyleReadiness()
   const runtimeBaseUrl = React.useMemo(getRuntimeBaseUrl, [])
   const runtimeClient = React.useMemo(() => createDramaRuntimeClient({ baseUrl: runtimeBaseUrl }), [runtimeBaseUrl])
@@ -827,8 +888,10 @@ export function App() {
 
   React.useEffect(() => {
     const handlePopState = () => {
+      const nextZenHost = isZenHost()
       setSurface(getInitialSurface())
-      setZenHost(isZenHost())
+      setZenHost(nextZenHost)
+      setActiveSkinId(getInitialDramaSkinId(nextZenHost ? 'zen-follow' : 'drama-classic'))
     }
     globalThis.addEventListener?.('popstate', handlePopState)
     return () => globalThis.removeEventListener?.('popstate', handlePopState)
@@ -992,6 +1055,9 @@ export function App() {
     markProductPath('first-styled-viewport', {
       surface,
       state: 'ready',
+      detail: {
+        activeSkinId,
+      },
     })
     markProductPath('route-ready', {
       surface,
@@ -999,9 +1065,10 @@ export function App() {
       detail: {
         hostKind,
         productPath: surfaceClassification.productPath,
+        activeSkinId,
       },
     }, { once: false })
-  }, [hostKind, shellState.id, styleReadiness, surface, surfaceClassification.productPath])
+  }, [activeSkinId, hostKind, shellState.id, styleReadiness, surface, surfaceClassification.productPath])
 
   if (styleReadiness !== 'ready') {
     return (
@@ -1018,7 +1085,9 @@ export function App() {
       <DramaWorkbenchShell
         surface={surface}
         surfaces={surfaces}
+        skins={DRAMA_SKINS}
         activeSurface={activeSurface}
+        activeSkinId={activeSkinId}
         zenHost={zenHost}
         hostKind={hostKind}
         surfaceClassification={surfaceClassification}
@@ -1026,6 +1095,7 @@ export function App() {
         runtimeStateLabel={runtimeStateLabel}
         shellState={shellState}
         onSwitchSurface={switchSurface}
+        onSkinChange={setActiveSkinId}
       >
         {surface === 'graph' ? (
           <StoryletNativeGraphContainer

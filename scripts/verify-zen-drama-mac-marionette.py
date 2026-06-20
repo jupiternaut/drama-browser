@@ -89,6 +89,7 @@ def parse_args():
     parser.add_argument("--expect-shell-state", default=None, help="Require documentElement.dataset.dramaShellState to equal this value.")
     parser.add_argument("--production-fixture", action="store_true", help="Ask the Zen PLM panel to bootstrap the deterministic production parity fixture.")
     parser.add_argument("--expect-production-evidence", action="store_true", help="Require PLM production evidence DOM markers for project, chapter, prompt, memory, and autopilot.")
+    parser.add_argument("--expect-production-ready", action="store_true", help="Require Stage 9.2 PLM production evidence to be ready for Prompt, Memory, Hosted Write, and Autopilot.")
     parser.add_argument("--first-viewport-budget-ms", type=int, default=FIRST_VIEWPORT_BUDGET_MS)
     parser.add_argument("--runtime-budget-ms", type=int, default=RUNTIME_READY_BUDGET_MS)
     parser.add_argument("--sidecar-budget-ms", type=int, default=SIDECAR_READY_BUDGET_MS)
@@ -116,6 +117,9 @@ def write_profile(profile_dir: Path, port: int, runtime_url: str, surface: str, 
                 'user_pref("startup.homepage_welcome_url.additional", "");',
                 'user_pref("browser.startup.homepage_override.mstone", "ignore");',
                 'user_pref("browser.aboutwelcome.enabled", false);',
+                'user_pref("sidebar.visibility", "always-show");',
+                'user_pref("sidebar.expandOnHover", false);',
+                'user_pref("zen.view.sidebar-expanded", true);',
                 f'user_pref("zen.drama.runtime-url", "{runtime_url}");',
                 'user_pref("zen.drama.internal-app.enabled", true);',
                 'user_pref("zen.drama.internal-app-url", "chrome://browser/content/drama/app/index.html");',
@@ -167,16 +171,34 @@ const panel = document.getElementById('zen-drama-panel');
 const browser = document.getElementById('zen-drama-browser');
 const launcher = document.getElementById('zen-drama-launcher-button');
 const lockButton = document.getElementById('zen-drama-lock-button');
+const nativeSidebar = document.getElementById('navigator-toolbox');
+const appcontent = document.getElementById('zen-appcontent-wrapper');
 const manager = window.gZenDramaManager;
+const rectOf = (node) => node ? (() => {
+  const rect = node.getBoundingClientRect();
+  return { width: rect.width, height: rect.height, top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom };
+})() : null;
 const launcherRect = launcher ? (() => {
   const rect = launcher.getBoundingClientRect();
   return { width: rect.width, height: rect.height, top: rect.top, left: rect.left };
 })() : null;
+const nativeSidebarRect = rectOf(nativeSidebar);
+const appcontentRect = rectOf(appcontent);
+const panelRect = rectOf(panel);
 let content = null;
 try {
   const doc = browser?.contentWindow?.document ?? browser?.contentDocument ?? null;
   const root = doc?.getElementById('root') ?? null;
   const shell = doc?.querySelector('[data-drama-shell="workbench"], .drama-shell, .drama-critical-fallback') ?? null;
+  const lazyLayout = doc?.querySelector('[data-plm-lazy-layout]') ?? null;
+  const readerModule = doc?.querySelector('[data-plm-reader-module="true"]') ?? null;
+  const controlRail = doc?.querySelector('[data-plm-control-rail="true"]') ?? null;
+  const contentRectOf = (node) => node ? (() => {
+    const rect = node.getBoundingClientRect();
+    return { width: rect.width, height: rect.height, top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom };
+  })() : null;
+  const readerModuleRect = contentRectOf(readerModule);
+  const controlRailRect = contentRectOf(controlRail);
   const productionEvidenceRoot = doc?.querySelector('[data-plm-production-evidence="true"]') ?? null;
   const productionEvidenceItems = productionEvidenceRoot
     ? [...productionEvidenceRoot.querySelectorAll('[data-plm-production-evidence-item]')].map((item) => ({
@@ -190,6 +212,9 @@ try {
     projectId: productionEvidenceRoot.getAttribute('data-plm-production-project-id') ?? null,
     chapterId: productionEvidenceRoot.getAttribute('data-plm-production-chapter-id') ?? null,
     chapterNumber: productionEvidenceRoot.getAttribute('data-plm-production-chapter-number') ?? null,
+    stage9Ready: productionEvidenceRoot.getAttribute('data-plm-stage9-ready') ?? null,
+    stage9NonReady: productionEvidenceRoot.getAttribute('data-plm-stage9-non-ready') ?? null,
+    hostedWriteState: productionEvidenceRoot.getAttribute('data-plm-hosted-write-evidence') ?? null,
     promptState: productionEvidenceRoot.getAttribute('data-plm-prompt-evidence') ?? null,
     memoryState: productionEvidenceRoot.getAttribute('data-plm-memory-evidence') ?? null,
     autopilotState: productionEvidenceRoot.getAttribute('data-plm-autopilot-evidence') ?? null,
@@ -216,6 +241,12 @@ try {
     shellExists: Boolean(shell),
     shellText: (shell?.textContent ?? '').slice(0, 1200),
     shellRect,
+    lazyLayout: lazyLayout?.getAttribute('data-plm-lazy-layout') ?? null,
+    readerModuleExists: Boolean(readerModule),
+    controlRailExists: Boolean(controlRail),
+    readerModuleRect,
+    controlRailRect,
+    readerBeforeControlRail: Boolean(readerModuleRect && controlRailRect && readerModuleRect.left < controlRailRect.left),
     elementCount: doc.querySelectorAll('*').length,
     scripts: [...doc.scripts].map((script) => script.src),
     stylesheets: [...doc.styleSheets].length,
@@ -233,6 +264,18 @@ return {
   panelExists: Boolean(panel),
   panelHidden: panel?.hidden ?? null,
   panelDisplay: panel ? getComputedStyle(panel).display : null,
+  panelParentId: panel?.parentElement?.id ?? null,
+  panelRect,
+  appcontentRect,
+  nativeSidebarExists: Boolean(nativeSidebar),
+  nativeSidebarRect,
+  nativeSidebarVisible: Boolean(nativeSidebarRect?.width > 0 && nativeSidebarRect?.height > 0),
+  nativeSidebarExpandedAttr: document.documentElement.getAttribute('zen-sidebar-expanded'),
+  nativeSidebarPinnedAttr: document.documentElement.getAttribute('zen-drama-sidebar-pinned'),
+  nativeSidebarCoveredByPanel: Boolean(panelRect && nativeSidebarRect && panelRect.left < nativeSidebarRect.right),
+  sidebarVisibilityPref: Services.prefs.getStringPref('sidebar.visibility', ''),
+  sidebarExpandOnHoverPref: Services.prefs.getBoolPref('sidebar.expandOnHover', true),
+  zenSidebarExpandedPref: Services.prefs.getBoolPref('zen.view.sidebar-expanded', false),
   launcherExists: Boolean(launcher),
   launcherBound: launcher?.getAttribute('zen-drama-launcher-bound') ?? null,
   launcherLabel: launcher?.getAttribute('label') ?? null,
@@ -878,8 +921,8 @@ def expected_shell_state_reasons(result, expected_state):
     return [f"Drama shell state was {actual_state!r}, expected {expected_state!r}."]
 
 
-def production_evidence_reasons(result, expect_production_evidence: bool):
-    if not expect_production_evidence:
+def production_evidence_reasons(result, expect_production_evidence: bool, expect_production_ready: bool):
+    if not expect_production_evidence and not expect_production_ready:
         return []
 
     content = result.get("content") if isinstance(result, dict) else None
@@ -922,14 +965,23 @@ def production_evidence_reasons(result, expect_production_evidence: bool):
         if item_states.get(present_item) == "blocked":
             reasons.append(f"PLM production evidence item {present_item!r} is blocked.")
 
+    if expect_production_ready:
+        if evidence.get("stage9Ready") != "true":
+            reasons.append(f"PLM Stage 9.2 readiness marker was {evidence.get('stage9Ready')!r}; non-ready={evidence.get('stage9NonReady')!r}.")
+        for ready_item in ("prompt", "memory", "autopilot", "hosted-write"):
+            if item_states.get(ready_item) != "ready":
+                reasons.append(f"PLM Stage 9.2 evidence item {ready_item!r} is {item_states.get(ready_item)!r}, expected 'ready'.")
+
     for attr_name, label in (
+        ("hostedWriteState", "hosted-write"),
         ("promptState", "prompt"),
         ("memoryState", "memory"),
         ("autopilotState", "autopilot"),
     ):
         state = evidence.get(attr_name)
-        if state not in ("ready", "partial"):
-            reasons.append(f"PLM production {label} marker is {state!r}, expected ready or partial.")
+        expected_states = ("ready",) if expect_production_ready else ("ready", "partial")
+        if state not in expected_states:
+            reasons.append(f"PLM production {label} marker is {state!r}, expected {', '.join(expected_states)}.")
 
     return reasons
 
@@ -993,7 +1045,7 @@ def main() -> int:
         reasons = (
             failure_reasons(inspected, args.surface)
             + expected_shell_state_reasons(inspected, args.expect_shell_state)
-            + production_evidence_reasons(inspected, args.expect_production_evidence)
+            + production_evidence_reasons(inspected, args.expect_production_evidence, args.expect_production_ready)
             + performance_reasons
             + screenshot_reasons
             + launcher_reopen_reasons(launcher_reopen_result)
@@ -1012,6 +1064,7 @@ def main() -> int:
             "expectedShellState": args.expect_shell_state,
             "productionFixture": args.production_fixture,
             "expectedProductionEvidence": args.expect_production_evidence,
+            "expectedProductionReady": args.expect_production_ready,
             "profile": str(profile_dir),
             "logPath": str(log_path),
             "durationMs": round((time.time() - started_at) * 1000),
@@ -1039,6 +1092,7 @@ def main() -> int:
             "expectedShellState": args.expect_shell_state,
             "productionFixture": args.production_fixture,
             "expectedProductionEvidence": args.expect_production_evidence,
+            "expectedProductionReady": args.expect_production_ready,
             "profile": str(profile_dir),
             "logPath": str(log_path),
             "durationMs": round((time.time() - started_at) * 1000),
