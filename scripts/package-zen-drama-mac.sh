@@ -70,14 +70,16 @@ if body_marker not in text:
     body_hook = """  <!-- zen-drama-body-hook -->
   <commandset id="zen-drama-commandset">
     <command id="cmd_zenDramaToggle" />
+    <command id="cmd_zenDramaOpenStart" />
     <command id="cmd_zenDramaOpenGraph" />
     <command id="cmd_zenDramaOpenPlm" />
     <command id="cmd_zenDramaOpenCrew" />
     <command id="cmd_zenDramaOpenInTab" />
   </commandset>
-  <toolbarbutton id="zen-drama-launcher-button" class="toolbarbutton-1 zen-drama-launcher-button" image="chrome://browser/content/zen-icons/drama-plm.svg" label="PLM" tooltiptext="Open Drama PLM" />
+  <toolbarbutton id="zen-drama-launcher-button" class="toolbarbutton-1 zen-drama-launcher-button" image="chrome://browser/content/zen-icons/drama-start.svg" label="Drama" tooltiptext="Open Drama Browser" />
   <vbox id="zen-drama-panel" hidden="true">
     <hbox id="zen-drama-toolbar" class="chromeclass-toolbar" align="center">
+      <toolbarbutton id="zen-drama-start-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenStart" label="Zen Start" tooltiptext="Zen Start" />
       <toolbarbutton id="zen-drama-graph-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenGraph" label="Drama Graph" tooltiptext="Drama Graph" />
       <toolbarbutton id="zen-drama-plm-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenPlm" label="Drama PLM" tooltiptext="Drama PLM" />
       <toolbarbutton id="zen-drama-crew-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenCrew" label="Skill Crew" tooltiptext="Skill Crew" />
@@ -91,12 +93,24 @@ if body_marker not in text:
 """
     text = text.replace("</html:body>", f"{body_hook}</html:body>", 1)
 elif "zen-drama-launcher-button" not in text:
-    launcher_hook = """  <toolbarbutton id="zen-drama-launcher-button" class="toolbarbutton-1 zen-drama-launcher-button" image="chrome://browser/content/zen-icons/drama-plm.svg" label="PLM" tooltiptext="Open Drama PLM" />
+    launcher_hook = """  <toolbarbutton id="zen-drama-launcher-button" class="toolbarbutton-1 zen-drama-launcher-button" image="chrome://browser/content/zen-icons/drama-start.svg" label="Drama" tooltiptext="Open Drama Browser" />
 """
     text = text.replace('  <vbox id="zen-drama-panel" hidden="true">', f"{launcher_hook}  <vbox id=\"zen-drama-panel\" hidden=\"true\">", 1)
 
 text = text.replace('id="zen-drama-close-button"', 'id="zen-drama-lock-button"')
 text = text.replace('tooltiptext="Close Drama"', 'tooltiptext="Lock Drama and release panel memory"')
+if 'id="cmd_zenDramaOpenStart"' not in text:
+    text = text.replace(
+        '    <command id="cmd_zenDramaOpenGraph" />',
+        '    <command id="cmd_zenDramaOpenStart" />\n    <command id="cmd_zenDramaOpenGraph" />',
+        1,
+    )
+if 'id="zen-drama-start-button"' not in text:
+    text = text.replace(
+        '      <toolbarbutton id="zen-drama-graph-button"',
+        '      <toolbarbutton id="zen-drama-start-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenStart" label="Zen Start" tooltiptext="Zen Start" />\n      <toolbarbutton id="zen-drama-graph-button"',
+        1,
+    )
 
 path.write_text(text)
 PY
@@ -105,8 +119,14 @@ PY
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
-APP_DEST="$OUTPUT_DIR/Zen Browser.app"
+APP_DEST="$OUTPUT_DIR/Drama Browser.app"
 ditto "$ZEN_APP" "$APP_DEST"
+INFO_PLIST="$APP_DEST/Contents/Info.plist"
+if [[ -f "$INFO_PLIST" ]]; then
+  plutil -replace CFBundleName -string "Drama Browser" "$INFO_PLIST"
+  plutil -replace CFBundleDisplayName -string "Drama Browser" "$INFO_PLIST"
+  plutil -replace CFBundleIdentifier -string "app.drama-browser.local" "$INFO_PLIST"
+fi
 
 RESOURCE_ROOT="$APP_DEST/Contents/Resources/browser/chrome/browser/content/browser"
 APP_RESOURCE_DIR="$RESOURCE_ROOT/drama/app"
@@ -121,7 +141,7 @@ cp "$REPO_ROOT/zen-drama-chrome/ZenDramaManager.mjs" "$COMPONENT_DIR/ZenDramaMan
 cp "$REPO_ROOT/zen-drama-chrome/zen-drama.css" "$STYLE_DIR/zen-drama.css"
 install_browser_chrome_hooks "$RESOURCE_ROOT/browser.xhtml"
 
-for icon in drama-graph.svg drama-plm.svg drama-crew.svg; do
+for icon in drama-start.svg drama-graph.svg drama-plm.svg drama-crew.svg; do
   if [[ -f "$REPO_ROOT/zen-drama-chrome/$icon" ]]; then
     cp "$REPO_ROOT/zen-drama-chrome/$icon" "$ICON_DIR/$icon"
   fi
@@ -143,7 +163,7 @@ if [[ -f "$OMNI_JA" ]]; then
     "$OMNI_STAGING/chrome/browser/content/browser/zen-components/ZenDramaManager.mjs"
   cp "$REPO_ROOT/zen-drama-chrome/zen-drama.css" \
     "$OMNI_STAGING/chrome/browser/content/browser/zen-styles/zen-drama.css"
-  for icon in drama-graph.svg drama-plm.svg drama-crew.svg; do
+  for icon in drama-start.svg drama-graph.svg drama-plm.svg drama-crew.svg; do
     if [[ -f "$REPO_ROOT/zen-drama-chrome/$icon" ]]; then
       cp "$REPO_ROOT/zen-drama-chrome/$icon" \
         "$OMNI_STAGING/chrome/browser/content/browser/zen-icons/$icon"
@@ -157,24 +177,24 @@ fi
 mkdir -p "$OUTPUT_DIR/scripts"
 cp "$REPO_ROOT/scripts/launch-drama-runtime.sh" "$OUTPUT_DIR/scripts/"
 cp "$REPO_ROOT/scripts/launch-plotpilot-sidecar-mac.sh" "$OUTPUT_DIR/scripts/"
-cat > "$OUTPUT_DIR/Start-Drama-Zen.command" <<EOF
+cat > "$OUTPUT_DIR/Start-Drama-Browser.command" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
 PACKAGE_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_REPO_ROOT="$REPO_ROOT"
-ZEN_APP="\${ZEN_APP:-\$PACKAGE_DIR/Zen Browser.app}"
+ZEN_APP="\${ZEN_APP:-\$PACKAGE_DIR/Drama Browser.app}"
 
-exec "\$SOURCE_REPO_ROOT/scripts/launch-zen-drama-mac.sh" --zen-app "\$ZEN_APP" "\$@"
+exec "\$SOURCE_REPO_ROOT/scripts/launch-zen-drama-mac.sh" --zen-app "\$ZEN_APP" --surface "\${ZEN_DRAMA_SURFACE:-start}" "\$@"
 EOF
 chmod +x "$OUTPUT_DIR/scripts/launch-drama-runtime.sh" \
   "$OUTPUT_DIR/scripts/launch-plotpilot-sidecar-mac.sh" \
-  "$OUTPUT_DIR/Start-Drama-Zen.command"
+  "$OUTPUT_DIR/Start-Drama-Browser.command"
 
 cat > "$OUTPUT_DIR/README.md" <<EOF
-# Zen Drama macOS package
+# Drama Browser macOS package
 
-This package is Zen-backed only when \`Zen Browser.app\` is a real Zen app/build
+This package is Zen-backed only when the source \`Zen Browser.app\` is a real Zen app/build
 with the Drama chrome-resource integration. A developer runtime wrapper, Brave,
 Electron, or localhost browser shell does not count as \`product-zen-panel\`
 validation.
@@ -182,7 +202,7 @@ validation.
 Launch:
 
 \`\`\`bash
-ZEN_APP="$APP_DEST" "$OUTPUT_DIR/Start-Drama-Zen.command" --surface plm --internal-app auto
+ZEN_APP="$APP_DEST" "$OUTPUT_DIR/Start-Drama-Browser.command" --surface start --internal-app auto
 \`\`\`
 
 If the source Zen build does not already register the ZenDrama chrome manager,
@@ -192,8 +212,8 @@ requires the matching Zen source/build integration.
 Verify the product-path boundary:
 
 \`\`\`bash
-"$REPO_ROOT/scripts/verify-zen-drama-mac.sh" --zen-app "$APP_DEST" --surface plm
+"$REPO_ROOT/scripts/verify-zen-drama-mac.sh" --zen-app "$APP_DEST" --surface start
 \`\`\`
 EOF
 
-echo "Packaged Zen Drama macOS tree at $OUTPUT_DIR"
+echo "Packaged Drama Browser macOS tree at $OUTPUT_DIR"

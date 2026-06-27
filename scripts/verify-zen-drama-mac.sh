@@ -8,7 +8,7 @@ LAUNCH=false
 
 usage() {
   cat <<'EOF'
-Usage: verify-zen-drama-mac.sh [--zen-app PATH] [--surface graph|plm|crew] [--runtime-url URL] [--launch]
+Usage: verify-zen-drama-mac.sh [--zen-app PATH] [--surface start|graph|plm|crew] [--runtime-url URL] [--launch]
 
 Verifies the macOS product-path boundary. If a real Zen Browser.app or local Zen
 build is missing, this reports blocked instead of substituting Brave, Electron,
@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$SURFACE" in
-  graph|plm|crew) ;;
+  start|graph|plm|crew) ;;
   *) echo "Invalid surface: $SURFACE" >&2; exit 2 ;;
 esac
 

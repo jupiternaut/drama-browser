@@ -213,9 +213,9 @@ async function serveBrowserShell(url: URL): Promise<Response | null> {
 
   if (pathname === '/') {
     const requestedSurface = url.searchParams.get('surface')
-    const surface = requestedSurface === 'graph' || requestedSurface === 'crew' || requestedSurface === 'plm'
+    const surface = requestedSurface === 'start' || requestedSurface === 'graph' || requestedSurface === 'crew' || requestedSurface === 'plm'
       ? requestedSurface
-      : 'plm'
+      : 'start'
     const runtimeUrl = `${url.protocol}//${url.host}`
     return new Response(null, {
       status: 302,
@@ -247,7 +247,7 @@ async function serveBrowserShell(url: URL): Promise<Response | null> {
     return null
   }
 
-  if (pathname === '/app' || pathname === '/app/' || pathname === '/app/graph' || pathname === '/app/plm' || pathname === '/app/crew') {
+  if (pathname === '/app' || pathname === '/app/' || pathname === '/app/start' || pathname === '/app/graph' || pathname === '/app/plm' || pathname === '/app/crew') {
     return new Response(await readFile(indexPath), {
       headers: {
         'content-type': 'text/html; charset=utf-8',
@@ -256,12 +256,12 @@ async function serveBrowserShell(url: URL): Promise<Response | null> {
     })
   }
 
-  const assetPrefixes = ['/app/assets/', '/assets/']
+  const assetPrefixes = ['/app/assets/', '/assets/', '/app/reader-assets/', '/reader-assets/']
   const matchedPrefix = assetPrefixes.find((prefix) => pathname.startsWith(prefix))
   if (!matchedPrefix) return null
 
-  const relativePath = matchedPrefix === '/app/assets/'
-    ? join('assets', pathname.slice(matchedPrefix.length))
+  const relativePath = matchedPrefix === '/app/assets/' || matchedPrefix === '/app/reader-assets/'
+    ? join(matchedPrefix.includes('reader-assets') ? 'reader-assets' : 'assets', pathname.slice(matchedPrefix.length))
     : pathname.slice(1)
   const filePath = join(distDir, relativePath)
   if (!isInsideDir(distDir, filePath) || !existsSync(filePath)) {

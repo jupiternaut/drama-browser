@@ -4,6 +4,7 @@ import {
   Bot,
   CheckCircle2,
   Clock3,
+  Compass,
   Database,
   FolderOpen,
   GitBranch,
@@ -50,8 +51,9 @@ import {
   type DramaSkin,
   type DramaSkinId,
 } from './skins'
+import { ZenStartSurface } from './ZenStartSurface'
 
-type Surface = 'graph' | 'plm' | 'crew'
+type Surface = 'start' | 'graph' | 'plm' | 'crew'
 type StyleReadiness = 'checking' | 'ready' | 'missing'
 type ShellStateId =
   | 'booting-shell'
@@ -82,23 +84,30 @@ interface SurfaceDescriptor {
 }
 
 const surfaces: SurfaceDescriptor[] = [
+  { id: 'start', title: 'Zen Start', shortLabel: 'Start', subtitle: '启动看板', source: '搜索 / 快捷入口 / 看板', Icon: Compass },
   { id: 'graph', title: 'Drama Graph', shortLabel: 'Graph', subtitle: '状态机画布', source: '画布 / 状态机 / 剧情结构', Icon: Network },
   { id: 'plm', title: 'Drama PLM', shortLabel: 'PLM', subtitle: '长上下文生成', source: '章节 / Bible / 草稿回写', Icon: ScrollText },
   { id: 'crew', title: 'Skill Crew', shortLabel: 'Crew', subtitle: '导演控场', source: 'Agent / Task / Graph Events', Icon: UsersRound },
 ]
 
+const PRODUCT_NAME = 'Drama Browser'
+
+function isSurfaceId(value: string | null | undefined): value is Surface {
+  return value === 'start' || value === 'plm' || value === 'crew' || value === 'graph'
+}
+
 function getInitialSurface(): Surface {
   const params = new URLSearchParams(globalThis.location?.search ?? '')
   const surfaceParam = params.get('surface')
-  if (surfaceParam === 'plm' || surfaceParam === 'crew' || surfaceParam === 'graph') return surfaceParam
+  if (isSurfaceId(surfaceParam)) return surfaceParam
 
   const hashSurface = globalThis.location?.hash?.replace(/^#\/?/, '').split(/[/?&]/)[0]
-  if (hashSurface === 'plm' || hashSurface === 'crew' || hashSurface === 'graph') return hashSurface
+  if (isSurfaceId(hashSurface)) return hashSurface
 
   const segments = globalThis.location?.pathname?.replace(/^\/+/, '').split('/').filter(Boolean) ?? []
   const path = segments[0] === 'app' ? segments[1] : segments[0]
-  if (path === 'plm' || path === 'crew' || path === 'graph') return path
-  return 'graph'
+  if (isSurfaceId(path)) return path
+  return 'start'
 }
 
 function isInternalChromeShell(): boolean {
@@ -119,7 +128,7 @@ function normalizeShellLocation(surface: Surface): void {
   const pathname = globalThis.location?.pathname ?? '/'
   const segments = pathname.replace(/^\/+/, '').split('/').filter(Boolean)
   const alreadyAppRoute = segments[0] === 'app'
-  const nakedSurfaceRoute = segments.length === 1 && (segments[0] === 'graph' || segments[0] === 'plm' || segments[0] === 'crew')
+  const nakedSurfaceRoute = segments.length === 1 && isSurfaceId(segments[0])
   if (alreadyAppRoute || !nakedSurfaceRoute) return
 
   const nextPath = `${getShellBasePath()}/${surface}${globalThis.location?.search ?? ''}${globalThis.location?.hash ?? ''}`
@@ -255,7 +264,7 @@ function StyleFailurePanel({ state }: { state: StyleReadiness }) {
       <section className="drama-critical-card" role="status" aria-live="polite">
         <div className="drama-critical-mark">D</div>
         <div className="drama-critical-copy">
-          <p className="drama-critical-kicker">Drama Workbench</p>
+          <p className="drama-critical-kicker">{PRODUCT_NAME}</p>
           <h1>{isChecking ? '正在校验工作台样式' : '工作台样式未完整加载'}</h1>
           <p>
             {isChecking
@@ -406,6 +415,15 @@ function deriveShellState({
       label: '工作台启动中',
       message: styleReadiness === 'checking' ? '正在校验 shell 和样式。' : '样式或 token bridge 未完整加载。',
       tone: styleReadiness === 'checking' ? 'info' : 'danger',
+    }
+  }
+
+  if (surface === 'start') {
+    return {
+      id: 'runtime-ready',
+      label: 'Zen Start ready',
+      message: 'Zen Start 启动看板已加载。',
+      tone: 'success',
     }
   }
 
@@ -666,7 +684,7 @@ function DramaWorkbenchShell({
               <ShellSurfaceIcon />
             </span>
             <span className="drama-surface-title-copy">
-              <span className="drama-surface-title-primary">Drama Workspace</span>
+              <span className="drama-surface-title-primary">{PRODUCT_NAME}</span>
               <span className="drama-surface-title-secondary">{activeSurface.title}</span>
             </span>
             <span className="drama-mode-pill" title={activeSurface.source}>{activeSurface.subtitle}</span>
@@ -699,7 +717,7 @@ function DramaWorkbenchShell({
         </header>
 
         <section className="drama-surface-frame" data-surface={surface}>
-          {runtimeStatus.state === 'offline' || runtimeStatus.state === 'error' ? (
+          {surface !== 'start' && (runtimeStatus.state === 'offline' || runtimeStatus.state === 'error') ? (
             <DramaRuntimeRecoveryPanel status={runtimeStatus} />
           ) : children}
         </section>
@@ -737,7 +755,7 @@ export function App() {
         runtimeBaseUrl,
       })
       : createBrowserHostApi({
-        name: 'Drama Browser Shell',
+        name: PRODUCT_NAME,
         version: '0.1.0',
       })
   ), [runtimeBaseUrl, zenHost])
@@ -875,16 +893,18 @@ export function App() {
     { state: '待审', label: '把建议写回 graph event', Icon: Clock3 },
     { state: '观察', label: '等待 PLM 章节生成状态', Icon: Activity },
   ]
+  const activeSurface = surfaces.find((item) => item.id === surface) ?? surfaces[0]!
 
   React.useEffect(() => {
     normalizeShellLocation(surface)
   }, [surface])
 
   React.useEffect(() => {
+    document.title = surface === 'start' ? PRODUCT_NAME : `${activeSurface.title} - ${PRODUCT_NAME}`
     setDramaReadySignal('dramaShellMounted', 'true')
     setDramaReadySignal('dramaSurface', surface)
     setDramaReadySignal('dramaHost', zenHost ? 'zen' : 'browser')
-  }, [surface, zenHost])
+  }, [activeSurface.title, surface, zenHost])
 
   React.useEffect(() => {
     const handlePopState = () => {
@@ -1010,7 +1030,6 @@ export function App() {
     })()
   }, [runtimeClient])
 
-  const activeSurface = surfaces.find((item) => item.id === surface) ?? surfaces[0]!
   const runtimeStateLabel = runtimeStatus.state === 'ready' ? 'ready' : runtimeStatus.state
   const hostKind = browserHost.getInfo().kind
   const surfaceClassification = React.useMemo(() => classifyDramaPlmSurface({
@@ -1097,6 +1116,10 @@ export function App() {
         onSwitchSurface={switchSurface}
         onSkinChange={setActiveSkinId}
       >
+        {surface === 'start' ? (
+          <ZenStartSurface />
+        ) : null}
+
         {surface === 'graph' ? (
           <StoryletNativeGraphContainer
             tool={{

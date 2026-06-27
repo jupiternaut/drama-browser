@@ -5,8 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 ZEN_APP="${ZEN_APP:-}"
-PROFILE_DIR="${ZEN_DRAMA_PROFILE:-$HOME/Library/Application Support/ZenDrama/profile-main}"
-SURFACE="${ZEN_DRAMA_SURFACE:-graph}"
+PROFILE_DIR="${ZEN_DRAMA_PROFILE:-$HOME/Library/Application Support/DramaBrowser/profile-main}"
+SURFACE="${ZEN_DRAMA_SURFACE:-start}"
 RUNTIME_URL="${DRAMA_RUNTIME_URL:-http://127.0.0.1:3198}"
 WAIT_FOR_EXIT=0
 NO_RUNTIME_LAUNCH=0
@@ -15,7 +15,7 @@ PLM_LAUNCH_TIMEOUT_SECONDS="${ZEN_DRAMA_PLM_LAUNCH_TIMEOUT_SECONDS:-45}"
 
 usage() {
   cat <<'EOF'
-Usage: launch-zen-drama-mac.sh [--zen-app PATH] [--profile PATH] [--surface graph|plm|crew]
+Usage: launch-zen-drama-mac.sh [--zen-app PATH] [--profile PATH] [--surface start|graph|plm|crew]
                                [--runtime-url URL] [--internal-app true|false|auto]
                                [--no-runtime-launch] [--wait]
 EOF
@@ -36,7 +36,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$SURFACE" in
-  graph|plm|crew) ;;
+  start|graph|plm|crew) ;;
   *) echo "Invalid surface: $SURFACE" >&2; exit 2 ;;
 esac
 
@@ -106,7 +106,14 @@ user_pref("zen.drama.open-on-startup", true);
 user_pref("zen.drama.start-surface", "$SURFACE");
 EOF
 
-if [[ "$NO_RUNTIME_LAUNCH" == "0" ]]; then
+ENCODED_RUNTIME="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$RUNTIME_URL")"
+if [[ "$INTERNAL_APP_ENABLED" == "true" ]]; then
+  DRAMA_DOCUMENT_URI="chrome://browser/content/drama/app/index.html?host=zen&runtime=${ENCODED_RUNTIME}&surface=${SURFACE}"
+else
+  DRAMA_DOCUMENT_URI="${RUNTIME_URL}/app/${SURFACE}?host=zen&runtime=${ENCODED_RUNTIME}&surface=${SURFACE}"
+fi
+
+if [[ "$NO_RUNTIME_LAUNCH" == "0" && "$SURFACE" != "start" ]]; then
   "$REPO_ROOT/scripts/launch-drama-runtime.sh"
   if [[ "$SURFACE" == "plm" ]]; then
     "$REPO_ROOT/scripts/launch-plotpilot-sidecar-mac.sh"
@@ -122,4 +129,6 @@ if [[ "$WAIT_FOR_EXIT" == "1" ]]; then
   open -W "${OPEN_ARGS[@]}"
 else
   open "${OPEN_ARGS[@]}"
+  sleep 0.8
+  open -a "$ZEN_APP" "$DRAMA_DOCUMENT_URI" >/tmp/zen-drama-open-url.log 2>&1 || true
 fi

@@ -96,6 +96,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
 
   #bindCommands() {
     this.#bindCommand("cmd_zenDramaToggle", () => this.toggle());
+    this.#bindCommand("cmd_zenDramaOpenStart", () => this.open("start"));
     this.#bindCommand("cmd_zenDramaOpenGraph", () => this.open("graph"));
     this.#bindCommand("cmd_zenDramaOpenPlm", () => this.open("plm"));
     this.#bindCommand("cmd_zenDramaOpenCrew", () => this.open("crew"));
@@ -177,9 +178,9 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     }
 
     button.setAttribute("class", "toolbarbutton-1 zen-drama-launcher-button");
-    button.setAttribute("image", "chrome://browser/content/zen-icons/drama-plm.svg");
-    button.setAttribute("label", "PLM");
-    button.setAttribute("tooltiptext", "Open Drama PLM");
+    button.setAttribute("image", "chrome://browser/content/zen-icons/drama-start.svg");
+    button.setAttribute("label", "Drama");
+    button.setAttribute("tooltiptext", "Open Drama Browser");
     button.setAttribute("removable", "false");
     button.setAttribute("overflows", "false");
 
@@ -187,7 +188,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       button.addEventListener("command", event => {
         event.preventDefault();
         event.stopPropagation();
-        this.open("plm");
+        this.open("start");
       });
       button.setAttribute("zen-drama-launcher-bound", "true");
     }
@@ -247,6 +248,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       this.#sidebarMountUpdatePending = true;
       window.requestAnimationFrame(() => {
         this.#sidebarMountUpdatePending = false;
+        this.#ensurePinnedStartSidebarEntry();
         this.#ensurePinnedPlmSidebarEntry();
         this.#ensureSidebarSurfaceButtons();
         this.#updatePinnedPlmActiveState();
@@ -259,6 +261,64 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       subtree: true,
     });
     scheduleSidebarMountUpdate();
+  }
+
+  #ensurePinnedStartSidebarEntry() {
+    const tabs = document.getElementById("tabbrowser-tabs");
+    const tabWrapper = document.getElementById("zen-tabs-wrapper");
+    if (!tabs || !tabWrapper) {
+      return null;
+    }
+
+    const htmlNamespace = "http://www.w3.org/1999/xhtml";
+    let button = document.getElementById("zen-drama-start-pinned-sidebar-entry");
+    if (!button || button.namespaceURI !== htmlNamespace || button.localName !== "button") {
+      button?.remove();
+      button = document.createElementNS(htmlNamespace, "button");
+      button.setAttribute("id", "zen-drama-start-pinned-sidebar-entry");
+    }
+
+    if (!button.querySelector(".zen-drama-pinned-sidebar-entry-label")) {
+      const icon = document.createElementNS(htmlNamespace, "span");
+      icon.setAttribute("class", "zen-drama-pinned-sidebar-entry-icon");
+      icon.setAttribute("aria-hidden", "true");
+
+      const label = document.createElementNS(htmlNamespace, "span");
+      label.setAttribute("class", "zen-drama-pinned-sidebar-entry-label");
+      label.textContent = "Zen Start";
+
+      button.replaceChildren(icon, label);
+    }
+
+    button.setAttribute("class", "zen-drama-pinned-sidebar-entry");
+    button.setAttribute("type", "button");
+    button.setAttribute("title", "Zen Start");
+    button.setAttribute("aria-label", "Zen Start");
+    button.setAttribute("zen-drama-pinned-style", "start");
+
+    if (button.getAttribute("zen-drama-pinned-entry-bound") !== "true") {
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.open("start");
+      });
+      button.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this.open("start");
+      });
+      button.setAttribute("zen-drama-pinned-entry-bound", "true");
+    }
+
+    const reference = document.getElementById("zen-drama-plm-pinned-sidebar-entry") || tabWrapper;
+    if (button.parentElement !== tabs || button.nextElementSibling !== reference) {
+      tabs.insertBefore(button, reference);
+    }
+
+    return button;
   }
 
   #ensurePinnedPlmSidebarEntry() {
@@ -335,6 +395,12 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     }
 
     const surfaces = [
+      {
+        id: "zen-drama-start-sidebar-button",
+        command: "cmd_zenDramaOpenStart",
+        image: "chrome://browser/content/zen-icons/drama-start.svg",
+        tooltip: "Zen Start",
+      },
       {
         id: "zen-drama-graph-sidebar-button",
         command: "cmd_zenDramaOpenGraph",
@@ -488,8 +554,8 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   }
 
   get startSurface() {
-    const surface = this.#getStringPref(DRAMA_START_SURFACE_PREF, "graph").trim();
-    return surface === "plm" || surface === "crew" || surface === "graph" ? surface : "graph";
+    const surface = this.#getStringPref(DRAMA_START_SURFACE_PREF, "start").trim();
+    return surface === "start" || surface === "plm" || surface === "crew" || surface === "graph" ? surface : "start";
   }
 
   get productionFixtureEnabled() {
@@ -592,9 +658,13 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     const url = this.currentUrl;
     this.#setStatus(`Drama ${this.#surface.toUpperCase()}`);
 
-    const runtimeReady = await this.#checkRuntimeStatus();
-    if (!runtimeReady) {
-      await this.#tryStartRuntime();
+    if (this.#surface === "start") {
+      this.#setStatus("Zen Start");
+    } else {
+      const runtimeReady = await this.#checkRuntimeStatus();
+      if (!runtimeReady) {
+        await this.#tryStartRuntime();
+      }
     }
 
     if (!this.#hasLoadedBrowser || this.browser.currentURI?.spec !== url) {
@@ -610,7 +680,9 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     }
 
     this.#sendTheme();
-    void this.#checkRuntimeStatus();
+    if (this.#surface !== "start") {
+      void this.#checkRuntimeStatus();
+    }
   }
 
   #hideForBrowserTab() {
@@ -681,9 +753,11 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     const launcherButton = this.#ensureLauncherButton();
     launcherButton?.setAttribute("zen-drama-surface", this.#surface);
     launcherButton?.setAttribute("zen-drama-locked", this.#isLocked ? "true" : "false");
+    this.#ensurePinnedStartSidebarEntry();
     this.#ensurePinnedPlmSidebarEntry();
     this.#ensureSidebarSurfaceButtons();
     const ids = {
+      start: ["zen-drama-start-button", "zen-drama-start-sidebar-button", "zen-drama-start-pinned-sidebar-entry"],
       graph: ["zen-drama-graph-button", "zen-drama-graph-sidebar-button"],
       plm: ["zen-drama-plm-button", "zen-drama-plm-sidebar-button", "zen-drama-plm-pinned-sidebar-entry"],
       crew: ["zen-drama-crew-button", "zen-drama-crew-sidebar-button"],
