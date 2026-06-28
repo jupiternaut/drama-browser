@@ -251,6 +251,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
         this.#sidebarMountUpdatePending = false;
         this.#ensurePinnedStartSidebarEntry();
         this.#ensurePinnedPlmSidebarEntry();
+        this.#ensurePinnedMemorySidebarEntry();
         this.#ensureSidebarSurfaceButtons();
         this.#updatePinnedPlmActiveState();
       });
@@ -314,7 +315,10 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       button.setAttribute("zen-drama-pinned-entry-bound", "true");
     }
 
-    const reference = document.getElementById("zen-drama-plm-pinned-sidebar-entry") || tabWrapper;
+    const reference =
+      document.getElementById("zen-drama-plm-pinned-sidebar-entry") ||
+      document.getElementById("zen-drama-memory-pinned-sidebar-entry") ||
+      tabWrapper;
     if (button.parentElement !== tabs || button.nextElementSibling !== reference) {
       tabs.insertBefore(button, reference);
     }
@@ -372,6 +376,64 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       button.setAttribute("zen-drama-pinned-entry-bound", "true");
     }
 
+    const reference = document.getElementById("zen-drama-memory-pinned-sidebar-entry") || tabWrapper;
+    if (button.parentElement !== tabs || button.nextElementSibling !== reference) {
+      tabs.insertBefore(button, reference);
+    }
+
+    return button;
+  }
+
+  #ensurePinnedMemorySidebarEntry() {
+    const tabs = document.getElementById("tabbrowser-tabs");
+    const tabWrapper = document.getElementById("zen-tabs-wrapper");
+    if (!tabs || !tabWrapper) {
+      return null;
+    }
+
+    const htmlNamespace = "http://www.w3.org/1999/xhtml";
+    let button = document.getElementById("zen-drama-memory-pinned-sidebar-entry");
+    if (!button || button.namespaceURI !== htmlNamespace || button.localName !== "button") {
+      button?.remove();
+      button = document.createElementNS(htmlNamespace, "button");
+      button.setAttribute("id", "zen-drama-memory-pinned-sidebar-entry");
+    }
+
+    if (!button.querySelector(".zen-drama-pinned-sidebar-entry-label")) {
+      const icon = document.createElementNS(htmlNamespace, "span");
+      icon.setAttribute("class", "zen-drama-pinned-sidebar-entry-icon");
+      icon.setAttribute("aria-hidden", "true");
+
+      const label = document.createElementNS(htmlNamespace, "span");
+      label.setAttribute("class", "zen-drama-pinned-sidebar-entry-label");
+      label.textContent = "Basic Memory";
+
+      button.replaceChildren(icon, label);
+    }
+
+    button.setAttribute("class", "zen-drama-pinned-sidebar-entry");
+    button.setAttribute("type", "button");
+    button.setAttribute("title", "Basic Memory");
+    button.setAttribute("aria-label", "Basic Memory");
+    button.setAttribute("zen-drama-pinned-style", "memory");
+
+    if (button.getAttribute("zen-drama-pinned-entry-bound") !== "true") {
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.open("memory");
+      });
+      button.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this.open("memory");
+      });
+      button.setAttribute("zen-drama-pinned-entry-bound", "true");
+    }
+
     if (button.parentElement !== tabs || tabWrapper.previousElementSibling !== button) {
       tabs.insertBefore(button, tabWrapper);
     }
@@ -381,11 +443,17 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
 
   #updatePinnedPlmActiveState() {
     const pinnedEntry = document.getElementById("zen-drama-plm-pinned-sidebar-entry");
+    const memoryEntry = document.getElementById("zen-drama-memory-pinned-sidebar-entry");
     const panelVisible = Boolean(this.panel && !this.panel.hidden);
     if (panelVisible && this.#surface === "plm") {
       pinnedEntry?.setAttribute("zen-drama-active", "true");
     } else {
       pinnedEntry?.removeAttribute("zen-drama-active");
+    }
+    if (panelVisible && this.#surface === "memory") {
+      memoryEntry?.setAttribute("zen-drama-active", "true");
+    } else {
+      memoryEntry?.removeAttribute("zen-drama-active");
     }
   }
 
@@ -763,13 +831,14 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     launcherButton?.setAttribute("zen-drama-locked", this.#isLocked ? "true" : "false");
     this.#ensurePinnedStartSidebarEntry();
     this.#ensurePinnedPlmSidebarEntry();
+    this.#ensurePinnedMemorySidebarEntry();
     this.#ensureSidebarSurfaceButtons();
     const ids = {
       start: ["zen-drama-start-button", "zen-drama-start-sidebar-button", "zen-drama-start-pinned-sidebar-entry"],
       graph: ["zen-drama-graph-button", "zen-drama-graph-sidebar-button"],
       plm: ["zen-drama-plm-button", "zen-drama-plm-sidebar-button", "zen-drama-plm-pinned-sidebar-entry"],
       crew: ["zen-drama-crew-button", "zen-drama-crew-sidebar-button"],
-      memory: ["zen-drama-memory-button", "zen-drama-memory-sidebar-button"],
+      memory: ["zen-drama-memory-button", "zen-drama-memory-sidebar-button", "zen-drama-memory-pinned-sidebar-entry"],
     };
     const panelVisible = Boolean(this.panel && !this.panel.hidden);
 
