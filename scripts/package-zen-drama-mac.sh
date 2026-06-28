@@ -191,18 +191,20 @@ fi
 mkdir -p "$OUTPUT_DIR/scripts"
 cp "$REPO_ROOT/scripts/launch-drama-runtime.sh" "$OUTPUT_DIR/scripts/"
 cp "$REPO_ROOT/scripts/launch-plotpilot-sidecar-mac.sh" "$OUTPUT_DIR/scripts/"
+cp "$REPO_ROOT/scripts/launch-drama-browser-mac.sh" "$OUTPUT_DIR/scripts/"
 cat > "$OUTPUT_DIR/Start-Drama-Browser.command" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
 PACKAGE_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_REPO_ROOT="$REPO_ROOT"
-ZEN_APP="\${ZEN_APP:-\$PACKAGE_DIR/Drama Browser.app}"
+DRAMA_BROWSER_APP="\${DRAMA_BROWSER_APP:-\$PACKAGE_DIR/Drama Browser.app}"
 
-exec "\$SOURCE_REPO_ROOT/scripts/launch-zen-drama-mac.sh" --zen-app "\$ZEN_APP" --surface "\${ZEN_DRAMA_SURFACE:-start}" "\$@"
+exec "\$SOURCE_REPO_ROOT/scripts/launch-drama-browser-mac.sh" --drama-app "\$DRAMA_BROWSER_APP" --surface "\${DRAMA_BROWSER_SURFACE:-\${ZEN_DRAMA_SURFACE:-start}}" "\$@"
 EOF
 chmod +x "$OUTPUT_DIR/scripts/launch-drama-runtime.sh" \
   "$OUTPUT_DIR/scripts/launch-plotpilot-sidecar-mac.sh" \
+  "$OUTPUT_DIR/scripts/launch-drama-browser-mac.sh" \
   "$OUTPUT_DIR/Start-Drama-Browser.command"
 
 cat > "$OUTPUT_DIR/README.md" <<EOF
@@ -216,7 +218,7 @@ validation.
 Launch:
 
 \`\`\`bash
-ZEN_APP="$APP_DEST" "$OUTPUT_DIR/Start-Drama-Browser.command" --surface start --internal-app auto
+DRAMA_BROWSER_APP="$APP_DEST" "$OUTPUT_DIR/Start-Drama-Browser.command" --surface start --internal-app auto
 \`\`\`
 
 If the source Zen build does not already register the ZenDrama chrome manager,

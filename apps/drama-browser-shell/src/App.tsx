@@ -26,13 +26,11 @@ import { createSkillCrewAgentOutputEvent, createSkillCrewSuggestionEvent, inferS
 import { StoryletNativeGraphContainer } from '@drama/graph-ui'
 import {
   classifyDramaPlmSurface,
-  createBrowserHostApi,
   createDramaRuntimeClient,
   type DramaPlmReadinessStatus,
   type DramaPlmSurfaceClassificationResult,
   type DramaRuntimeStatus,
 } from '@drama/host'
-import { createGeckoHostApi } from '@drama/host/gecko'
 import {
   PlotPilotNativeContainer,
   type PlotPilotIntegrationStatus,
@@ -53,6 +51,7 @@ import {
   type DramaSkinId,
 } from './skins'
 import { BasicMemorySurface } from './BasicMemorySurface'
+import { resolveDramaBrowserHostAdapter } from './host-adapter'
 import { ZenStartSurface } from './ZenStartSurface'
 
 type Surface = 'start' | 'graph' | 'plm' | 'crew' | 'memory'
@@ -136,10 +135,6 @@ function normalizeShellLocation(surface: Surface): void {
 
   const nextPath = `${getShellBasePath()}/${surface}${globalThis.location?.search ?? ''}${globalThis.location?.hash ?? ''}`
   globalThis.history?.replaceState?.({}, '', nextPath)
-}
-
-function isZenHost(): boolean {
-  return new URLSearchParams(globalThis.location?.search ?? '').get('host') === 'zen'
 }
 
 function currentDocumentUrl(): string {
@@ -603,7 +598,9 @@ function DramaWorkbenchShell({
   activeSurface,
   activeSkinId,
   zenHost,
+  dataHost,
   hostKind,
+  hostBadgeLabel,
   surfaceClassification,
   runtimeStatus,
   runtimeStateLabel,
@@ -618,7 +615,9 @@ function DramaWorkbenchShell({
   activeSurface: SurfaceDescriptor
   activeSkinId: DramaSkinId
   zenHost: boolean
+  dataHost: string
   hostKind: string
+  hostBadgeLabel: string
   surfaceClassification: DramaPlmSurfaceClassificationResult
   runtimeStatus: DramaRuntimeStatus
   runtimeStateLabel: string
@@ -636,7 +635,7 @@ function DramaWorkbenchShell({
       data-drama-shell="workbench"
       data-drama-shell-state={shellState.id}
       data-drama-active-skin={activeSkinId}
-      data-host={zenHost ? 'zen' : 'browser'}
+      data-host={dataHost}
     >
       {!zenHost ? (
         <aside className="drama-sidebar">
@@ -706,7 +705,7 @@ function DramaWorkbenchShell({
             >
               {surfaceClassificationLabel(surfaceClassification)}
             </StatusBadge>
-            <span className="drama-host-badge">{zenHost ? 'host=zen' : hostKind}</span>
+            <span className="drama-host-badge">{hostBadgeLabel}</span>
             <RuntimeChip status={runtimeStatus} stateLabel={runtimeStateLabel} />
             <StatusBadge
               className="drama-shell-state-badge"
@@ -731,9 +730,10 @@ function DramaWorkbenchShell({
 
 export function App() {
   const [surface, setSurface] = React.useState<Surface>(getInitialSurface)
-  const [zenHost, setZenHost] = React.useState(isZenHost)
+  const [hostAdapter, setHostAdapter] = React.useState(resolveDramaBrowserHostAdapter)
+  const zenHost = hostAdapter.id === 'zen'
   const [activeSkinId, setActiveSkinId] = React.useState<DramaSkinId>(() => (
-    getInitialDramaSkinId(isZenHost() ? 'zen-follow' : 'drama-classic')
+    getInitialDramaSkinId(resolveDramaBrowserHostAdapter().defaultSkinId)
   ))
   React.useLayoutEffect(() => {
     applyDramaSkin(activeSkinId)
@@ -750,18 +750,7 @@ export function App() {
   })
   const [resolvedPlmIntegrationStatus, setResolvedPlmIntegrationStatus] = React.useState<PlotPilotIntegrationStatus | undefined>()
   const [crewWriteStatus, setCrewWriteStatus] = React.useState<string>('尚未写入 runtime')
-  const browserHost = React.useMemo(() => (
-    zenHost
-      ? createGeckoHostApi({
-        name: 'Drama Zen Browser Host',
-        version: '0.1.0',
-        runtimeBaseUrl,
-      })
-      : createBrowserHostApi({
-        name: PRODUCT_NAME,
-        version: '0.1.0',
-      })
-  ), [runtimeBaseUrl, zenHost])
+  const browserHost = React.useMemo(() => hostAdapter.createHostApi({ runtimeBaseUrl }), [hostAdapter, runtimeBaseUrl])
   const graphApi = React.useMemo(() => createRuntimeBackedGraphApi({
     runtime: runtimeClient,
     fallback: fallbackGraphApi,
@@ -911,10 +900,10 @@ export function App() {
 
   React.useEffect(() => {
     const handlePopState = () => {
-      const nextZenHost = isZenHost()
+      const nextHostAdapter = resolveDramaBrowserHostAdapter()
       setSurface(getInitialSurface())
-      setZenHost(nextZenHost)
-      setActiveSkinId(getInitialDramaSkinId(nextZenHost ? 'zen-follow' : 'drama-classic'))
+      setHostAdapter(nextHostAdapter)
+      setActiveSkinId(getInitialDramaSkinId(nextHostAdapter.defaultSkinId))
     }
     globalThis.addEventListener?.('popstate', handlePopState)
     return () => globalThis.removeEventListener?.('popstate', handlePopState)
@@ -971,32 +960,23 @@ export function App() {
 
   React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type !== 'drama:host-theme') return
-      const variables = event.data.theme?.variables
-      if (!variables || typeof variables !== 'object') return
-      document.documentElement.dataset.host = 'zen'
-      for (const [key, value] of Object.entries(variables)) {
-        if (typeof key === 'string' && key.startsWith('--zen-') && typeof value === 'string') {
-          document.documentElement.style.setProperty(key, value.trim())
-        }
-      }
+      hostAdapter.applyThemeMessage(event.data)
     }
     globalThis.addEventListener?.('message', handleMessage)
     return () => globalThis.removeEventListener?.('message', handleMessage)
-  }, [])
+  }, [hostAdapter])
 
   const switchSurface = React.useCallback((next: Surface) => {
     setSurface(next)
     const params = new URLSearchParams()
-    if (zenHost) params.set('host', 'zen')
-    if (runtimeBaseUrl !== 'http://127.0.0.1:3198') params.set('runtime', runtimeBaseUrl)
+    hostAdapter.appendRouteParams(params, { runtimeBaseUrl, defaultRuntimeBaseUrl: 'http://127.0.0.1:3198' })
     if (isInternalChromeShell()) params.set('surface', next)
     const search = params.toString() ? `?${params.toString()}` : ''
     const nextUrl = isInternalChromeShell()
       ? `${getShellBasePath()}${search}`
       : `${getShellBasePath()}/${next}${search}`
     globalThis.history?.pushState?.({}, '', nextUrl)
-  }, [runtimeBaseUrl, zenHost])
+  }, [hostAdapter, runtimeBaseUrl])
 
   const writeCrewSuggestion = React.useCallback(() => {
     void (async () => {
@@ -1035,6 +1015,7 @@ export function App() {
 
   const runtimeStateLabel = runtimeStatus.state === 'ready' ? 'ready' : runtimeStatus.state
   const hostKind = browserHost.getInfo().kind
+  const hostBadgeLabel = hostAdapter.displayBadge(hostKind)
   const surfaceClassification = React.useMemo(() => classifyDramaPlmSurface({
     url: currentDocumentUrl(),
     hostKind,
@@ -1111,7 +1092,9 @@ export function App() {
         activeSurface={activeSurface}
         activeSkinId={activeSkinId}
         zenHost={zenHost}
+        dataHost={hostAdapter.dataHost}
         hostKind={hostKind}
+        hostBadgeLabel={hostBadgeLabel}
         surfaceClassification={surfaceClassification}
         runtimeStatus={runtimeStatus}
         runtimeStateLabel={runtimeStateLabel}
