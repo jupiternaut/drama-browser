@@ -380,7 +380,7 @@ async function summarizeBasicMemoryNote(filePath: string, query = ''): Promise<B
 
 async function listBasicMemoryNotes(payload: BasicMemoryListRequest = {}): Promise<BasicMemoryListResponse> {
   const query = String(payload.query ?? '').trim()
-  const limit = Math.min(200, Math.max(1, readLimit(payload) ?? 80))
+  const limit = Math.min(400, Math.max(1, readLimit(payload) ?? 80))
   if (!existsSync(basicMemoryRoot)) {
     return {
       root: basicMemoryRoot,
