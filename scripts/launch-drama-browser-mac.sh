@@ -101,6 +101,16 @@ fi
 cat > "$USER_JS" <<EOF
 user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.shell.didSkipDefaultBrowserCheckOnFirstRun", true);
+user_pref("drama.browser.base-url", "${RUNTIME_URL}/app");
+user_pref("drama.browser.runtime-url", "${RUNTIME_URL}");
+user_pref("drama.browser.internal-app.enabled", ${INTERNAL_APP_ENABLED});
+user_pref("drama.browser.internal-app-url", "chrome://browser/content/drama/app/index.html");
+user_pref("drama.browser.runtime-launch.enabled", $([[ "$NO_RUNTIME_LAUNCH" == "1" ]] && echo false || echo true));
+user_pref("drama.browser.runtime-launch.command", "/bin/bash");
+user_pref("drama.browser.runtime-launch.args", "[\\"$REPO_ROOT/scripts/launch-drama-runtime.sh\\"]");
+user_pref("drama.browser.runtime-launch.cwd", "$REPO_ROOT");
+user_pref("drama.browser.open-on-startup", true);
+user_pref("drama.browser.start-surface", "$SURFACE");
 user_pref("zen.drama.base-url", "${RUNTIME_URL}/app");
 user_pref("zen.drama.runtime-url", "${RUNTIME_URL}");
 user_pref("zen.drama.internal-app.enabled", ${INTERNAL_APP_ENABLED});

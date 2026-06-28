@@ -4,6 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+echo "launch-zen-drama-mac.sh is a legacy Zen/Gecko adapter launcher. Use launch-drama-browser-mac.sh for Drama Browser product launches." >&2
+
 ZEN_APP="${ZEN_APP:-}"
 PROFILE_DIR="${ZEN_DRAMA_PROFILE:-$HOME/Library/Application Support/DramaBrowser/profile-main}"
 SURFACE="${ZEN_DRAMA_SURFACE:-start}"

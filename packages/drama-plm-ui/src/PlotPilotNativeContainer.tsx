@@ -14,9 +14,12 @@ import {
   type PlotPilotChapterEditor,
   type PlotPilotChapterAnnotation,
   type PlotPilotChapterRevisionContext,
+  type PlotPilotStoryContextBundle,
+  type PlotPilotStoryContextCard,
   type PlotPilotCodexStatus as PlotPilotUiCodexStatus,
   type PlotPilotHumanizerSettingsDraft,
   type PlotPilotIntegrationStatus,
+  type PlotPilotIntegrationSurface,
   type PlotPilotNativeFeatureState,
   type PlotPilotOnboardingDraft,
   type PlotPilotParityCheck,
@@ -84,12 +87,26 @@ const DRAMA_PRODUCTION_FIXTURE_ID = 'drama-production-parity-mac'
 const DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY = 'drama.production.parity.chapter-draft'
 const DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID = 'drama-production-fixture-hosted-write'
 const DRAMA_PRODUCTION_FIXTURE_CHAPTER_NUMBER = 1
+const DRAMA_BROWSER_PRODUCT_SURFACE = 'product-drama-browser'
+const DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS = 'product-zen-panel'
+const DRAMA_BROWSER_PRODUCT_HOST_ADAPTER = 'zen-gecko'
+const DRAMA_PRODUCTION_FIXTURE_NAME = 'Drama Browser PLM production parity fixture'
+const DRAMA_PRODUCTION_FIXTURE_LEGACY_NAME = 'Zen Drama PLM production parity fixture'
+const DRAMA_PRODUCTION_FIXTURE_PROMPT_DESCRIPTION = 'Drama Browser product path production parity fixture prompt.'
+const DRAMA_PRODUCTION_FIXTURE_PROMPT_SYSTEM = 'You are validating the Drama Browser product path PLM production parity fixture through the Zen/Gecko adapter.'
+const DRAMA_PRODUCTION_FIXTURE_PROMPT_TAGS = [
+  'drama-production-parity',
+  'product-drama-browser',
+  'drama-browser-product-path',
+  'zen-gecko-adapter',
+  'fixture',
+]
 
 const DRAMA_PRODUCTION_FIXTURE_CONTENT = `第1章 生产闭环验证
 
-乔羽在海雾里停船，命令桨手收声。荒尤第一次看见云龙的影子从浪脊下翻过，鳞片像旧王朝留下的青铜密令。
+项目写作台加载一章可保存、可回写、可审稿的正文。人物、情节、环境三类上下文会被组装进生成请求，避免界面标题和正文内容来自不同项目。
 
-这一章用于 Zen Drama PLM macOS production parity 验收：它必须能被真实项目加载、保存、回写，并在 Memory Graph 与 Prompt Registry 面板留下可追踪证据。`
+这一章用于 Drama Browser product path macOS production parity 验收，并记录当前 Zen/Gecko adapter 路径：它必须能被真实项目加载、保存、回写，并在 Memory Graph 与 Prompt Registry 面板留下可追踪证据。`
 
 interface DramaPlmOpenRequest {
   schema: typeof DRAMA_PLM_OPEN_REQUEST_KEY
@@ -114,6 +131,8 @@ interface PlmProjectFileRecordInput {
 
 interface PlotPilotResolvedRevisionContext {
   annotations: PlotPilotChapterAnnotation[]
+  instruction: string
+  storyContext: PlotPilotStoryContextBundle | null
   markdown: string
 }
 
@@ -384,19 +403,61 @@ function normalizeChapterAnnotations(value: unknown): PlotPilotChapterAnnotation
       const end = Number(record.end)
       const quote = String(record.quote ?? '').trim()
       const note = String(record.note ?? '').trim()
-      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || !quote || !note) return null
-      const color = record.color === 'mint' || record.color === 'rose' || record.color === 'amber'
+      const color = record.color === 'mint' || record.color === 'rose' || record.color === 'amber' || record.color === 'sky'
         ? record.color
         : 'amber'
+      const status = record.status === 'resolved' ? 'resolved' : 'open'
+      const createdAt = String(record.createdAt ?? new Date().toISOString())
+
+      if (record.kind === 'ink') {
+        const inkRecord = asRecord(record.ink)
+        const tool = inkRecord.tool === 'arrow' ? 'arrow' : 'pen'
+        const points = Array.isArray(inkRecord.points)
+          ? inkRecord.points
+            .map((point) => {
+              const pointRecord = asRecord(point)
+              const x = Number(pointRecord.x)
+              const y = Number(pointRecord.y)
+              return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null
+            })
+            .filter((point): point is { x: number; y: number } => Boolean(point))
+            .slice(0, 2000)
+          : []
+        if (points.length < 2) return null
+        const width = Number(inkRecord.width)
+        const opacity = Number(inkRecord.opacity)
+        const toolLabel = tool === 'arrow' ? '箭头' : '画笔'
+        return {
+          id: String(record.id ?? createStorageCardId('annotation')),
+          kind: 'ink',
+          start: Number.isFinite(start) ? start : 0,
+          end: Number.isFinite(end) ? end : 0,
+          quote: quote || `手写批注：${toolLabel}`,
+          note: note || `${toolLabel}批注`,
+          color,
+          status,
+          createdAt,
+          ink: {
+            tool,
+            color: String(inkRecord.color ?? '#8a6818'),
+            width: Number.isFinite(width) ? Math.min(Math.max(width, 1), 24) : 5,
+            opacity: Number.isFinite(opacity) ? Math.min(Math.max(opacity, 0.1), 1) : undefined,
+            points,
+          },
+        }
+      }
+
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || !quote || !note) return null
       return {
         id: String(record.id ?? createStorageCardId('annotation')),
+        kind: 'text',
         start,
         end,
         quote,
         note,
         color,
-        status: record.status === 'resolved' ? 'resolved' : 'open',
-        createdAt: String(record.createdAt ?? new Date().toISOString()),
+        status,
+        createdAt,
       }
     })
     .filter((annotation): annotation is PlotPilotChapterAnnotation => Boolean(annotation))
@@ -419,9 +480,11 @@ function buildChapterAnnotationsMarkdown(args: {
   chapterNumber: number
   chapterTitle?: string
   annotations: PlotPilotChapterAnnotation[]
+  instruction?: string
   generatedAt?: string
 }): string {
   const openAnnotations = args.annotations.filter((annotation) => annotation.status !== 'resolved')
+  const instruction = args.instruction?.trim() ?? ''
   const lines = [
     `# Chapter ${args.chapterNumber} Revision Annotations`,
     '',
@@ -433,23 +496,55 @@ function buildChapterAnnotationsMarkdown(args: {
     '',
     '## Model Instructions',
     '',
-    'Use these annotations as mandatory revision guidance for the next pass. Keep the existing story continuity unless an annotation explicitly asks for a change. Address each open annotation in the revised chapter and avoid appending this annotation list to the manuscript.',
-    '',
-    '## Open Annotations',
+    'Use the user chat request and added annotations as mandatory revision guidance for the next pass. Keep the existing story continuity unless the user explicitly asks for a change. Address each open text annotation and treat ink annotations as visual emphasis from the reader. Avoid appending this context list to the manuscript.',
     '',
   ].filter(Boolean)
 
+  if (instruction) {
+    lines.push(
+      '## User Chat Request',
+      '',
+      markdownBlockquote(instruction),
+      '',
+    )
+  }
+
+  lines.push('## Added Annotation Context', '')
+
   if (openAnnotations.length === 0) {
-    lines.push('- No open annotations.')
+    lines.push('- No annotations were added to this chat turn.')
     return lines.join('\n')
   }
 
   openAnnotations.forEach((annotation, index) => {
+    if (annotation.kind === 'ink' && annotation.ink) {
+      lines.push(
+        `### A${index + 1}`,
+        '',
+        `- id: \`${markdownInline(annotation.id)}\``,
+        `- status: \`${annotation.status ?? 'open'}\``,
+        `- type: \`ink/${annotation.ink.tool}\``,
+        `- label: \`${markdownInline(annotation.quote)}\``,
+        `- color: \`${markdownInline(annotation.color)}\``,
+        `- stroke_color: \`${markdownInline(annotation.ink.color)}\``,
+        `- stroke_width: \`${annotation.ink.width}\``,
+        `- stroke_opacity: \`${annotation.ink.opacity ?? 1}\``,
+        `- stroke_points: \`${annotation.ink.points.length}\``,
+        '',
+        '**Visual Comment**',
+        '',
+        markdownBlockquote(annotation.note),
+        '',
+      )
+      return
+    }
+
     lines.push(
       `### A${index + 1}`,
       '',
       `- id: \`${markdownInline(annotation.id)}\``,
       `- status: \`${annotation.status ?? 'open'}\``,
+      `- type: \`text/highlight\``,
       `- range: \`${annotation.start}-${annotation.end}\``,
       `- quote: \`${markdownInline(annotation.quote)}\``,
       '',
@@ -463,12 +558,106 @@ function buildChapterAnnotationsMarkdown(args: {
   return lines.join('\n').trimEnd()
 }
 
-function buildRevisionPromptMarkdown(context: PlotPilotResolvedRevisionContext): string {
-  if (context.annotations.length === 0) return ''
-  return [
-    '## Annotation Revision Context',
+function normalizeStoryContextCard(value: unknown): PlotPilotStoryContextCard | null {
+  const record = asRecord(value)
+  const id = String(record.id ?? '').trim()
+  const kind = String(record.kind ?? '').trim()
+  const title = String(record.title ?? '').trim()
+  const body = String(record.body ?? '').trim()
+  if (!id || !title || !body) return null
+  if (kind !== 'character' && kind !== 'plot' && kind !== 'world' && kind !== 'style') return null
+  return {
+    id,
+    kind,
+    title,
+    body,
+    source: String(record.source ?? '').trim() || undefined,
+    priority: typeof record.priority === 'number' ? record.priority : undefined,
+  }
+}
+
+function normalizeStoryContext(value: unknown): PlotPilotStoryContextBundle | null {
+  const record = asRecord(value)
+  const cards = Array.isArray(record.cards)
+    ? record.cards
+      .map(normalizeStoryContextCard)
+      .filter((card): card is PlotPilotStoryContextCard => Boolean(card))
+    : []
+  if (cards.length === 0) return null
+  const focusCardIds = Array.isArray(record.focusCardIds)
+    ? record.focusCardIds.map((id) => String(id).trim()).filter(Boolean)
+    : undefined
+  return {
+    schema: 'plotpilot.story_context.v1',
+    novelId: String(record.novelId ?? '').trim() || undefined,
+    chapterNumber: Number.isFinite(Number(record.chapterNumber)) ? Number(record.chapterNumber) : undefined,
+    focusCardIds,
+    cards,
+  }
+}
+
+function storyContextKindLabel(kind: PlotPilotStoryContextCard['kind']): string {
+  switch (kind) {
+    case 'character':
+      return '人物'
+    case 'plot':
+      return '情节'
+    case 'world':
+      return '环境'
+    case 'style':
+      return '文风'
+  }
+}
+
+function buildStoryContextMarkdown(context: PlotPilotStoryContextBundle | null): string {
+  if (!context?.cards.length) return ''
+  const focusIds = new Set(context.focusCardIds ?? [])
+  const focusedCards = context.cards.filter((card) => focusIds.has(card.id))
+  const cards = [...focusedCards, ...context.cards.filter((card) => !focusIds.has(card.id))]
+  const lines = [
+    '## Story Context Package',
     '',
-    'The chapter is now in modification mode. The annotations below are user-authored revision requirements and must be applied in the next model pass.',
+    'Use this as the project-level context for the next chapter. Treat it as a higher-priority continuity and style layer than generic genre assumptions.',
+    '',
+    '### Priority Protocol',
+    '',
+    '1. Existing manuscript facts cannot be rewritten.',
+    '2. Current chapter goal must move forward.',
+    '3. Character voice and relationship state must stay consistent.',
+    '4. The prose style must follow the project style anchor.',
+    '5. Long-range setting can echo in the background, but must not hijack the current chapter.',
+    '',
+  ]
+
+  if (focusedCards.length > 0) {
+    lines.push('### User Focus', '')
+    focusedCards.forEach((card) => {
+      lines.push(`- ${storyContextKindLabel(card.kind)}：${markdownInline(card.title)}`)
+    })
+    lines.push('')
+  }
+
+  cards.forEach((card) => {
+    lines.push(
+      `### ${storyContextKindLabel(card.kind)}：${markdownInline(card.title)}`,
+      '',
+      card.source ? `- source: \`${markdownInline(card.source)}\`` : '',
+      typeof card.priority === 'number' ? `- priority: \`${card.priority}\`` : '',
+      '',
+      markdownBlockquote(card.body),
+      '',
+    )
+  })
+
+  return lines.filter((line) => line !== '').join('\n').trimEnd()
+}
+
+function buildRevisionPromptMarkdown(context: PlotPilotResolvedRevisionContext): string {
+  if (context.annotations.length === 0 && !context.instruction.trim() && !context.storyContext?.cards.length) return ''
+  return [
+    '## Agent Chat And Story Context',
+    '',
+    'The chapter is now in conversational writing mode. The context below came from the right-side chat composer, story element cards, and any annotation cards the user explicitly added to chat.',
     '',
     context.markdown,
   ].join('\n')
@@ -892,6 +1081,51 @@ function metricNumber(record: Record<string, unknown>, keys: string[]): number {
   return 0
 }
 
+function normalizeProductionFixtureName(value: unknown): string {
+  const rawName = String(value ?? '').trim()
+  if (!rawName) return DRAMA_PRODUCTION_FIXTURE_NAME
+  if (rawName === DRAMA_PRODUCTION_FIXTURE_LEGACY_NAME || rawName.includes('Zen Drama PLM')) {
+    return rawName.replaceAll('Zen Drama PLM', 'Drama Browser PLM')
+  }
+  return rawName
+}
+
+function canonicalPlmSurface(
+  surface: PlotPilotIntegrationSurface | undefined,
+): Exclude<PlotPilotIntegrationSurface, 'product-zen-panel'> {
+  return surface === DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS || !surface
+    ? DRAMA_BROWSER_PRODUCT_SURFACE
+    : surface
+}
+
+function productPathEvidence(surface: PlotPilotIntegrationSurface | undefined, productPath: boolean): string {
+  if (!productPath) return 'fallback surface'
+  const canonicalSurface = canonicalPlmSurface(surface)
+  const legacyAlias = surface === DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS
+    ? `; legacy alias=${DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS}`
+    : ''
+  return `${canonicalSurface}; adapter=${DRAMA_BROWSER_PRODUCT_HOST_ADAPTER}${legacyAlias}`
+}
+
+function normalizeIntegrationStatus(status: PlotPilotIntegrationStatus): PlotPilotIntegrationStatus {
+  const canonicalSurface = canonicalPlmSurface(status.surface)
+  const tiers = status.tiers.map((row) => {
+    if (row.tier !== 'shell-ready' || !row.message.includes('Zen chrome-resource PLM panel')) return row
+    return {
+      ...row,
+      message: 'Loaded from Drama Browser product path through the Zen/Gecko adapter.',
+    }
+  })
+  return {
+    ...status,
+    surface: canonicalSurface,
+    canonicalSurface,
+    hostAdapter: status.hostAdapter ?? (status.productPath ? DRAMA_BROWSER_PRODUCT_HOST_ADAPTER : undefined),
+    reason: status.reason?.replace('Zen chrome-resource product panel', 'Drama Browser product path'),
+    tiers,
+  }
+}
+
 function hasNativePromptWrite(featureState: PlotPilotNativeFeatureState): boolean {
   const promptStats = asRecord(featureState.promptStats)
   if (metricNumber(promptStats, ['dramaNativePromptWrites']) > 0) return true
@@ -944,24 +1178,24 @@ function buildProductionFixtureMemoryDiff(chapter: ChapterDTO): Array<Record<str
   return [
     {
       ...base,
-      id: `${chapter.id}:qiao-yu-huang-you-command`,
-      subject: '乔羽',
-      predicate: 'commands',
-      object: '桨手收声',
+      id: `${chapter.id}:context-builder-triad`,
+      subject: '三要素上下文',
+      predicate: 'feeds',
+      object: '章节生成请求',
     },
     {
       ...base,
-      id: `${chapter.id}:huang-you-cloud-dragon-witness`,
-      subject: '荒尤',
-      predicate: 'witnesses',
-      object: '云龙的影子',
+      id: `${chapter.id}:chapter-draft-writeback`,
+      subject: '章节正文',
+      predicate: 'writes_back_to',
+      object: 'Drama Graph',
     },
     {
       ...base,
-      id: `${chapter.id}:cloud-dragon-bronze-secret`,
-      subject: '云龙',
-      predicate: 'reveals',
-      object: '青铜密令',
+      id: `${chapter.id}:style-anchor-check`,
+      subject: '文风锚',
+      predicate: 'guards',
+      object: '项目正文一致性',
     },
   ]
 }
@@ -1149,16 +1383,17 @@ function buildProductionFixtureAutopilotEvidence(chapter: ChapterDTO): {
 function buildProductionEvidenceSnapshot(args: {
   runtimeReady: boolean
   productPath: boolean
+  surface?: PlotPilotIntegrationSurface
   selectedNovel: NovelDTO | null
   chapterEditor: PlotPilotChapterEditor | null
   featureState: PlotPilotNativeFeatureState
 }): PlotPilotProductionEvidenceSnapshot {
-  const { runtimeReady, productPath, selectedNovel, chapterEditor, featureState } = args
+  const { runtimeReady, productPath, surface, selectedNovel, chapterEditor, featureState } = args
   const productionFixture = asRecord(featureState.productionFixture)
   const pathHints = Array.isArray(productionFixture.pathHints)
     ? productionFixture.pathHints.map(String).filter(Boolean)
     : []
-  const fixtureName = String(productionFixture.name ?? 'Zen Drama PLM production parity fixture')
+  const fixtureName = normalizeProductionFixtureName(productionFixture.name)
   const fixtureId = String(productionFixture.fixtureId ?? DRAMA_PRODUCTION_FIXTURE_ID)
   const firstChapter = selectedNovel?.chapters?.[0] ?? null
   const activeChapterId = chapterEditor?.chapterId ?? firstChapter?.id
@@ -1288,11 +1523,11 @@ function buildProductionEvidenceSnapshot(args: {
       label: 'Verification',
       state: productPath && selectedNovel && activeChapterId ? 'ready' : productPath ? 'partial' : 'blocked',
       detail: productPath && selectedNovel && activeChapterId
-        ? 'Zen product-path panel has enough DOM evidence for macOS happy-path verification.'
+        ? 'Drama Browser product path has enough DOM evidence for macOS happy-path verification through the Zen/Gecko adapter.'
         : productPath
-          ? 'Zen product-path panel is loaded; project/chapter evidence is still incomplete.'
-          : 'Production evidence is not running in a product-path Zen panel.',
-      evidence: productPath ? 'product-zen-panel' : 'fallback surface',
+          ? 'Drama Browser product path is loaded through the Zen/Gecko adapter; project/chapter evidence is still incomplete.'
+          : 'Production evidence is not running in the Drama Browser product path.',
+      evidence: productPathEvidence(surface, productPath),
       updatedAt: new Date().toISOString(),
     },
   ]
@@ -1387,6 +1622,7 @@ function resolveIntegrationStatus(
   featureState: PlotPilotNativeFeatureState,
 ): PlotPilotIntegrationStatus | undefined {
   if (!baseStatus) return undefined
+  const normalizedBaseStatus = normalizeIntegrationStatus(baseStatus)
 
   const runtimeReady = isRuntimeReady(runtimeStatus)
   const runtimePending = runtimeStatus.state === 'starting' || runtimeStatus.state === 'stopping'
@@ -1426,7 +1662,8 @@ function resolveIntegrationStatus(
   const parityChecks = buildParityChecks(runtimeReady, selectedNovel, featureState)
   const productionEvidence = buildProductionEvidenceSnapshot({
     runtimeReady,
-    productPath: baseStatus.productPath,
+    productPath: normalizedBaseStatus.productPath,
+    surface: baseStatus.surface,
     selectedNovel,
     chapterEditor,
     featureState,
@@ -1445,17 +1682,17 @@ function resolveIntegrationStatus(
   }
 
   return {
-    ...baseStatus,
-    tiers: mergeReadinessTiers(baseStatus.tiers, [
+    ...normalizedBaseStatus,
+    tiers: mergeReadinessTiers(normalizedBaseStatus.tiers, [
       sidecarStatus,
       aiStatus,
       workflowStatus,
       parityStatus,
     ]),
     workspacePathHints: selectedNovel
-      ? baseStatus.workspacePathHints
+      ? normalizedBaseStatus.workspacePathHints
       : [
-        ...(baseStatus.workspacePathHints ?? []),
+        ...(normalizedBaseStatus.workspacePathHints ?? []),
         ...workspacePathHints(runtimeStatus),
       ].filter((item, index, list) => list.indexOf(item) === index),
     productionEvidence,
@@ -2146,22 +2383,34 @@ export function PlotPilotNativeContainer({
     revisionContext?: PlotPilotChapterRevisionContext,
   ): Promise<PlotPilotResolvedRevisionContext> => {
     const incomingAnnotations = normalizeChapterAnnotations(revisionContext?.annotations)
-    const annotations = incomingAnnotations.length > 0
+    const annotations = revisionContext
       ? incomingAnnotations
       : await loadLatestChapterAnnotations(novelId, chapterNumber)
+    const instruction = revisionContext?.instruction?.trim() ?? ''
+    const storyContext = normalizeStoryContext(revisionContext?.storyContext)
     const chapterTitle = chapterEditor?.novelId === novelId && chapterEditor.chapterNumber === chapterNumber
       ? chapterEditor.title
       : selectedNovel?.id === novelId
         ? selectedNovel.chapters?.find((chapter) => chapter.number === chapterNumber)?.title
         : undefined
-    return {
-      annotations,
-      markdown: buildChapterAnnotationsMarkdown({
+    const annotationMarkdown = annotations.length > 0 || instruction
+      ? buildChapterAnnotationsMarkdown({
         novelId,
         chapterNumber,
         chapterTitle,
         annotations,
-      }),
+        instruction,
+      })
+      : ''
+    const storyMarkdown = buildStoryContextMarkdown(storyContext)
+    return {
+      annotations,
+      instruction,
+      storyContext,
+      markdown: [
+        storyMarkdown,
+        annotationMarkdown,
+      ].filter(Boolean).join('\n\n'),
     }
   }, [chapterEditor, loadLatestChapterAnnotations, selectedNovel])
 
@@ -2609,10 +2858,10 @@ export function PlotPilotNativeContainer({
         try {
           novel = await activeClient.createNovel({
             novel_id: DRAMA_PRODUCTION_FIXTURE_ID,
-            title: 'Zen Drama PLM 生产闭环验收',
+            title: 'Drama Browser PLM 生产闭环验收',
             author: 'Drama',
             target_chapters: 3,
-            premise: '一个固定的 macOS Zen PLM 生产验收项目，用于验证真实项目、章节、Prompt、Memory 和 Autopilot 状态。',
+            premise: '一个固定的 macOS Drama Browser product path 生产验收项目，用于验证 Zen/Gecko adapter 下的真实项目、章节、Prompt、Memory 和 Autopilot 状态。',
             genre: 'mythic adventure',
             world_preset: 'eastern sea myth',
             story_structure: 'three act verification arc',
@@ -2653,28 +2902,33 @@ export function PlotPilotNativeContainer({
         node_key: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
         name: '生产闭环章节正文 Prompt',
         scope: 'production-parity',
-        template: '读取固定 fixture 章节、Bible 和 PlotPilot 状态，生成可回写 Drama Graph 的章节正文。',
+        template: '读取固定 Drama Browser product path fixture 章节、Bible 和 PlotPilot 状态，生成可回写 Drama Graph 的章节正文。',
         version: 'mac-production-parity',
         source: 'drama-production-fixture',
+        tags: DRAMA_PRODUCTION_FIXTURE_PROMPT_TAGS,
+        legacyTags: ['zen-plm'],
+        surface: DRAMA_BROWSER_PRODUCT_SURFACE,
+        legacySurfaceAliases: [DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS],
+        hostAdapter: DRAMA_BROWSER_PRODUCT_HOST_ADAPTER,
         updated_at: new Date().toISOString(),
       }
       try {
         nativePromptWrite = await activeClient.updatePrompt(DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY, {
           name: String(promptRecord.name),
-          description: 'Zen Drama PLM production parity fixture prompt.',
+          description: DRAMA_PRODUCTION_FIXTURE_PROMPT_DESCRIPTION,
           user_template: String(promptRecord.template),
-          system: 'You are validating the Zen Drama PLM production parity fixture.',
-          tags: ['drama-production-parity', 'zen-plm', 'fixture'],
-          change_summary: 'Seeded by Drama PLM production parity fixture.',
+          system: DRAMA_PRODUCTION_FIXTURE_PROMPT_SYSTEM,
+          tags: DRAMA_PRODUCTION_FIXTURE_PROMPT_TAGS,
+          change_summary: 'Seeded by Drama Browser product path PLM production parity fixture.',
         }) as unknown as Record<string, unknown>
       } catch (error) {
         try {
           nativePromptWrite = await activeClient.createPromptNode({
             node_key: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
             name: String(promptRecord.name),
-            description: 'Zen Drama PLM production parity fixture prompt.',
+            description: DRAMA_PRODUCTION_FIXTURE_PROMPT_DESCRIPTION,
             category: 'drama',
-            system: 'You are validating the Zen Drama PLM production parity fixture.',
+            system: DRAMA_PRODUCTION_FIXTURE_PROMPT_SYSTEM,
             user_template: String(promptRecord.template),
           }) as unknown as Record<string, unknown>
         } catch (createError) {
@@ -2719,7 +2973,11 @@ export function PlotPilotNativeContainer({
           },
           productionFixture: {
             fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
-            name: 'Zen Drama PLM production parity fixture',
+            name: DRAMA_PRODUCTION_FIXTURE_NAME,
+            legacyFixtureNames: [DRAMA_PRODUCTION_FIXTURE_LEGACY_NAME],
+            surface: DRAMA_BROWSER_PRODUCT_SURFACE,
+            legacySurfaceAliases: [DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS],
+            hostAdapter: DRAMA_BROWSER_PRODUCT_HOST_ADAPTER,
             projectId: novelWithChapter.id,
             chapterId: chapter.id,
             chapterNumber: chapter.number,
@@ -2746,15 +3004,18 @@ export function PlotPilotNativeContainer({
         type: 'plm.production.fixture.loaded',
         title: novelWithChapter.title,
         summary: {
-            fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
-            chapterId: chapter.id,
-            chapterNumber: chapter.number,
-            promptNative: Boolean(nativePromptWrite),
-            promptReadback: promptReadback.ok,
-          },
-          payload: {
-            novel: novelRecordSummary(novelWithChapter),
-            chapter: chapterRecordSummary(chapter),
+          fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+          surface: DRAMA_BROWSER_PRODUCT_SURFACE,
+          legacySurfaceAliases: [DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS],
+          hostAdapter: DRAMA_BROWSER_PRODUCT_HOST_ADAPTER,
+          chapterId: chapter.id,
+          chapterNumber: chapter.number,
+          promptNative: Boolean(nativePromptWrite),
+          promptReadback: promptReadback.ok,
+        },
+        payload: {
+          novel: novelRecordSummary(novelWithChapter),
+          chapter: chapterRecordSummary(chapter),
           prompt: storedPrompt,
         },
       })
@@ -2765,9 +3026,12 @@ export function PlotPilotNativeContainer({
           chapterId: chapter.id,
         },
         status: 'ready',
-        summary: 'Zen Drama PLM 生产闭环验收项目已载入',
+        summary: 'Drama Browser PLM 生产闭环验收项目已载入',
         details: {
           fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+          surface: DRAMA_BROWSER_PRODUCT_SURFACE,
+          legacySurfaceAliases: [DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS],
+          hostAdapter: DRAMA_BROWSER_PRODUCT_HOST_ADAPTER,
           promptNative: Boolean(nativePromptWrite),
           promptReadback,
           promptNativeError,
@@ -3072,11 +3336,13 @@ export function PlotPilotNativeContainer({
 
       const outline = buildChapterOutline(novel, ensuredChapter, currentChapterEditor)
       const resolvedRevisionContext = await resolveRevisionContext(novelId, resolvedChapterNumber, revisionContext)
-      if (revisionContext?.annotations) {
+      if (revisionContext?.annotations && !revisionContext.instruction?.trim()) {
         await saveChapterAnnotations(novelId, resolvedChapterNumber, revisionContext.annotations)
       }
       const revisionPromptMarkdown = buildRevisionPromptMarkdown(resolvedRevisionContext)
-      const revisionMode = resolvedRevisionContext.annotations.length > 0 ? 'annotation_revision' : 'draft_generation'
+      const revisionMode = resolvedRevisionContext.annotations.length > 0 || resolvedRevisionContext.instruction.trim()
+        ? 'annotation_revision'
+        : 'draft_generation'
       const modelRequirements = [
         outline,
         revisionPromptMarkdown,
@@ -4267,10 +4533,12 @@ export function PlotPilotNativeContainer({
     try {
       const activeClient = await ensureRuntimeClient()
       const resolvedRevisionContext = await resolveRevisionContext(novelId, fromChapter, revisionContext)
-      if (revisionContext?.annotations) {
+      if (revisionContext?.annotations && !revisionContext.instruction?.trim()) {
         await saveChapterAnnotations(novelId, fromChapter, revisionContext.annotations)
       }
-      const revisionMode = resolvedRevisionContext.annotations.length > 0 ? 'annotation_revision' : 'draft_generation'
+      const revisionMode = resolvedRevisionContext.annotations.length > 0 || resolvedRevisionContext.instruction.trim()
+        ? 'annotation_revision'
+        : 'draft_generation'
       for await (const event of activeClient.hostedWriteStream(novelId, {
         from_chapter: fromChapter,
         to_chapter: toChapter,
@@ -5687,11 +5955,12 @@ export function PlotPilotNativeContainer({
     () => buildProductionEvidenceSnapshot({
       runtimeReady,
       productPath: integrationStatus?.productPath === true,
+      surface: integrationStatus?.surface,
       selectedNovel,
       chapterEditor,
       featureState,
     }),
-    [chapterEditor, featureState, integrationStatus?.productPath, runtimeReady, selectedNovel],
+    [chapterEditor, featureState, integrationStatus?.productPath, integrationStatus?.surface, runtimeReady, selectedNovel],
   )
   const featureStateWithProductionEvidence = React.useMemo<PlotPilotNativeFeatureState>(
     () => ({

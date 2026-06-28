@@ -229,8 +229,14 @@ export type {
   DramaPlmReadinessState,
   DramaPlmReadinessStatus,
   DramaPlmReadinessTier,
+  DramaPlmHostAdapter,
   DramaPlmSurfaceClassification,
   DramaPlmSurfaceClassificationInput,
   DramaPlmSurfaceClassificationResult,
 } from './surface.ts'
-export { classifyDramaPlmSurface, isZenDramaProductPath } from './surface.ts'
+export {
+  classifyDramaPlmSurface,
+  isDramaBrowserProductPath,
+  isZenDramaProductPath,
+  normalizeDramaPlmSurfaceClassification,
+} from './surface.ts'

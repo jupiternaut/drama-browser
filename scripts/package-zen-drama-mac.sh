@@ -69,26 +69,26 @@ if head_marker not in text:
 if body_marker not in text:
     body_hook = """  <!-- zen-drama-body-hook -->
   <commandset id="zen-drama-commandset">
-    <command id="cmd_zenDramaToggle" />
-    <command id="cmd_zenDramaOpenStart" />
-    <command id="cmd_zenDramaOpenGraph" />
-    <command id="cmd_zenDramaOpenPlm" />
-    <command id="cmd_zenDramaOpenCrew" />
-    <command id="cmd_zenDramaOpenMemory" />
-    <command id="cmd_zenDramaOpenInTab" />
+    <command id="cmd_dramaBrowserToggle" />
+    <command id="cmd_dramaBrowserOpenStart" />
+    <command id="cmd_dramaBrowserOpenGraph" />
+    <command id="cmd_dramaBrowserOpenPlm" />
+    <command id="cmd_dramaBrowserOpenCrew" />
+    <command id="cmd_dramaBrowserOpenMemory" />
+    <command id="cmd_dramaBrowserOpenInTab" />
   </commandset>
   <toolbarbutton id="zen-drama-launcher-button" class="toolbarbutton-1 zen-drama-launcher-button" image="chrome://browser/content/zen-icons/drama-start.svg" label="Drama" tooltiptext="Open Drama Browser" />
   <vbox id="zen-drama-panel" hidden="true">
     <hbox id="zen-drama-toolbar" class="chromeclass-toolbar" align="center">
-      <toolbarbutton id="zen-drama-start-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenStart" label="Zen Start" tooltiptext="Zen Start" />
-      <toolbarbutton id="zen-drama-graph-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenGraph" label="Drama Graph" tooltiptext="Drama Graph" />
-      <toolbarbutton id="zen-drama-plm-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenPlm" label="Drama PLM" tooltiptext="Drama PLM" />
-      <toolbarbutton id="zen-drama-crew-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenCrew" label="Skill Crew" tooltiptext="Skill Crew" />
-      <toolbarbutton id="zen-drama-memory-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenMemory" label="Basic Memory" tooltiptext="Basic Memory" />
+      <toolbarbutton id="zen-drama-start-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_dramaBrowserOpenStart" label="Drama Start" tooltiptext="Drama Start" />
+      <toolbarbutton id="zen-drama-graph-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_dramaBrowserOpenGraph" label="Drama Graph" tooltiptext="Drama Graph" />
+      <toolbarbutton id="zen-drama-plm-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_dramaBrowserOpenPlm" label="Drama PLM" tooltiptext="Drama PLM" />
+      <toolbarbutton id="zen-drama-crew-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_dramaBrowserOpenCrew" label="Skill Crew" tooltiptext="Skill Crew" />
+      <toolbarbutton id="zen-drama-memory-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_dramaBrowserOpenMemory" label="Basic Memory" tooltiptext="Basic Memory" />
       <spacer flex="1" />
       <label id="zen-drama-runtime-status" value="Drama" />
-      <toolbarbutton id="zen-drama-open-tab-button" class="toolbarbutton-1 zen-drama-icon-button" command="cmd_zenDramaOpenInTab" tooltiptext="Open Drama in a tab" />
-      <toolbarbutton id="zen-drama-lock-button" class="toolbarbutton-1 zen-drama-icon-button" command="cmd_zenDramaToggle" tooltiptext="Lock Drama and release panel memory" />
+      <toolbarbutton id="zen-drama-open-tab-button" class="toolbarbutton-1 zen-drama-icon-button" command="cmd_dramaBrowserOpenInTab" tooltiptext="Open Drama in a tab" />
+      <toolbarbutton id="zen-drama-lock-button" class="toolbarbutton-1 zen-drama-icon-button" command="cmd_dramaBrowserToggle" tooltiptext="Lock Drama and release panel memory" />
     </hbox>
     <browser id="zen-drama-browser" type="content" remote="true" flex="1" maychangeremoteness="true" disableglobalhistory="true" />
   </vbox>
@@ -101,28 +101,28 @@ elif "zen-drama-launcher-button" not in text:
 
 text = text.replace('id="zen-drama-close-button"', 'id="zen-drama-lock-button"')
 text = text.replace('tooltiptext="Close Drama"', 'tooltiptext="Lock Drama and release panel memory"')
-if 'id="cmd_zenDramaOpenStart"' not in text:
+if 'id="cmd_dramaBrowserOpenStart"' not in text:
     text = text.replace(
-        '    <command id="cmd_zenDramaOpenGraph" />',
-        '    <command id="cmd_zenDramaOpenStart" />\n    <command id="cmd_zenDramaOpenGraph" />',
+        '    <command id="cmd_dramaBrowserOpenGraph" />',
+        '    <command id="cmd_dramaBrowserOpenStart" />\n    <command id="cmd_dramaBrowserOpenGraph" />',
         1,
     )
-if 'id="cmd_zenDramaOpenMemory"' not in text:
+if 'id="cmd_dramaBrowserOpenMemory"' not in text:
     text = text.replace(
-        '    <command id="cmd_zenDramaOpenInTab" />',
-        '    <command id="cmd_zenDramaOpenMemory" />\n    <command id="cmd_zenDramaOpenInTab" />',
+        '    <command id="cmd_dramaBrowserOpenInTab" />',
+        '    <command id="cmd_dramaBrowserOpenMemory" />\n    <command id="cmd_dramaBrowserOpenInTab" />',
         1,
     )
 if 'id="zen-drama-start-button"' not in text:
     text = text.replace(
         '      <toolbarbutton id="zen-drama-graph-button"',
-        '      <toolbarbutton id="zen-drama-start-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenStart" label="Zen Start" tooltiptext="Zen Start" />\n      <toolbarbutton id="zen-drama-graph-button"',
+        '      <toolbarbutton id="zen-drama-start-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_dramaBrowserOpenStart" label="Drama Start" tooltiptext="Drama Start" />\n      <toolbarbutton id="zen-drama-graph-button"',
         1,
     )
 if 'id="zen-drama-memory-button"' not in text:
     text = text.replace(
         '      <spacer flex="1" />',
-        '      <toolbarbutton id="zen-drama-memory-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenMemory" label="Basic Memory" tooltiptext="Basic Memory" />\n      <spacer flex="1" />',
+        '      <toolbarbutton id="zen-drama-memory-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_dramaBrowserOpenMemory" label="Basic Memory" tooltiptext="Basic Memory" />\n      <spacer flex="1" />',
         1,
     )
 
@@ -151,7 +151,7 @@ ICON_DIR="$RESOURCE_ROOT/zen-icons"
 mkdir -p "$APP_RESOURCE_DIR" "$COMPONENT_DIR" "$STYLE_DIR" "$ICON_DIR"
 ditto "$REPO_ROOT/apps/drama-browser-shell/dist" "$APP_RESOURCE_DIR"
 prepare_chrome_index "$APP_RESOURCE_DIR/index.html"
-cp "$REPO_ROOT/zen-drama-chrome/ZenDramaManager.mjs" "$COMPONENT_DIR/ZenDramaManager.mjs"
+cp "$REPO_ROOT/gecko-drama-chrome/DramaBrowserChromeManager.mjs" "$COMPONENT_DIR/ZenDramaManager.mjs"
 cp "$REPO_ROOT/zen-drama-chrome/zen-drama.css" "$STYLE_DIR/zen-drama.css"
 install_browser_chrome_hooks "$RESOURCE_ROOT/browser.xhtml"
 
@@ -173,7 +173,7 @@ if [[ -f "$OMNI_JA" ]]; then
   ditto "$REPO_ROOT/apps/drama-browser-shell/dist" \
     "$OMNI_STAGING/chrome/browser/content/browser/drama/app"
   prepare_chrome_index "$OMNI_STAGING/chrome/browser/content/browser/drama/app/index.html"
-  cp "$REPO_ROOT/zen-drama-chrome/ZenDramaManager.mjs" \
+  cp "$REPO_ROOT/gecko-drama-chrome/DramaBrowserChromeManager.mjs" \
     "$OMNI_STAGING/chrome/browser/content/browser/zen-components/ZenDramaManager.mjs"
   cp "$REPO_ROOT/zen-drama-chrome/zen-drama.css" \
     "$OMNI_STAGING/chrome/browser/content/browser/zen-styles/zen-drama.css"
@@ -197,10 +197,9 @@ cat > "$OUTPUT_DIR/Start-Drama-Browser.command" <<EOF
 set -euo pipefail
 
 PACKAGE_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_REPO_ROOT="$REPO_ROOT"
 DRAMA_BROWSER_APP="\${DRAMA_BROWSER_APP:-\$PACKAGE_DIR/Drama Browser.app}"
 
-exec "\$SOURCE_REPO_ROOT/scripts/launch-drama-browser-mac.sh" --drama-app "\$DRAMA_BROWSER_APP" --surface "\${DRAMA_BROWSER_SURFACE:-\${ZEN_DRAMA_SURFACE:-start}}" "\$@"
+exec "\$PACKAGE_DIR/scripts/launch-drama-browser-mac.sh" --drama-app "\$DRAMA_BROWSER_APP" --surface "\${DRAMA_BROWSER_SURFACE:-\${ZEN_DRAMA_SURFACE:-start}}" "\$@"
 EOF
 chmod +x "$OUTPUT_DIR/scripts/launch-drama-runtime.sh" \
   "$OUTPUT_DIR/scripts/launch-plotpilot-sidecar-mac.sh" \
@@ -210,9 +209,9 @@ chmod +x "$OUTPUT_DIR/scripts/launch-drama-runtime.sh" \
 cat > "$OUTPUT_DIR/README.md" <<EOF
 # Drama Browser macOS package
 
-This package is Zen-backed only when the source \`Zen Browser.app\` is a real Zen app/build
-with the Drama chrome-resource integration. A developer runtime wrapper, Brave,
-Electron, or localhost browser shell does not count as \`product-zen-panel\`
+This package is a Drama Browser product wrapper backed by the current Zen/Gecko
+adapter. A developer runtime wrapper, Brave, Electron, localhost browser shell,
+or installed Zen Browser.app does not count as \`product-drama-browser\`
 validation.
 
 Launch:
@@ -221,14 +220,14 @@ Launch:
 DRAMA_BROWSER_APP="$APP_DEST" "$OUTPUT_DIR/Start-Drama-Browser.command" --surface start --internal-app auto
 \`\`\`
 
-If the source Zen build does not already register the ZenDrama chrome manager,
+If the source Zen build does not already register the Drama Browser chrome manager,
 this package can still launch the local runtime, but the sidebar panel itself
 requires the matching Zen source/build integration.
 
 Verify the product-path boundary:
 
 \`\`\`bash
-"$REPO_ROOT/scripts/verify-zen-drama-mac.sh" --zen-app "$APP_DEST" --surface start
+"$REPO_ROOT/scripts/verify-drama-browser-mac.sh" --app "$APP_DEST" --surface start
 \`\`\`
 EOF
 

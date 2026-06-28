@@ -1,5 +1,6 @@
 :root,
 :root[data-drama-skin="drama-classic"],
+:root[data-drama-skin="host-follow"],
 :root[data-drama-skin="zen-follow"] {
   color-scheme: dark;
   --drama-css-ready: ready;
@@ -227,7 +228,67 @@
   --drama-shadow-color: rgba(137, 80, 124, 0.15);
 }
 
-:root[data-host="zen"][data-drama-skin="zen-follow"] {
+:root[data-drama-skin="triad-soft"] {
+  color-scheme: light;
+  --drama-bg: #f6f0e7;
+  --drama-bg-elevated: #fff8ef;
+  --drama-panel: rgba(255, 248, 239, 0.95);
+  --drama-panel-raised: rgba(251, 243, 232, 0.98);
+  --drama-surface: rgba(255, 248, 239, 0.78);
+  --drama-surface-strong: rgba(249, 240, 229, 0.96);
+  --drama-surface-soft: rgba(135, 61, 36, 0.08);
+  --drama-surface-hover: rgba(135, 61, 36, 0.12);
+  --drama-surface-selected: rgba(135, 61, 36, 0.18);
+  --drama-border: rgba(86, 64, 51, 0.16);
+  --drama-border-strong: rgba(86, 64, 51, 0.28);
+  --drama-border-soft: rgba(86, 64, 51, 0.10);
+  --drama-text: rgba(50, 17, 19, 0.94);
+  --drama-text-muted: rgba(97, 75, 62, 0.68);
+  --drama-text-subtle: rgba(97, 75, 62, 0.48);
+  --drama-text-faint: rgba(97, 75, 62, 0.32);
+  --drama-accent: #873d24;
+  --drama-accent-soft: rgba(135, 61, 36, 0.14);
+  --drama-accent-strong: #321113;
+  --drama-success: #614b3e;
+  --drama-success-text: #321113;
+  --drama-warning: #a06b4a;
+  --drama-warning-text: #6a3a24;
+  --drama-danger: #b05a55;
+  --drama-danger-text: #873d24;
+  --drama-info: #414146;
+  --drama-info-text: #414146;
+  --drama-control-bg: rgba(135, 61, 36, 0.06);
+  --drama-code-bg: rgba(65, 65, 70, 0.08);
+  --drama-sheen: rgba(255, 255, 255, 0.78);
+  --drama-sheen-weak: rgba(255, 255, 255, 0.46);
+  --drama-shadow-color: rgba(80, 55, 43, 0.18);
+  --drama-plm-pill-primary: #873d24;
+  --drama-plm-pill-primary-hover: #6f2f1c;
+  --drama-plm-pill-primary-shadow: rgba(135, 61, 36, 0.28);
+  --drama-plm-pill-secondary: #414146;
+  --drama-plm-pill-tertiary: #f5f4df;
+  --drama-plm-pill-ink: #321113;
+  --drama-plm-pill-coffee: #614b3e;
+  --drama-plm-pill-taupe: #8b846d;
+  --drama-plm-card-character-from: rgba(135, 61, 36, 0.96);
+  --drama-plm-card-character-to: rgba(50, 17, 19, 0.92);
+  --drama-plm-card-character-dot: rgba(245, 244, 223, 0.16);
+  --drama-plm-card-character-border: rgba(135, 61, 36, 0.46);
+  --drama-plm-card-plot-from: rgba(65, 65, 70, 0.96);
+  --drama-plm-card-plot-to: rgba(75, 69, 92, 0.90);
+  --drama-plm-card-plot-dot: rgba(245, 244, 223, 0.14);
+  --drama-plm-card-plot-border: rgba(65, 65, 70, 0.44);
+  --drama-plm-card-world-from: rgba(139, 132, 109, 0.96);
+  --drama-plm-card-world-to: rgba(97, 75, 62, 0.90);
+  --drama-plm-card-world-dot: rgba(50, 17, 19, 0.18);
+  --drama-plm-card-world-border: rgba(139, 132, 109, 0.46);
+  --drama-plm-card-style-from: rgba(214, 160, 155, 0.96);
+  --drama-plm-card-style-to: rgba(135, 61, 36, 0.86);
+  --drama-plm-card-style-dot: rgba(50, 17, 19, 0.16);
+  --drama-plm-card-style-border: rgba(214, 160, 155, 0.50);
+}
+
+:root:is([data-host="drama"], [data-host="zen"]):is([data-drama-skin="host-follow"], [data-drama-skin="zen-follow"]) {
   --drama-bg: var(--zen-main-browser-background, #101010);
   --drama-bg-elevated: color-mix(in srgb, var(--zen-main-browser-background, #101010) 88%, white 8%);
   --drama-panel: color-mix(in srgb, var(--zen-colors-tertiary, #151515) 88%, black 12%);

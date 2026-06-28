@@ -1,10 +1,14 @@
 import type { DramaHostKind } from './index.ts'
 
 export type DramaPlmSurfaceClassification =
+  | 'product-drama-browser'
+  /** @deprecated Use product-drama-browser with hostAdapter=zen-gecko. */
   | 'product-zen-panel'
   | 'dev-localhost'
   | 'browser-fallback'
   | 'legacy-electron'
+
+export type DramaPlmHostAdapter = 'zen-gecko' | 'browser' | 'electron' | 'unknown'
 
 export type DramaPlmReadinessTier =
   | 'shell-ready'
@@ -31,6 +35,8 @@ export interface DramaPlmSurfaceClassificationInput {
 
 export interface DramaPlmSurfaceClassificationResult {
   classification: DramaPlmSurfaceClassification
+  canonicalClassification: Exclude<DramaPlmSurfaceClassification, 'product-zen-panel'>
+  hostAdapter: DramaPlmHostAdapter
   productPath: boolean
   currentUrl: string
   reason: string
@@ -55,21 +61,42 @@ function isLocalhost(hostname: string): boolean {
 }
 
 function surfaceLabel(surface: string): string {
-  if (surface === 'start') return 'Zen Start'
+  if (surface === 'start') return 'Start'
   if (surface === 'graph') return 'Graph'
   if (surface === 'crew') return 'Skill Crew'
   if (surface === 'memory') return 'Basic Memory'
   return 'PLM'
 }
 
-export function isZenDramaProductPath(url: string | URL | null | undefined, expectedSurface = 'plm'): boolean {
+function isDramaChromeProductPath(
+  url: string | URL | null | undefined,
+  expectedSurface = 'plm',
+  allowedHosts = new Set(['drama', 'zen']),
+): boolean {
   const parsed = normalizeUrl(url)
   if (!parsed) return false
+  const hostParam = parsed.searchParams.get('host')
   return parsed.protocol === PRODUCT_CHROME_PROTOCOL
     && parsed.hostname === PRODUCT_CHROME_HOST
     && parsed.pathname === PRODUCT_CHROME_PATH
-    && parsed.searchParams.get('host') === 'zen'
+    && (!hostParam || allowedHosts.has(hostParam))
     && parsed.searchParams.get('surface') === expectedSurface
+}
+
+export function isDramaBrowserProductPath(url: string | URL | null | undefined, expectedSurface = 'plm'): boolean {
+  return isDramaChromeProductPath(url, expectedSurface)
+}
+
+/** @deprecated Use isDramaBrowserProductPath. */
+export function isZenDramaProductPath(url: string | URL | null | undefined, expectedSurface = 'plm'): boolean {
+  return isDramaChromeProductPath(url, expectedSurface, new Set(['zen']))
+}
+
+export function normalizeDramaPlmSurfaceClassification(
+  classification: DramaPlmSurfaceClassification,
+): Exclude<DramaPlmSurfaceClassification, 'product-zen-panel'> {
+  if (classification === 'product-zen-panel') return 'product-drama-browser'
+  return classification
 }
 
 export function classifyDramaPlmSurface(
@@ -84,24 +111,31 @@ export function classifyDramaPlmSurface(
   if (hostKind === 'electron' || /\bElectron\//.test(userAgent)) {
     return {
       classification: 'legacy-electron',
+      canonicalClassification: 'legacy-electron',
+      hostAdapter: 'electron',
       productPath: false,
       currentUrl,
       reason: 'PLM is running in the legacy Electron compatibility surface.',
     }
   }
 
-  if (isZenDramaProductPath(parsed, expectedSurface)) {
+  if (isDramaBrowserProductPath(parsed, expectedSurface)) {
+    const hostParam = parsed?.searchParams.get('host')
     return {
-      classification: 'product-zen-panel',
+      classification: 'product-drama-browser',
+      canonicalClassification: 'product-drama-browser',
+      hostAdapter: hostParam === 'zen' || hostKind === 'gecko' ? 'zen-gecko' : 'unknown',
       productPath: true,
       currentUrl,
-      reason: `${surfaceLabel(expectedSurface)} is loaded from the Zen chrome-resource product path.`,
+      reason: `${surfaceLabel(expectedSurface)} is loaded from the Drama Browser product path.`,
     }
   }
 
   if (parsed && (parsed.protocol === 'http:' || parsed.protocol === 'https:') && isLocalhost(parsed.hostname)) {
     return {
       classification: 'dev-localhost',
+      canonicalClassification: 'dev-localhost',
+      hostAdapter: hostKind === 'gecko' ? 'zen-gecko' : 'browser',
       productPath: false,
       currentUrl,
       reason: `${surfaceLabel(expectedSurface)} is running through the localhost developer compatibility route.`,
@@ -110,8 +144,10 @@ export function classifyDramaPlmSurface(
 
   return {
     classification: 'browser-fallback',
+    canonicalClassification: 'browser-fallback',
+    hostAdapter: hostKind === 'gecko' ? 'zen-gecko' : 'browser',
     productPath: false,
     currentUrl,
-    reason: `${surfaceLabel(expectedSurface)} is running outside the Zen chrome-resource product panel.`,
+    reason: `${surfaceLabel(expectedSurface)} is running outside the Drama Browser product path.`,
   }
 }

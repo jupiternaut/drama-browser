@@ -2070,7 +2070,8 @@
 :root:is(
   [data-drama-skin="paper-light"],
   [data-drama-skin="jade-glass"],
-  [data-drama-skin="opal-bloom"]
+  [data-drama-skin="opal-bloom"],
+  [data-drama-skin="triad-soft"]
 ) .drama-surface-frame [class~="text-white"] {
   color: var(--drama-text) !important;
 }
@@ -2078,7 +2079,8 @@
 :root:is(
   [data-drama-skin="paper-light"],
   [data-drama-skin="jade-glass"],
-  [data-drama-skin="opal-bloom"]
+  [data-drama-skin="opal-bloom"],
+  [data-drama-skin="triad-soft"]
 ) .drama-surface-frame [class*="text-white/"] {
   color: var(--drama-text-muted) !important;
 }
@@ -2086,7 +2088,8 @@
 :root:is(
   [data-drama-skin="paper-light"],
   [data-drama-skin="jade-glass"],
-  [data-drama-skin="opal-bloom"]
+  [data-drama-skin="opal-bloom"],
+  [data-drama-skin="triad-soft"]
 ) .drama-surface-frame [class*="border-white"] {
   border-color: var(--drama-border) !important;
 }
@@ -2094,7 +2097,8 @@
 :root:is(
   [data-drama-skin="paper-light"],
   [data-drama-skin="jade-glass"],
-  [data-drama-skin="opal-bloom"]
+  [data-drama-skin="opal-bloom"],
+  [data-drama-skin="triad-soft"]
 ) .drama-surface-frame [class*="bg-white"] {
   background-color: var(--drama-surface-soft) !important;
 }
@@ -2102,12 +2106,14 @@
 :root:is(
   [data-drama-skin="paper-light"],
   [data-drama-skin="jade-glass"],
-  [data-drama-skin="opal-bloom"]
+  [data-drama-skin="opal-bloom"],
+  [data-drama-skin="triad-soft"]
 ) .drama-surface-frame [class*="bg-black"],
 :root:is(
   [data-drama-skin="paper-light"],
   [data-drama-skin="jade-glass"],
-  [data-drama-skin="opal-bloom"]
+  [data-drama-skin="opal-bloom"],
+  [data-drama-skin="triad-soft"]
 ) .drama-surface-frame [class*="bg-[#"] {
   background-color: var(--drama-code-bg) !important;
 }
@@ -2115,7 +2121,8 @@
 :root:is(
   [data-drama-skin="paper-light"],
   [data-drama-skin="jade-glass"],
-  [data-drama-skin="opal-bloom"]
+  [data-drama-skin="opal-bloom"],
+  [data-drama-skin="triad-soft"]
 ) .drama-surface-frame [class*="ring-white"] {
   --tw-ring-color: color-mix(in srgb, var(--drama-accent) 34%, transparent) !important;
 }
@@ -2123,11 +2130,13 @@
 :root:is(
   [data-drama-skin="paper-light"],
   [data-drama-skin="jade-glass"],
-  [data-drama-skin="opal-bloom"]
+  [data-drama-skin="opal-bloom"],
+  [data-drama-skin="triad-soft"]
 ) .drama-surface-frame [class*="ring-offset-"] {
   --tw-ring-offset-color: var(--drama-bg) !important;
 }
 
+.drama-start-surface,
 .zen-start-surface {
   position: relative;
   display: grid;
@@ -2929,6 +2938,7 @@
   background: transparent;
 }
 
+.drama-start-reference-surface,
 .zen-start-reference-surface {
   position: relative;
   display: block;
@@ -2941,6 +2951,7 @@
   color: #fff;
 }
 
+.drama-start-reference-image,
 .zen-start-reference-image {
   position: absolute;
   inset-inline-start: 50%;
@@ -2957,6 +2968,11 @@
   user-select: none;
 }
 
+.drama-start-reference-hotspot,
+.drama-start-reference-settings,
+.drama-start-reference-carousel,
+.drama-start-reference-search,
+.drama-start-reference-search input,
 .zen-start-reference-hotspot,
 .zen-start-reference-settings,
 .zen-start-reference-carousel,
@@ -2969,6 +2985,7 @@
   outline: none;
 }
 
+.drama-start-reference-shortcuts,
 .zen-start-reference-shortcuts {
   position: absolute;
   inset-block-start: 4.4%;
@@ -2980,6 +2997,7 @@
   gap: 1.4%;
 }
 
+.drama-start-reference-hotspot,
 .zen-start-reference-hotspot {
   position: relative;
   width: 100%;
@@ -2987,6 +3005,7 @@
   cursor: pointer;
 }
 
+.drama-start-reference-search,
 .zen-start-reference-search {
   inset-block-start: 24.7%;
   inset-inline-start: 39.7%;
@@ -2996,6 +3015,7 @@
   opacity: 0;
 }
 
+.drama-start-reference-search input,
 .zen-start-reference-search input {
   inset: 0;
   width: 100%;
@@ -3008,6 +3028,7 @@
   opacity: 0;
 }
 
+.drama-start-reference-settings,
 .zen-start-reference-settings {
   inset-block-start: 4.5%;
   inset-inline-end: 1.3%;
@@ -3016,6 +3037,7 @@
   cursor: pointer;
 }
 
+.drama-start-reference-carousel,
 .zen-start-reference-carousel {
   inset-block-start: 91.4%;
   width: 2.8%;
@@ -3023,14 +3045,20 @@
   cursor: pointer;
 }
 
+.drama-start-reference-carousel-prev,
 .zen-start-reference-carousel-prev {
   inset-inline-start: 46.9%;
 }
 
+.drama-start-reference-carousel-next,
 .zen-start-reference-carousel-next {
   inset-inline-start: 53.7%;
 }
 
+.drama-start-reference-hotspot:focus-visible,
+.drama-start-reference-settings:focus-visible,
+.drama-start-reference-carousel:focus-visible,
+.drama-start-reference-search:focus-within,
 .zen-start-reference-hotspot:focus-visible,
 .zen-start-reference-settings:focus-visible,
 .zen-start-reference-carousel:focus-visible,
@@ -3038,6 +3066,7 @@
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.72);
 }
 
+.drama-start-reference-status,
 .zen-start-reference-status {
   position: absolute;
   width: 1px;

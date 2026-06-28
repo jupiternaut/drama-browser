@@ -52,7 +52,7 @@ import {
 } from './skins'
 import { BasicMemorySurface } from './BasicMemorySurface'
 import { resolveDramaBrowserHostAdapter } from './host-adapter'
-import { ZenStartSurface } from './ZenStartSurface'
+import { DramaStartSurface } from './DramaStartSurface'
 
 type Surface = 'start' | 'graph' | 'plm' | 'crew' | 'memory'
 type StyleReadiness = 'checking' | 'ready' | 'missing'
@@ -85,7 +85,7 @@ interface SurfaceDescriptor {
 }
 
 const surfaces: SurfaceDescriptor[] = [
-  { id: 'start', title: 'Zen Start', shortLabel: 'Start', subtitle: '启动看板', source: '搜索 / 快捷入口 / 看板', Icon: Compass },
+  { id: 'start', title: 'Drama Start', shortLabel: 'Start', subtitle: '启动看板', source: '搜索 / 快捷入口 / 看板', Icon: Compass },
   { id: 'graph', title: 'Drama Graph', shortLabel: 'Graph', subtitle: '状态机画布', source: '画布 / 状态机 / 剧情结构', Icon: Network },
   { id: 'plm', title: 'Drama PLM', shortLabel: 'PLM', subtitle: '长上下文生成', source: '章节 / Bible / 草稿回写', Icon: ScrollText },
   { id: 'crew', title: 'Skill Crew', shortLabel: 'Crew', subtitle: '导演控场', source: 'Agent / Task / Graph Events', Icon: UsersRound },
@@ -308,17 +308,26 @@ function RuntimeChip({
 }
 
 function surfaceClassificationLabel(result: DramaPlmSurfaceClassificationResult): string {
-  if (result.classification === 'product-zen-panel') return 'Zen panel'
-  if (result.classification === 'dev-localhost') return 'dev-localhost'
-  if (result.classification === 'legacy-electron') return 'legacy'
+  if (result.canonicalClassification === 'product-drama-browser') {
+    return result.hostAdapter === 'zen-gecko' ? 'Drama Browser · Zen/Gecko' : 'Drama Browser'
+  }
+  if (result.canonicalClassification === 'dev-localhost') return 'dev-localhost'
+  if (result.canonicalClassification === 'legacy-electron') return 'legacy'
   return 'fallback'
 }
 
 function surfaceClassificationTone(result: DramaPlmSurfaceClassificationResult): StatusTone {
-  if (result.classification === 'product-zen-panel') return 'success'
-  if (result.classification === 'dev-localhost') return 'warning'
-  if (result.classification === 'legacy-electron') return 'neutral'
+  if (result.canonicalClassification === 'product-drama-browser') return 'success'
+  if (result.canonicalClassification === 'dev-localhost') return 'warning'
+  if (result.canonicalClassification === 'legacy-electron') return 'neutral'
   return 'warning'
+}
+
+function surfaceClassificationTitle(result: DramaPlmSurfaceClassificationResult): string {
+  if (result.hostAdapter === 'zen-gecko') return `${result.reason} Adapter: Zen/Gecko.`
+  if (result.hostAdapter === 'electron') return `${result.reason} Adapter: Electron legacy.`
+  if (result.hostAdapter === 'browser') return `${result.reason} Adapter: browser fallback.`
+  return result.reason
 }
 
 function createShellReadinessTiers(
@@ -330,7 +339,9 @@ function createShellReadinessTiers(
       tier: 'shell-ready',
       state: surfaceClassification.productPath ? 'ready' : 'blocked',
       message: surfaceClassification.productPath
-        ? 'Loaded from Zen chrome-resource PLM panel.'
+        ? surfaceClassification.hostAdapter === 'zen-gecko'
+          ? 'Loaded from the Drama Browser product path through the Zen/Gecko adapter.'
+          : 'Loaded from the Drama Browser product path.'
         : surfaceClassification.reason,
     },
     {
@@ -348,6 +359,8 @@ function toPlmIntegrationStatus(
   const runtimeReady = runtimeStatus.state === 'ready'
   return {
     surface: surfaceClassification.classification,
+    canonicalSurface: surfaceClassification.canonicalClassification,
+    hostAdapter: surfaceClassification.hostAdapter,
     productPath: surfaceClassification.productPath,
     currentUrl: surfaceClassification.currentUrl,
     reason: surfaceClassification.reason,
@@ -419,8 +432,8 @@ function deriveShellState({
   if (surface === 'start') {
     return {
       id: 'runtime-ready',
-      label: 'Zen Start ready',
-      message: 'Zen Start 启动看板已加载。',
+      label: 'Start ready',
+      message: 'Drama Browser 启动看板已加载。',
       tone: 'success',
     }
   }
@@ -522,7 +535,7 @@ function DramaRuntimeRecoveryPanel({
           <p className="drama-runtime-recovery-kicker">Drama Runtime</p>
           <h1>后台运行时未就绪</h1>
           <p>
-            Drama 工作台已经作为 Zen 内部资源加载，但本地 runtime 暂时不可用。请重新加载面板，或重新双击桌面 Drama 启动完整应用。
+            Drama 工作台已经从 Drama Browser 产品路径加载；当前宿主适配器为 Zen/Gecko，但本地 runtime 暂时不可用。请重新加载面板，或重新双击桌面 Drama 启动完整应用。
           </p>
           <div className="drama-runtime-recovery-state">
             <span>{stateLabel}</span>
@@ -597,7 +610,8 @@ function DramaWorkbenchShell({
   skins,
   activeSurface,
   activeSkinId,
-  zenHost,
+  hostedChrome,
+  hostShellClassName,
   dataHost,
   hostKind,
   hostBadgeLabel,
@@ -614,7 +628,8 @@ function DramaWorkbenchShell({
   skins: DramaSkin[]
   activeSurface: SurfaceDescriptor
   activeSkinId: DramaSkinId
-  zenHost: boolean
+  hostedChrome: boolean
+  hostShellClassName?: string
   dataHost: string
   hostKind: string
   hostBadgeLabel: string
@@ -631,13 +646,13 @@ function DramaWorkbenchShell({
 
   return (
     <div
-      className={['drama-shell', zenHost ? 'zen-host' : ''].filter(Boolean).join(' ')}
+      className={['drama-shell', hostShellClassName].filter(Boolean).join(' ')}
       data-drama-shell="workbench"
       data-drama-shell-state={shellState.id}
       data-drama-active-skin={activeSkinId}
       data-host={dataHost}
     >
-      {!zenHost ? (
+      {!hostedChrome ? (
         <aside className="drama-sidebar">
           <div className="drama-sidebar-brand">
             <div className="drama-mark" aria-hidden="true">D</div>
@@ -668,7 +683,7 @@ function DramaWorkbenchShell({
       <main className="drama-main" data-drama-surface={surface}>
         <header className="drama-workbench-bar">
           <div className="drama-workbench-left">
-            {zenHost ? <div className="drama-mark drama-mark-inline" aria-hidden="true">D</div> : null}
+            {hostedChrome ? <div className="drama-mark drama-mark-inline" aria-hidden="true">D</div> : null}
             <nav className="drama-tool-switcher" aria-label="Drama workspace surfaces">
               {surfaces.map((item) => (
                 <SurfaceButton
@@ -701,7 +716,7 @@ function DramaWorkbenchShell({
             <StatusBadge
               className="drama-surface-classification-badge"
               tone={surfaceClassificationTone(surfaceClassification)}
-              title={surfaceClassification.reason}
+              title={surfaceClassificationTitle(surfaceClassification)}
             >
               {surfaceClassificationLabel(surfaceClassification)}
             </StatusBadge>
@@ -731,7 +746,6 @@ function DramaWorkbenchShell({
 export function App() {
   const [surface, setSurface] = React.useState<Surface>(getInitialSurface)
   const [hostAdapter, setHostAdapter] = React.useState(resolveDramaBrowserHostAdapter)
-  const zenHost = hostAdapter.id === 'zen'
   const [activeSkinId, setActiveSkinId] = React.useState<DramaSkinId>(() => (
     getInitialDramaSkinId(resolveDramaBrowserHostAdapter().defaultSkinId)
   ))
@@ -803,10 +817,10 @@ export function App() {
       return runtimeClient.request('drama:graph:recordEvent', request)
     },
     async loadStoryletBridgeSnapshot() {
-      throw new Error('Storylet JSON compatibility import is not available in the Zen/browser host. Use Drama Graph as the primary source.')
+      throw new Error('Storylet JSON compatibility import is not available in the current Drama Browser host adapter. Use Drama Graph as the primary source.')
     },
     async writeStoryletChapterFromPlotPilot() {
-      throw new Error('Storylet JSON compatibility writeback is disabled in the Zen/browser host. Drama Graph writeback remains enabled.')
+      throw new Error('Storylet JSON compatibility writeback is disabled in the current Drama Browser host adapter. Drama Graph writeback remains enabled.')
     },
   }), [browserHost, runtimeBaseUrl, runtimeClient])
   const crewRoom = inferSkillCrewRoomId({
@@ -895,8 +909,9 @@ export function App() {
     document.title = surface === 'start' ? PRODUCT_NAME : `${activeSurface.title} - ${PRODUCT_NAME}`
     setDramaReadySignal('dramaShellMounted', 'true')
     setDramaReadySignal('dramaSurface', surface)
-    setDramaReadySignal('dramaHost', zenHost ? 'zen' : 'browser')
-  }, [activeSurface.title, surface, zenHost])
+    setDramaReadySignal('dramaHost', hostAdapter.id)
+    setDramaReadySignal('dramaHostAdapter', hostAdapter.adapterKind)
+  }, [activeSurface.title, hostAdapter.adapterKind, hostAdapter.id, surface])
 
   React.useEffect(() => {
     const handlePopState = () => {
@@ -1067,11 +1082,22 @@ export function App() {
       state: 'ready',
       detail: {
         hostKind,
+        hostAdapter: surfaceClassification.hostAdapter,
+        canonicalClassification: surfaceClassification.canonicalClassification,
         productPath: surfaceClassification.productPath,
         activeSkinId,
       },
     }, { once: false })
-  }, [activeSkinId, hostKind, shellState.id, styleReadiness, surface, surfaceClassification.productPath])
+  }, [
+    activeSkinId,
+    hostKind,
+    shellState.id,
+    styleReadiness,
+    surface,
+    surfaceClassification.canonicalClassification,
+    surfaceClassification.hostAdapter,
+    surfaceClassification.productPath,
+  ])
 
   if (styleReadiness !== 'ready') {
     return (
@@ -1091,7 +1117,8 @@ export function App() {
         skins={DRAMA_SKINS}
         activeSurface={activeSurface}
         activeSkinId={activeSkinId}
-        zenHost={zenHost}
+        hostedChrome={hostAdapter.hostedChrome}
+        hostShellClassName={hostAdapter.shellClassName}
         dataHost={hostAdapter.dataHost}
         hostKind={hostKind}
         hostBadgeLabel={hostBadgeLabel}
@@ -1103,7 +1130,7 @@ export function App() {
         onSkinChange={setActiveSkinId}
       >
         {surface === 'start' ? (
-          <ZenStartSurface />
+          <DramaStartSurface />
         ) : null}
 
         {surface === 'graph' ? (

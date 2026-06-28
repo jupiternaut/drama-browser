@@ -8,6 +8,8 @@ ZEN_RUNTIME_BUNDLE="${ZEN_DRAMA_RUNTIME_BUNDLE:-$REPO_ROOT/dist/zen-drama-runtim
 ZEN_BIN="$ZEN_RUNTIME_BUNDLE/Contents/MacOS/zen"
 PINNED_ENTRY_STYLE="${ZEN_DRAMA_PINNED_ENTRY_STYLE:-jade}"
 
+echo "launch-zen-drama-single-app.sh is a legacy Zen/Gecko adapter launcher. Use launch-drama-browser-mac.sh for Drama Browser product launches." >&2
+
 if [[ ! -x "$ZEN_BIN" ]]; then
   echo "Zen Drama runtime binary is missing: $ZEN_BIN" >&2
   exit 1

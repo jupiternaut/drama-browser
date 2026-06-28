@@ -35,7 +35,7 @@ function resolveSearchTarget(value: string): string {
   return `https://www.google.com/search?q=${encodeURIComponent(value)}`
 }
 
-export function ZenStartSurface() {
+export function DramaStartSurface() {
   const [slideIndex, setSlideIndex] = React.useState(0)
   const activeSlide = referenceSlides[slideIndex] ?? fallbackSlide
   const wheelGestureRef = React.useRef({ deltaX: 0, lastSwitchAt: 0 })
@@ -83,57 +83,57 @@ export function ZenStartSurface() {
 
   return (
     <section
-      className="zen-start-surface zen-start-reference-surface"
+      className="drama-start-surface drama-start-reference-surface"
       style={slideStyle}
-      aria-label="Zen Start"
+      aria-label="Drama Start"
       onWheel={handleWheel}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
     >
-      <img className="zen-start-reference-image" src={activeSlide.src} alt="" draggable={false} />
+      <img className="drama-start-reference-image" src={activeSlide.src} alt="" draggable={false} />
 
-      <button className="zen-start-reference-settings" type="button" aria-label="Settings" />
+      <button className="drama-start-reference-settings" type="button" aria-label="Settings" />
 
-      <nav className="zen-start-reference-shortcuts" aria-label="Top sites">
+      <nav className="drama-start-reference-shortcuts" aria-label="Top sites">
         {shortcutLabels.map((label) => (
-          <button key={label} className="zen-start-reference-hotspot" type="button" aria-label={label} />
+          <button key={label} className="drama-start-reference-hotspot" type="button" aria-label={label} />
         ))}
       </nav>
 
       <form
-        className="zen-start-reference-search"
+        className="drama-start-reference-search"
         role="search"
         aria-label="Search or ask anything"
         onSubmit={(event) => {
           event.preventDefault()
-          const input = event.currentTarget.elements.namedItem('zen-start-query')
+          const input = event.currentTarget.elements.namedItem('drama-start-query')
           const value = input instanceof HTMLInputElement ? input.value.trim() : ''
           if (!value) return
           window.location.href = resolveSearchTarget(value)
         }}
       >
         <input
-          id="zen-start-query"
-          name="zen-start-query"
+          id="drama-start-query"
+          name="drama-start-query"
           aria-label="Search or ask anything"
           autoComplete="off"
         />
       </form>
 
       <button
-        className="zen-start-reference-carousel zen-start-reference-carousel-prev"
+        className="drama-start-reference-carousel drama-start-reference-carousel-prev"
         type="button"
         aria-label="Previous billboard"
         onClick={() => switchSlide(-1)}
       />
       <button
-        className="zen-start-reference-carousel zen-start-reference-carousel-next"
+        className="drama-start-reference-carousel drama-start-reference-carousel-next"
         type="button"
         aria-label="Next billboard"
         onClick={() => switchSlide(1)}
       />
 
-      <span className="zen-start-reference-status" aria-live="polite">
+      <span className="drama-start-reference-status" aria-live="polite">
         {activeSlide.label}
       </span>
     </section>

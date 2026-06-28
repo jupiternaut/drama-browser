@@ -11,25 +11,25 @@ const { Subprocess } = ChromeUtils.importESModule(
 const DRAMA_DEFAULT_BASE_URL = "http://127.0.0.1:3198/app";
 const DRAMA_DEFAULT_RUNTIME_URL = "http://127.0.0.1:3198";
 const DRAMA_DEFAULT_INTERNAL_APP_URL = "chrome://browser/content/drama/app/index.html";
-const DRAMA_BASE_URL_PREF = "zen.drama.base-url";
-const DRAMA_RUNTIME_URL_PREF = "zen.drama.runtime-url";
-const DRAMA_INTERNAL_APP_ENABLED_PREF = "zen.drama.internal-app.enabled";
-const DRAMA_INTERNAL_APP_URL_PREF = "zen.drama.internal-app-url";
-const DRAMA_RUNTIME_LAUNCH_ENABLED_PREF = "zen.drama.runtime-launch.enabled";
-const DRAMA_RUNTIME_LAUNCH_COMMAND_PREF = "zen.drama.runtime-launch.command";
-const DRAMA_RUNTIME_LAUNCH_ARGS_PREF = "zen.drama.runtime-launch.args";
-const DRAMA_RUNTIME_LAUNCH_CWD_PREF = "zen.drama.runtime-launch.cwd";
-const DRAMA_RUNTIME_LAUNCH_TIMEOUT_MS_PREF = "zen.drama.runtime-launch.timeout-ms";
-const DRAMA_OPEN_ON_STARTUP_PREF = "zen.drama.open-on-startup";
-const DRAMA_START_SURFACE_PREF = "zen.drama.start-surface";
-const DRAMA_PRODUCTION_FIXTURE_ENABLED_PREF = "zen.drama.production-fixture.enabled";
+const DRAMA_BASE_URL_PREF = ["drama.browser.base-url", "zen.drama.base-url"];
+const DRAMA_RUNTIME_URL_PREF = ["drama.browser.runtime-url", "zen.drama.runtime-url"];
+const DRAMA_INTERNAL_APP_ENABLED_PREF = ["drama.browser.internal-app.enabled", "zen.drama.internal-app.enabled"];
+const DRAMA_INTERNAL_APP_URL_PREF = ["drama.browser.internal-app-url", "zen.drama.internal-app-url"];
+const DRAMA_RUNTIME_LAUNCH_ENABLED_PREF = ["drama.browser.runtime-launch.enabled", "zen.drama.runtime-launch.enabled"];
+const DRAMA_RUNTIME_LAUNCH_COMMAND_PREF = ["drama.browser.runtime-launch.command", "zen.drama.runtime-launch.command"];
+const DRAMA_RUNTIME_LAUNCH_ARGS_PREF = ["drama.browser.runtime-launch.args", "zen.drama.runtime-launch.args"];
+const DRAMA_RUNTIME_LAUNCH_CWD_PREF = ["drama.browser.runtime-launch.cwd", "zen.drama.runtime-launch.cwd"];
+const DRAMA_RUNTIME_LAUNCH_TIMEOUT_MS_PREF = ["drama.browser.runtime-launch.timeout-ms", "zen.drama.runtime-launch.timeout-ms"];
+const DRAMA_OPEN_ON_STARTUP_PREF = ["drama.browser.open-on-startup", "zen.drama.open-on-startup"];
+const DRAMA_START_SURFACE_PREF = ["drama.browser.start-surface", "zen.drama.start-surface"];
+const DRAMA_PRODUCTION_FIXTURE_ENABLED_PREF = ["drama.browser.production-fixture.enabled", "zen.drama.production-fixture.enabled"];
 const DRAMA_NATIVE_SIDEBAR_VISIBILITY_PREF = "sidebar.visibility";
 const DRAMA_NATIVE_SIDEBAR_EXPAND_ON_HOVER_PREF = "sidebar.expandOnHover";
 const DRAMA_ZEN_SIDEBAR_EXPANDED_PREF = "zen.view.sidebar-expanded";
-const DRAMA_PINNED_ENTRY_STYLE_PREF = "zen.drama.pinned-entry-style";
+const DRAMA_PINNED_ENTRY_STYLE_PREF = ["drama.browser.pinned-entry-style", "zen.drama.pinned-entry-style"];
 const DRAMA_LOCKED_URL = "about:blank";
 
-class nsZenDramaManager extends nsZenDOMOperatedFeature {
+class DramaBrowserChromeManager extends nsZenDOMOperatedFeature {
   #surface = "graph";
   #hasLoadedBrowser = false;
   #runtimeLaunchPromise = null;
@@ -95,27 +95,30 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   }
 
   #bindCommands() {
-    this.#bindCommand("cmd_zenDramaToggle", () => this.toggle());
-    this.#bindCommand("cmd_zenDramaOpenStart", () => this.open("start"));
-    this.#bindCommand("cmd_zenDramaOpenGraph", () => this.open("graph"));
-    this.#bindCommand("cmd_zenDramaOpenPlm", () => this.open("plm"));
-    this.#bindCommand("cmd_zenDramaOpenCrew", () => this.open("crew"));
-    this.#bindCommand("cmd_zenDramaOpenMemory", () => this.open("memory"));
-    this.#bindCommand("cmd_zenDramaOpenInTab", () => this.openInTab());
+    this.#bindCommand(["cmd_dramaBrowserToggle", "cmd_zenDramaToggle"], () => this.toggle());
+    this.#bindCommand(["cmd_dramaBrowserOpenStart", "cmd_zenDramaOpenStart"], () => this.open("start"));
+    this.#bindCommand(["cmd_dramaBrowserOpenGraph", "cmd_zenDramaOpenGraph"], () => this.open("graph"));
+    this.#bindCommand(["cmd_dramaBrowserOpenPlm", "cmd_zenDramaOpenPlm"], () => this.open("plm"));
+    this.#bindCommand(["cmd_dramaBrowserOpenCrew", "cmd_zenDramaOpenCrew"], () => this.open("crew"));
+    this.#bindCommand(["cmd_dramaBrowserOpenMemory", "cmd_zenDramaOpenMemory"], () => this.open("memory"));
+    this.#bindCommand(["cmd_dramaBrowserOpenInTab", "cmd_zenDramaOpenInTab"], () => this.openInTab());
   }
 
-  #bindCommand(id, handler) {
-    const command = document.getElementById(id);
-    if (!command || command.getAttribute("zen-drama-command-bound") === "true") {
-      return;
-    }
+  #bindCommand(ids, handler) {
+    for (const id of Array.isArray(ids) ? ids : [ids]) {
+      const command = document.getElementById(id);
+      if (!command || command.getAttribute("drama-browser-command-bound") === "true") {
+        continue;
+      }
 
-    command.addEventListener("command", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      handler();
-    });
-    command.setAttribute("zen-drama-command-bound", "true");
+      command.addEventListener("command", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        handler();
+      });
+      command.setAttribute("drama-browser-command-bound", "true");
+      command.setAttribute("zen-drama-command-bound", "true");
+    }
   }
 
   #bindBrowserThemeBridge() {
@@ -213,7 +216,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       Services.prefs.setBoolPref(DRAMA_NATIVE_SIDEBAR_EXPAND_ON_HOVER_PREF, false);
       Services.prefs.setBoolPref(DRAMA_ZEN_SIDEBAR_EXPANDED_PREF, true);
     } catch (error) {
-      console.warn("[ZenDrama] Failed to persist native sidebar state:", error);
+      console.warn("[DramaBrowserChrome] Failed to persist native sidebar state:", error);
     }
 
     document.documentElement.setAttribute("zen-sidebar-expanded", "true");
@@ -287,15 +290,15 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
 
       const label = document.createElementNS(htmlNamespace, "span");
       label.setAttribute("class", "zen-drama-pinned-sidebar-entry-label");
-      label.textContent = "Zen Start";
+      label.textContent = "Drama Start";
 
       button.replaceChildren(icon, label);
     }
 
     button.setAttribute("class", "zen-drama-pinned-sidebar-entry");
     button.setAttribute("type", "button");
-    button.setAttribute("title", "Zen Start");
-    button.setAttribute("aria-label", "Zen Start");
+    button.setAttribute("title", "Drama Start");
+    button.setAttribute("aria-label", "Drama Start");
     button.setAttribute("zen-drama-pinned-style", "start");
 
     if (button.getAttribute("zen-drama-pinned-entry-bound") !== "true") {
@@ -466,31 +469,31 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     const surfaces = [
       {
         id: "zen-drama-start-sidebar-button",
-        command: "cmd_zenDramaOpenStart",
+        command: "cmd_dramaBrowserOpenStart",
         image: "chrome://browser/content/zen-icons/drama-start.svg",
-        tooltip: "Zen Start",
+        tooltip: "Drama Start",
       },
       {
         id: "zen-drama-graph-sidebar-button",
-        command: "cmd_zenDramaOpenGraph",
+        command: "cmd_dramaBrowserOpenGraph",
         image: "chrome://browser/content/zen-icons/drama-graph.svg",
         tooltip: "Drama Graph",
       },
       {
         id: "zen-drama-plm-sidebar-button",
-        command: "cmd_zenDramaOpenPlm",
+        command: "cmd_dramaBrowserOpenPlm",
         image: "chrome://browser/content/zen-icons/drama-plm.svg",
         tooltip: "Drama PLM",
       },
       {
         id: "zen-drama-crew-sidebar-button",
-        command: "cmd_zenDramaOpenCrew",
+        command: "cmd_dramaBrowserOpenCrew",
         image: "chrome://browser/content/zen-icons/drama-crew.svg",
         tooltip: "Skill Crew",
       },
       {
         id: "zen-drama-memory-sidebar-button",
-        command: "cmd_zenDramaOpenMemory",
+        command: "cmd_dramaBrowserOpenMemory",
         image: "chrome://browser/content/zen-icons/drama-memory.svg",
         tooltip: "Basic Memory",
       },
@@ -559,11 +562,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   }
 
   get internalAppEnabled() {
-    try {
-      return Services.prefs.getBoolPref(DRAMA_INTERNAL_APP_ENABLED_PREF, true);
-    } catch {
-      return true;
-    }
+    return this.#getBoolPref(DRAMA_INTERNAL_APP_ENABLED_PREF, true);
   }
 
   get internalAppUrl() {
@@ -572,7 +571,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
 
   get currentUrl() {
     const params = new URLSearchParams({
-      host: "zen",
+      host: "drama",
       runtime: this.runtimeUrl,
       surface: this.#surface,
     });
@@ -588,19 +587,11 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   }
 
   get runtimeLaunchEnabled() {
-    try {
-      return Services.prefs.getBoolPref(DRAMA_RUNTIME_LAUNCH_ENABLED_PREF, true);
-    } catch {
-      return true;
-    }
+    return this.#getBoolPref(DRAMA_RUNTIME_LAUNCH_ENABLED_PREF, true);
   }
 
   get runtimeLaunchTimeoutMs() {
-    try {
-      return Math.max(1000, Services.prefs.getIntPref(DRAMA_RUNTIME_LAUNCH_TIMEOUT_MS_PREF, 30000));
-    } catch {
-      return 30000;
-    }
+    return Math.max(1000, this.#getIntPref(DRAMA_RUNTIME_LAUNCH_TIMEOUT_MS_PREF, 30000));
   }
 
   get runtimeLaunchCwd() {
@@ -621,11 +612,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   }
 
   get openOnStartup() {
-    try {
-      return Services.prefs.getBoolPref(DRAMA_OPEN_ON_STARTUP_PREF, false);
-    } catch {
-      return false;
-    }
+    return this.#getBoolPref(DRAMA_OPEN_ON_STARTUP_PREF, false);
   }
 
   get startSurface() {
@@ -634,11 +621,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   }
 
   get productionFixtureEnabled() {
-    try {
-      return Services.prefs.getBoolPref(DRAMA_PRODUCTION_FIXTURE_ENABLED_PREF, false);
-    } catch {
-      return false;
-    }
+    return this.#getBoolPref(DRAMA_PRODUCTION_FIXTURE_ENABLED_PREF, false);
   }
 
   get pinnedEntryStyle() {
@@ -734,7 +717,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     this.#setStatus(`Drama ${this.#surface.toUpperCase()}`);
 
     if (this.#surface === "start") {
-      this.#setStatus("Zen Start");
+      this.#setStatus("Drama Start");
     } else {
       const runtimeReady = await this.#checkRuntimeStatus();
       if (!runtimeReady) {
@@ -749,7 +732,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
           triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
         });
       } catch (error) {
-        console.error("[ZenDrama] Failed to load Drama surface:", error);
+        console.error("[DramaBrowserChrome] Failed to load Drama surface:", error);
         this.browser.setAttribute("src", url);
       }
     }
@@ -801,7 +784,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
         triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
       });
     } catch (error) {
-      console.error("[ZenDrama] Failed to release Drama surface:", error);
+      console.error("[DramaBrowserChrome] Failed to release Drama surface:", error);
       this.browser.setAttribute("src", DRAMA_LOCKED_URL);
     }
   }
@@ -921,10 +904,10 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       });
       const { exitCode } = await process.wait();
       if (exitCode !== 0) {
-        console.error(`[ZenDrama] Runtime launcher exited with ${exitCode}`);
+        console.error(`[DramaBrowserChrome] Runtime launcher exited with ${exitCode}`);
       }
     } catch (error) {
-      console.error("[ZenDrama] Failed to launch Drama runtime:", error);
+      console.error("[DramaBrowserChrome] Failed to launch Drama runtime:", error);
       this.#setStatus("Drama runtime launch failed");
       return false;
     }
@@ -945,12 +928,73 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     return false;
   }
 
-  #getStringPref(name, fallback) {
-    try {
-      return Services.prefs.getStringPref(name, fallback);
-    } catch {
-      return fallback;
+  #getStringPref(names, fallback) {
+    const orderedNames = Array.isArray(names) ? names : [names];
+    for (const name of orderedNames) {
+      try {
+        if (Services.prefs.prefHasUserValue(name)) {
+          return Services.prefs.getStringPref(name, fallback);
+        }
+      } catch {
+        // Try the next compatibility name.
+      }
     }
+    for (const name of orderedNames) {
+      try {
+        if (Services.prefs.getPrefType(name) !== Services.prefs.PREF_INVALID) {
+          return Services.prefs.getStringPref(name, fallback);
+        }
+      } catch {
+        // Try the next compatibility name.
+      }
+    }
+    return fallback;
+  }
+
+  #getBoolPref(names, fallback) {
+    const orderedNames = Array.isArray(names) ? names : [names];
+    for (const name of orderedNames) {
+      try {
+        if (Services.prefs.prefHasUserValue(name)) {
+          return Services.prefs.getBoolPref(name, fallback);
+        }
+      } catch {
+        // Try the next compatibility name.
+      }
+    }
+    for (const name of orderedNames) {
+      try {
+        if (Services.prefs.getPrefType(name) !== Services.prefs.PREF_INVALID) {
+          return Services.prefs.getBoolPref(name, fallback);
+        }
+      } catch {
+        // Try the next compatibility name.
+      }
+    }
+    return fallback;
+  }
+
+  #getIntPref(names, fallback) {
+    const orderedNames = Array.isArray(names) ? names : [names];
+    for (const name of orderedNames) {
+      try {
+        if (Services.prefs.prefHasUserValue(name)) {
+          return Services.prefs.getIntPref(name, fallback);
+        }
+      } catch {
+        // Try the next compatibility name.
+      }
+    }
+    for (const name of orderedNames) {
+      try {
+        if (Services.prefs.getPrefType(name) !== Services.prefs.PREF_INVALID) {
+          return Services.prefs.getIntPref(name, fallback);
+        }
+      } catch {
+        // Try the next compatibility name.
+      }
+    }
+    return fallback;
   }
 
   #parseLaunchArgs(value) {
@@ -986,7 +1030,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
 
     const styles = getComputedStyle(document.documentElement);
     const theme = {
-      source: "zen",
+      source: "zen-gecko-adapter",
       variables: {
         "--zen-border-radius": styles.getPropertyValue("--zen-border-radius"),
         "--zen-primary-color": styles.getPropertyValue("--zen-primary-color"),
@@ -1005,15 +1049,16 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
   }
 }
 
-window.gZenDramaManager = new nsZenDramaManager();
-const initializeZenDramaManager = () => window.gZenDramaManager?.init();
-const ensureZenDramaStartupOpen = () => window.gZenDramaManager?.ensureStartupOpen?.();
+window.gDramaBrowserChromeManager = new DramaBrowserChromeManager();
+window.gZenDramaManager = window.gDramaBrowserChromeManager;
+const initializeDramaBrowserChromeManager = () => window.gDramaBrowserChromeManager?.init();
+const ensureDramaBrowserStartupOpen = () => window.gDramaBrowserChromeManager?.ensureStartupOpen?.();
 if (document.readyState !== "loading") {
-  window.queueMicrotask(initializeZenDramaManager);
+  window.queueMicrotask(initializeDramaBrowserChromeManager);
 } else {
-  document.addEventListener("DOMContentLoaded", initializeZenDramaManager, { once: true });
+  document.addEventListener("DOMContentLoaded", initializeDramaBrowserChromeManager, { once: true });
 }
-window.addEventListener("load", initializeZenDramaManager, { once: true });
-window.addEventListener("load", () => window.setTimeout(ensureZenDramaStartupOpen, 300), { once: true });
-window.setTimeout(ensureZenDramaStartupOpen, 1500);
-window.setTimeout(ensureZenDramaStartupOpen, 3000);
+window.addEventListener("load", initializeDramaBrowserChromeManager, { once: true });
+window.addEventListener("load", () => window.setTimeout(ensureDramaBrowserStartupOpen, 300), { once: true });
+window.setTimeout(ensureDramaBrowserStartupOpen, 1500);
+window.setTimeout(ensureDramaBrowserStartupOpen, 3000);

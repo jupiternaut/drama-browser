@@ -2,12 +2,14 @@ export const DRAMA_SKIN_STORAGE_KEY = 'drama.activeSkin'
 
 export type DramaSkinId =
   | 'drama-classic'
+  | 'host-follow'
   | 'zen-follow'
   | 'warp-midnight'
   | 'solar-script'
   | 'paper-light'
   | 'jade-glass'
   | 'opal-bloom'
+  | 'triad-soft'
 
 export interface DramaSkin {
   id: DramaSkinId
@@ -24,10 +26,10 @@ export const DRAMA_SKINS: DramaSkin[] = [
     description: '当前 Drama 深色工作台',
   },
   {
-    id: 'zen-follow',
-    label: 'Follow Zen',
-    shortLabel: 'Zen',
-    description: '跟随 Zen Browser 主色和圆角',
+    id: 'host-follow',
+    label: 'Follow Host',
+    shortLabel: 'Host',
+    description: '跟随当前浏览器宿主主色和圆角',
   },
   {
     id: 'warp-midnight',
@@ -59,19 +61,31 @@ export const DRAMA_SKINS: DramaSkin[] = [
     shortLabel: 'Opal',
     description: '粉蓝欧泊的柔光创作基底',
   },
+  {
+    id: 'triad-soft',
+    label: 'Triad Soft',
+    shortLabel: 'Triad',
+    description: '奶白、陶土、炭灰的三色柔光按钮皮肤',
+  },
 ]
 
 const DRAMA_SKIN_IDS = new Set(DRAMA_SKINS.map((skin) => skin.id))
 
+function normalizeLegacyDramaSkinId(value: string | null | undefined): string | null | undefined {
+  return value === 'zen-follow' ? 'host-follow' : value
+}
+
 export function isDramaSkinId(value: string | null | undefined): value is DramaSkinId {
-  return typeof value === 'string' && DRAMA_SKIN_IDS.has(value as DramaSkinId)
+  const normalized = normalizeLegacyDramaSkinId(value)
+  return typeof normalized === 'string' && DRAMA_SKIN_IDS.has(normalized as DramaSkinId)
 }
 
 export function resolveDramaSkinId(
   value: string | null | undefined,
   fallback: DramaSkinId = 'drama-classic',
 ): DramaSkinId {
-  return isDramaSkinId(value) ? value : fallback
+  const normalized = normalizeLegacyDramaSkinId(value)
+  return isDramaSkinId(normalized) ? normalized : fallback
 }
 
 export function getInitialDramaSkinId(fallback: DramaSkinId = 'drama-classic'): DramaSkinId {
