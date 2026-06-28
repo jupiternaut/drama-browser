@@ -296,6 +296,10 @@
   color: var(--toolbar-color);
 }
 
+#zen-drama-panel[zen-drama-surface="start"] #zen-drama-toolbar {
+  display: none;
+}
+
 .zen-drama-toolbar-button {
   min-width: 88px;
   border-radius: var(--toolbarbutton-border-radius);

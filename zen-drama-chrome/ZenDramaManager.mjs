@@ -751,6 +751,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
 
   #updateActiveSurface() {
     const launcherButton = this.#ensureLauncherButton();
+    this.panel?.setAttribute("zen-drama-surface", this.#surface);
     launcherButton?.setAttribute("zen-drama-surface", this.#surface);
     launcherButton?.setAttribute("zen-drama-locked", this.#isLocked ? "true" : "false");
     this.#ensurePinnedStartSidebarEntry();
