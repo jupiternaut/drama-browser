@@ -130,6 +130,181 @@ path.write_text(text)
 PY
 }
 
+install_direct_app_launcher() {
+  local app_dest="$1"
+  local repo_root="$2"
+  local info_plist="$app_dest/Contents/Info.plist"
+  local executable_name real_executable_name executable_path real_executable_path launcher_script_path launcher_c_path
+
+  executable_name="$(plutil -extract CFBundleExecutable raw -o - "$info_plist" 2>/dev/null || true)"
+  if [[ -z "$executable_name" ]]; then
+    echo "Could not resolve CFBundleExecutable for $app_dest; direct app launcher was not installed." >&2
+    return 1
+  fi
+
+  real_executable_name="${executable_name}-gecko-bin"
+  executable_path="$app_dest/Contents/MacOS/$executable_name"
+  real_executable_path="$app_dest/Contents/MacOS/$real_executable_name"
+  launcher_script_path="$app_dest/Contents/MacOS/${executable_name}-launcher.sh"
+  launcher_c_path="$app_dest/Contents/MacOS/${executable_name}-launcher.c"
+
+  if [[ ! -x "$real_executable_path" ]]; then
+    if [[ ! -x "$executable_path" ]]; then
+      echo "Could not find executable at $executable_path; direct app launcher was not installed." >&2
+      return 1
+    fi
+    mv "$executable_path" "$real_executable_path"
+  fi
+
+  cat > "$launcher_script_path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+MACOS_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+APP_DIR="\$(cd "\$MACOS_DIR/../.." && pwd)"
+PACKAGE_DIR="\$(cd "\$APP_DIR/.." && pwd)"
+REAL_EXECUTABLE="\$MACOS_DIR/$real_executable_name"
+SOURCE_REPO_ROOT="$repo_root"
+
+PROFILE_DIR="\${DRAMA_BROWSER_PROFILE:-\$HOME/Library/Application Support/DramaBrowser/profile-main}"
+SURFACE="\${DRAMA_BROWSER_SURFACE:-start}"
+RUNTIME_URL="\${DRAMA_RUNTIME_URL:-http://127.0.0.1:3198}"
+INTERNAL_APP_URL="chrome://browser/content/drama/app/index.html"
+INTERNAL_APP_ENABLED="false"
+if [[ -f "\$APP_DIR/Contents/Resources/browser/chrome/browser/content/browser/drama/app/index.html" ]]; then
+  INTERNAL_APP_ENABLED="true"
+fi
+RUNTIME_SCRIPT="\$PACKAGE_DIR/scripts/launch-drama-runtime.sh"
+RUNTIME_CWD="\$PACKAGE_DIR"
+if [[ -x "\$SOURCE_REPO_ROOT/scripts/launch-drama-runtime.sh" && -d "\$SOURCE_REPO_ROOT/apps/drama-runtime" ]]; then
+  RUNTIME_SCRIPT="\$SOURCE_REPO_ROOT/scripts/launch-drama-runtime.sh"
+  RUNTIME_CWD="\$SOURCE_REPO_ROOT"
+fi
+
+mkdir -p "\$PROFILE_DIR"
+PROFILE_MARKER="\$PROFILE_DIR/.drama-browser-direct-launch-v1"
+if [[ ! -f "\$PROFILE_MARKER" ]]; then
+  rm -f \
+    "\$PROFILE_DIR/zen-sessions.jsonlz4" \
+    "\$PROFILE_DIR/sessionstore.jsonlz4" \
+    "\$PROFILE_DIR/sessionCheckpoints.json" \
+    "\$PROFILE_DIR/addonStartup.json.lz4"
+  rm -rf "\$PROFILE_DIR/sessionstore-backups"
+  : > "\$PROFILE_MARKER"
+fi
+
+cat > "\$PROFILE_DIR/user.js" <<PREFS
+user_pref("app.update.auto", false);
+user_pref("app.update.background.scheduling.enabled", false);
+user_pref("app.update.badge", false);
+user_pref("app.update.checkInstallTime", false);
+user_pref("app.update.disabledForTesting", true);
+user_pref("app.update.doorhanger", false);
+user_pref("app.update.enabled", false);
+user_pref("app.update.service.enabled", false);
+user_pref("browser.aboutwelcome.enabled", false);
+user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("browser.shell.didSkipDefaultBrowserCheckOnFirstRun", true);
+user_pref("browser.startup.homepage", "about:blank");
+user_pref("browser.startup.page", 0);
+user_pref("startup.homepage_welcome_url", "");
+user_pref("startup.homepage_welcome_url.additional", "");
+user_pref("drama.browser.base-url", "\${RUNTIME_URL}/app");
+user_pref("drama.browser.runtime-url", "\${RUNTIME_URL}");
+user_pref("drama.browser.internal-app.enabled", \${INTERNAL_APP_ENABLED});
+user_pref("drama.browser.internal-app-url", "\${INTERNAL_APP_URL}");
+user_pref("drama.browser.runtime-launch.enabled", true);
+user_pref("drama.browser.runtime-launch.command", "/bin/bash");
+user_pref("drama.browser.runtime-launch.args", "[\\\"\$RUNTIME_SCRIPT\\\"]");
+user_pref("drama.browser.runtime-launch.cwd", "\$RUNTIME_CWD");
+user_pref("drama.browser.open-on-startup", true);
+user_pref("drama.browser.start-surface", "\$SURFACE");
+user_pref("zen.drama.base-url", "\${RUNTIME_URL}/app");
+user_pref("zen.drama.runtime-url", "\${RUNTIME_URL}");
+user_pref("zen.drama.internal-app.enabled", \${INTERNAL_APP_ENABLED});
+user_pref("zen.drama.internal-app-url", "\${INTERNAL_APP_URL}");
+user_pref("zen.drama.runtime-launch.enabled", true);
+user_pref("zen.drama.runtime-launch.command", "/bin/bash");
+user_pref("zen.drama.runtime-launch.args", "[\\\"\$RUNTIME_SCRIPT\\\"]");
+user_pref("zen.drama.runtime-launch.cwd", "\$RUNTIME_CWD");
+user_pref("zen.drama.open-on-startup", true);
+user_pref("zen.drama.start-surface", "\$SURFACE");
+PREFS
+
+filtered_args=()
+for arg in "\$@"; do
+  case "\$arg" in
+    -psn_*) ;;
+    *) filtered_args+=("\$arg") ;;
+  esac
+done
+
+if (( \${#filtered_args[@]} > 0 )); then
+  exec "\$REAL_EXECUTABLE" -profile "\$PROFILE_DIR" -no-remote "\${filtered_args[@]}"
+fi
+
+exec "\$REAL_EXECUTABLE" -profile "\$PROFILE_DIR" -no-remote
+EOF
+  chmod +x "$launcher_script_path"
+
+  cat > "$launcher_c_path" <<'EOF'
+#include <limits.h>
+#include <mach-o/dyld.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+int main(int argc, char *argv[]) {
+  char executable_path[PATH_MAX];
+  uint32_t size = sizeof(executable_path);
+  if (_NSGetExecutablePath(executable_path, &size) != 0) {
+    fprintf(stderr, "Drama Browser launcher path is too long.\n");
+    return 127;
+  }
+
+  char *last_slash = strrchr(executable_path, '/');
+  if (last_slash == NULL) {
+    fprintf(stderr, "Drama Browser launcher could not resolve its directory.\n");
+    return 127;
+  }
+  *last_slash = '\0';
+
+  char script_path[PATH_MAX];
+  int written = snprintf(script_path, sizeof(script_path), "%s/zen-launcher.sh", executable_path);
+  if (written < 0 || written >= (int)sizeof(script_path)) {
+    fprintf(stderr, "Drama Browser launcher script path is too long.\n");
+    return 127;
+  }
+
+  char **args = calloc((size_t)argc + 2, sizeof(char *));
+  if (args == NULL) {
+    perror("calloc");
+    return 127;
+  }
+  args[0] = "/bin/bash";
+  args[1] = script_path;
+  for (int i = 1; i < argc; i++) {
+    args[i + 1] = argv[i];
+  }
+  args[argc + 1] = NULL;
+
+  execv("/bin/bash", args);
+  perror("execv");
+  return 127;
+}
+EOF
+
+  if command -v cc >/dev/null 2>&1; then
+    cc -Os -Wall -Wextra -o "$executable_path" "$launcher_c_path"
+    rm -f "$launcher_c_path"
+  else
+    echo "C compiler not found; falling back to a script executable, which may not work through LaunchServices." >&2
+    cp "$launcher_script_path" "$executable_path"
+    chmod +x "$executable_path"
+  fi
+}
+
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
@@ -141,6 +316,7 @@ if [[ -f "$INFO_PLIST" ]]; then
   plutil -replace CFBundleDisplayName -string "Drama Browser" "$INFO_PLIST"
   plutil -replace CFBundleIdentifier -string "app.drama-browser.local" "$INFO_PLIST"
 fi
+install_direct_app_launcher "$APP_DEST" "$REPO_ROOT"
 
 RESOURCE_ROOT="$APP_DEST/Contents/Resources/browser/chrome/browser/content/browser"
 APP_RESOURCE_DIR="$RESOURCE_ROOT/drama/app"
