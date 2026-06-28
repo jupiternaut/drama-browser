@@ -2,6 +2,7 @@ import * as React from 'react'
 import {
   Activity,
   Bot,
+  BookOpenText,
   CheckCircle2,
   Clock3,
   Compass,
@@ -51,9 +52,10 @@ import {
   type DramaSkin,
   type DramaSkinId,
 } from './skins'
+import { BasicMemorySurface } from './BasicMemorySurface'
 import { ZenStartSurface } from './ZenStartSurface'
 
-type Surface = 'start' | 'graph' | 'plm' | 'crew'
+type Surface = 'start' | 'graph' | 'plm' | 'crew' | 'memory'
 type StyleReadiness = 'checking' | 'ready' | 'missing'
 type ShellStateId =
   | 'booting-shell'
@@ -88,12 +90,13 @@ const surfaces: SurfaceDescriptor[] = [
   { id: 'graph', title: 'Drama Graph', shortLabel: 'Graph', subtitle: '状态机画布', source: '画布 / 状态机 / 剧情结构', Icon: Network },
   { id: 'plm', title: 'Drama PLM', shortLabel: 'PLM', subtitle: '长上下文生成', source: '章节 / Bible / 草稿回写', Icon: ScrollText },
   { id: 'crew', title: 'Skill Crew', shortLabel: 'Crew', subtitle: '导演控场', source: 'Agent / Task / Graph Events', Icon: UsersRound },
+  { id: 'memory', title: 'Basic Memory', shortLabel: 'Memory', subtitle: '本地知识库', source: 'Markdown / 搜索 / 编辑', Icon: BookOpenText },
 ]
 
 const PRODUCT_NAME = 'Drama Browser'
 
 function isSurfaceId(value: string | null | undefined): value is Surface {
-  return value === 'start' || value === 'plm' || value === 'crew' || value === 'graph'
+  return value === 'start' || value === 'plm' || value === 'crew' || value === 'graph' || value === 'memory'
 }
 
 function getInitialSurface(): Surface {
@@ -1140,6 +1143,10 @@ export function App() {
             onIntegrationStatusChange={handlePlmIntegrationStatusChange}
             productionFixture={productionFixture}
           />
+        ) : null}
+
+        {surface === 'memory' ? (
+          <BasicMemorySurface runtime={runtimeClient} />
         ) : null}
 
         {surface === 'crew' ? (

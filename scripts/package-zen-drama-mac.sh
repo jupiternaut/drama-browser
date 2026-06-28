@@ -74,6 +74,7 @@ if body_marker not in text:
     <command id="cmd_zenDramaOpenGraph" />
     <command id="cmd_zenDramaOpenPlm" />
     <command id="cmd_zenDramaOpenCrew" />
+    <command id="cmd_zenDramaOpenMemory" />
     <command id="cmd_zenDramaOpenInTab" />
   </commandset>
   <toolbarbutton id="zen-drama-launcher-button" class="toolbarbutton-1 zen-drama-launcher-button" image="chrome://browser/content/zen-icons/drama-start.svg" label="Drama" tooltiptext="Open Drama Browser" />
@@ -83,6 +84,7 @@ if body_marker not in text:
       <toolbarbutton id="zen-drama-graph-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenGraph" label="Drama Graph" tooltiptext="Drama Graph" />
       <toolbarbutton id="zen-drama-plm-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenPlm" label="Drama PLM" tooltiptext="Drama PLM" />
       <toolbarbutton id="zen-drama-crew-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenCrew" label="Skill Crew" tooltiptext="Skill Crew" />
+      <toolbarbutton id="zen-drama-memory-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenMemory" label="Basic Memory" tooltiptext="Basic Memory" />
       <spacer flex="1" />
       <label id="zen-drama-runtime-status" value="Drama" />
       <toolbarbutton id="zen-drama-open-tab-button" class="toolbarbutton-1 zen-drama-icon-button" command="cmd_zenDramaOpenInTab" tooltiptext="Open Drama in a tab" />
@@ -105,10 +107,22 @@ if 'id="cmd_zenDramaOpenStart"' not in text:
         '    <command id="cmd_zenDramaOpenStart" />\n    <command id="cmd_zenDramaOpenGraph" />',
         1,
     )
+if 'id="cmd_zenDramaOpenMemory"' not in text:
+    text = text.replace(
+        '    <command id="cmd_zenDramaOpenInTab" />',
+        '    <command id="cmd_zenDramaOpenMemory" />\n    <command id="cmd_zenDramaOpenInTab" />',
+        1,
+    )
 if 'id="zen-drama-start-button"' not in text:
     text = text.replace(
         '      <toolbarbutton id="zen-drama-graph-button"',
         '      <toolbarbutton id="zen-drama-start-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenStart" label="Zen Start" tooltiptext="Zen Start" />\n      <toolbarbutton id="zen-drama-graph-button"',
+        1,
+    )
+if 'id="zen-drama-memory-button"' not in text:
+    text = text.replace(
+        '      <spacer flex="1" />',
+        '      <toolbarbutton id="zen-drama-memory-button" class="toolbarbutton-1 zen-drama-toolbar-button" command="cmd_zenDramaOpenMemory" label="Basic Memory" tooltiptext="Basic Memory" />\n      <spacer flex="1" />',
         1,
     )
 
@@ -141,7 +155,7 @@ cp "$REPO_ROOT/zen-drama-chrome/ZenDramaManager.mjs" "$COMPONENT_DIR/ZenDramaMan
 cp "$REPO_ROOT/zen-drama-chrome/zen-drama.css" "$STYLE_DIR/zen-drama.css"
 install_browser_chrome_hooks "$RESOURCE_ROOT/browser.xhtml"
 
-for icon in drama-start.svg drama-graph.svg drama-plm.svg drama-crew.svg; do
+for icon in drama-start.svg drama-graph.svg drama-plm.svg drama-crew.svg drama-memory.svg; do
   if [[ -f "$REPO_ROOT/zen-drama-chrome/$icon" ]]; then
     cp "$REPO_ROOT/zen-drama-chrome/$icon" "$ICON_DIR/$icon"
   fi
@@ -163,7 +177,7 @@ if [[ -f "$OMNI_JA" ]]; then
     "$OMNI_STAGING/chrome/browser/content/browser/zen-components/ZenDramaManager.mjs"
   cp "$REPO_ROOT/zen-drama-chrome/zen-drama.css" \
     "$OMNI_STAGING/chrome/browser/content/browser/zen-styles/zen-drama.css"
-  for icon in drama-start.svg drama-graph.svg drama-plm.svg drama-crew.svg; do
+  for icon in drama-start.svg drama-graph.svg drama-plm.svg drama-crew.svg drama-memory.svg; do
     if [[ -f "$REPO_ROOT/zen-drama-chrome/$icon" ]]; then
       cp "$REPO_ROOT/zen-drama-chrome/$icon" \
         "$OMNI_STAGING/chrome/browser/content/browser/zen-icons/$icon"

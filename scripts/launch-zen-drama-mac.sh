@@ -15,7 +15,7 @@ PLM_LAUNCH_TIMEOUT_SECONDS="${ZEN_DRAMA_PLM_LAUNCH_TIMEOUT_SECONDS:-45}"
 
 usage() {
   cat <<'EOF'
-Usage: launch-zen-drama-mac.sh [--zen-app PATH] [--profile PATH] [--surface start|graph|plm|crew]
+Usage: launch-zen-drama-mac.sh [--zen-app PATH] [--profile PATH] [--surface start|graph|plm|crew|memory]
                                [--runtime-url URL] [--internal-app true|false|auto]
                                [--no-runtime-launch] [--wait]
 EOF
@@ -36,7 +36,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$SURFACE" in
-  start|graph|plm|crew) ;;
+  start|graph|plm|crew|memory) ;;
   *) echo "Invalid surface: $SURFACE" >&2; exit 2 ;;
 esac
 

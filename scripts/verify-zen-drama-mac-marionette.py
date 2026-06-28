@@ -14,7 +14,7 @@ from pathlib import Path
 
 DEFAULT_ZEN_APP = Path("/Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app")
 DEFAULT_RUNTIME_URL = "http://127.0.0.1:3198"
-SURFACES = {"graph", "plm", "crew"}
+SURFACES = {"graph", "plm", "crew", "memory"}
 FIRST_VIEWPORT_BUDGET_MS = 2000
 RUNTIME_READY_BUDGET_MS = 8000
 SIDECAR_READY_BUDGET_MS = 45000
@@ -287,7 +287,7 @@ return {
   browserExists: Boolean(browser),
   currentURI: browser?.currentURI?.spec ?? null,
   statusValue: document.getElementById('zen-drama-runtime-status')?.getAttribute('value') ?? null,
-  sidebarButtons: ['zen-drama-graph-sidebar-button','zen-drama-plm-sidebar-button','zen-drama-crew-sidebar-button']
+  sidebarButtons: ['zen-drama-graph-sidebar-button','zen-drama-plm-sidebar-button','zen-drama-crew-sidebar-button','zen-drama-memory-sidebar-button']
     .map((id) => Boolean(document.getElementById(id))),
   content,
   documentTitle: document.title,
@@ -314,7 +314,7 @@ const done = arguments[arguments.length - 1];
   }
 
   const currentSurface = doc.documentElement.dataset.dramaSurface;
-  const surfaces = ['graph', 'plm', 'crew'];
+  const surfaces = ['graph', 'plm', 'crew', 'memory'];
   const sequence = surfaces.filter((surface) => surface !== currentSurface);
   if (currentSurface && surfaces.includes(currentSurface)) sequence.push(currentSurface);
 

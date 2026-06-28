@@ -26,7 +26,7 @@ export interface DramaPlmSurfaceClassificationInput {
   url?: string | URL | null
   hostKind?: DramaHostKind | string | null
   userAgent?: string | null
-  expectedSurface?: 'start' | 'plm' | 'graph' | 'crew'
+  expectedSurface?: 'start' | 'plm' | 'graph' | 'crew' | 'memory'
 }
 
 export interface DramaPlmSurfaceClassificationResult {
@@ -58,6 +58,7 @@ function surfaceLabel(surface: string): string {
   if (surface === 'start') return 'Zen Start'
   if (surface === 'graph') return 'Graph'
   if (surface === 'crew') return 'Skill Crew'
+  if (surface === 'memory') return 'Basic Memory'
   return 'PLM'
 }
 

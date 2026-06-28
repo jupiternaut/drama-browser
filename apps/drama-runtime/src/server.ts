@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
-import { readdir, readFile } from 'node:fs/promises'
+import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, extname, join, resolve, sep } from 'node:path'
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { createEmptyDramaGraph, type DramaChapter, type DramaGraph } from '@drama/core'
@@ -94,6 +94,49 @@ interface RuntimeShutdownRequest {
   stopPlotPilot?: boolean
 }
 
+interface BasicMemoryListRequest {
+  query?: string
+  limit?: number
+}
+
+interface BasicMemoryReadRequest {
+  path?: string
+}
+
+interface BasicMemoryWriteRequest {
+  path?: string
+  content?: string
+}
+
+interface BasicMemoryNoteSummary {
+  path: string
+  title: string
+  type?: string
+  uuid?: string
+  createdAt?: string
+  updatedAt?: string
+  messageCount?: number
+  size: number
+  modifiedAt: string
+  excerpt: string
+}
+
+interface BasicMemoryListResponse {
+  root: string
+  exists: boolean
+  total: number
+  returned: number
+  truncated: boolean
+  query: string
+  notes: BasicMemoryNoteSummary[]
+}
+
+interface BasicMemoryReadResponse {
+  root: string
+  note: BasicMemoryNoteSummary
+  content: string
+}
+
 const startedAt = new Date().toISOString()
 const port = Number(process.env.DRAMA_RUNTIME_PORT ?? 3198)
 const host = process.env.DRAMA_RUNTIME_HOST ?? '127.0.0.1'
@@ -101,6 +144,7 @@ const moduleDir = dirname(fileURLToPath(import.meta.url))
 const workspaceRoot = process.env.DRAMA_WORKSPACE_ROOT
   ?? process.env.CRAFT_WORKSPACE_ROOT
   ?? join(homedir(), '.craft-agent', 'workspaces', 'my-workspace')
+const basicMemoryRoot = resolve(process.env.BASIC_MEMORY_ROOT ?? join(homedir(), 'basic-memory-claude-history'))
 const browserShellDistDir = resolveBrowserShellDistDir()
 const runtimePackageRoot = process.env.DRAMA_RUNTIME_PACKAGE_ROOT ?? null
 
@@ -150,12 +194,14 @@ function runtimeStatus() {
     startedAt,
     runtimePackageRoot,
     browserShellDistDir,
+    basicMemoryRoot,
     plmRuntime: plotPilotRuntime.getStatus(),
     endpoints: {
       graph: `http://${host}:${port}/graph`,
       plm: `http://${host}:${port}/plm/runtime/status`,
       crew: `http://${host}:${port}/crew`,
       app: `http://${host}:${port}/app`,
+      memory: `http://${host}:${port}/app/memory`,
       events: `ws://${host}:${port}/events`,
     },
   }
@@ -206,6 +252,204 @@ function isInsideDir(parent: string, candidate: string): boolean {
   return normalizedCandidate === normalizedParent || normalizedCandidate.startsWith(`${normalizedParent}${sep}`)
 }
 
+function runtimeError(code: RuntimeErrorCode, message: string, details?: unknown): Error & { code: RuntimeErrorCode; details?: unknown } {
+  return Object.assign(new Error(message), { code, details })
+}
+
+function isMarkdownPath(pathname: string): boolean {
+  const ext = extname(pathname).toLowerCase()
+  return ext === '.md' || ext === '.markdown'
+}
+
+function resolveBasicMemoryNotePath(requestPath: string | undefined): string {
+  const relativePath = String(requestPath ?? '').trim()
+  if (!relativePath) {
+    throw runtimeError('BAD_REQUEST', 'Basic Memory note path is required.')
+  }
+
+  const filePath = resolve(basicMemoryRoot, relativePath)
+  if (!isInsideDir(basicMemoryRoot, filePath)) {
+    throw runtimeError('BAD_REQUEST', 'Basic Memory note path must stay inside the configured root.')
+  }
+  if (!isMarkdownPath(filePath)) {
+    throw runtimeError('BAD_REQUEST', 'Basic Memory only supports Markdown notes.')
+  }
+  return filePath
+}
+
+function normalizeFrontmatterValue(value: string): string {
+  return value.trim().replace(/^['"]|['"]$/g, '')
+}
+
+function parseBasicMemoryMarkdown(content: string, fallbackPath: string) {
+  const metadata: Record<string, string | number> = {}
+  let body = content
+
+  if (content.startsWith('---\n')) {
+    const end = content.indexOf('\n---', 4)
+    if (end > 0) {
+      const frontmatter = content.slice(4, end).split(/\r?\n/)
+      body = content.slice(end + 4).replace(/^\r?\n/, '')
+
+      for (const line of frontmatter) {
+        const match = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line)
+        if (!match) continue
+        const key = match[1]
+        const raw = normalizeFrontmatterValue(match[2] ?? '')
+        const numeric = Number(raw)
+        metadata[key] = raw && Number.isFinite(numeric) && String(numeric) === raw ? numeric : raw
+      }
+    }
+  }
+
+  const heading = /^#\s+(.+)$/m.exec(body)?.[1]?.trim()
+  const title = String(metadata.title ?? heading ?? basename(fallbackPath, extname(fallbackPath))).trim()
+  return { metadata, body, title }
+}
+
+function compactWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function createBasicMemoryExcerpt(body: string, query: string): string {
+  const text = compactWhitespace(
+    body
+      .replace(/^```[\s\S]*?```/gm, ' ')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/`([^`]+)`/g, '$1'),
+  )
+  if (!text) return ''
+
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) return text.slice(0, 260)
+
+  const index = text.toLowerCase().indexOf(normalizedQuery)
+  if (index < 0) return text.slice(0, 260)
+  const start = Math.max(0, index - 90)
+  const end = Math.min(text.length, index + normalizedQuery.length + 170)
+  return `${start > 0 ? '...' : ''}${text.slice(start, end)}${end < text.length ? '...' : ''}`
+}
+
+async function listBasicMemoryMarkdownFiles(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true })
+  const files: string[] = []
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      files.push(...await listBasicMemoryMarkdownFiles(path))
+    } else if (entry.isFile() && isMarkdownPath(entry.name)) {
+      files.push(path)
+    }
+  }
+
+  return files
+}
+
+async function summarizeBasicMemoryNote(filePath: string, query = ''): Promise<BasicMemoryNoteSummary | null> {
+  const fileStat = await stat(filePath)
+  const content = await readFile(filePath, 'utf8')
+  const { metadata, body, title } = parseBasicMemoryMarkdown(content, filePath)
+  const normalizedQuery = query.trim().toLowerCase()
+  const searchable = `${relative(basicMemoryRoot, filePath)}\n${title}\n${body}`.toLowerCase()
+  if (normalizedQuery && !searchable.includes(normalizedQuery)) return null
+
+  const metadataString = (key: string) => {
+    const value = metadata[key]
+    return typeof value === 'string' ? value : undefined
+  }
+  const metadataNumber = (key: string) => {
+    const value = metadata[key]
+    return typeof value === 'number' ? value : undefined
+  }
+
+  return {
+    path: relative(basicMemoryRoot, filePath),
+    title,
+    type: metadataString('type'),
+    uuid: metadataString('uuid'),
+    createdAt: metadataString('created_at'),
+    updatedAt: metadataString('updated_at'),
+    messageCount: metadataNumber('message_count'),
+    size: fileStat.size,
+    modifiedAt: fileStat.mtime.toISOString(),
+    excerpt: createBasicMemoryExcerpt(body, query),
+  }
+}
+
+async function listBasicMemoryNotes(payload: BasicMemoryListRequest = {}): Promise<BasicMemoryListResponse> {
+  const query = String(payload.query ?? '').trim()
+  const limit = Math.min(200, Math.max(1, readLimit(payload) ?? 80))
+  if (!existsSync(basicMemoryRoot)) {
+    return {
+      root: basicMemoryRoot,
+      exists: false,
+      total: 0,
+      returned: 0,
+      truncated: false,
+      query,
+      notes: [],
+    }
+  }
+
+  const files = await listBasicMemoryMarkdownFiles(basicMemoryRoot)
+  const notes = (await Promise.all(files.map((file) => summarizeBasicMemoryNote(file, query))))
+    .filter((note): note is BasicMemoryNoteSummary => Boolean(note))
+    .sort((left, right) => {
+      const leftTime = Date.parse(left.updatedAt ?? left.modifiedAt)
+      const rightTime = Date.parse(right.updatedAt ?? right.modifiedAt)
+      return rightTime - leftTime || left.title.localeCompare(right.title)
+    })
+
+  return {
+    root: basicMemoryRoot,
+    exists: true,
+    total: notes.length,
+    returned: Math.min(notes.length, limit),
+    truncated: notes.length > limit,
+    query,
+    notes: notes.slice(0, limit),
+  }
+}
+
+async function readBasicMemoryNote(payload: BasicMemoryReadRequest = {}): Promise<BasicMemoryReadResponse> {
+  const filePath = resolveBasicMemoryNotePath(payload.path)
+  if (!existsSync(filePath)) {
+    throw runtimeError('NOT_FOUND', 'Basic Memory note was not found.')
+  }
+
+  const content = await readFile(filePath, 'utf8')
+  const note = await summarizeBasicMemoryNote(filePath) ?? await (async () => {
+    const fileStat = await stat(filePath)
+    const { title } = parseBasicMemoryMarkdown(content, filePath)
+    return {
+      path: relative(basicMemoryRoot, filePath),
+      title,
+      size: fileStat.size,
+      modifiedAt: fileStat.mtime.toISOString(),
+      excerpt: '',
+    }
+  })()
+  return {
+    root: basicMemoryRoot,
+    note,
+    content,
+  }
+}
+
+async function writeBasicMemoryNote(payload: BasicMemoryWriteRequest = {}): Promise<BasicMemoryReadResponse> {
+  const filePath = resolveBasicMemoryNotePath(payload.path)
+  if (!existsSync(filePath)) {
+    throw runtimeError('NOT_FOUND', 'Basic Memory note was not found.')
+  }
+  if (typeof payload.content !== 'string') {
+    throw runtimeError('BAD_REQUEST', 'Basic Memory note content must be a string.')
+  }
+  await writeFile(filePath, payload.content, 'utf8')
+  return readBasicMemoryNote({ path: relative(basicMemoryRoot, filePath) })
+}
+
 async function serveBrowserShell(url: URL): Promise<Response | null> {
   const pathname = decodeURIComponent(url.pathname)
   const distDir = browserShellDistDir
@@ -213,7 +457,11 @@ async function serveBrowserShell(url: URL): Promise<Response | null> {
 
   if (pathname === '/') {
     const requestedSurface = url.searchParams.get('surface')
-    const surface = requestedSurface === 'start' || requestedSurface === 'graph' || requestedSurface === 'crew' || requestedSurface === 'plm'
+    const surface = requestedSurface === 'start'
+      || requestedSurface === 'graph'
+      || requestedSurface === 'crew'
+      || requestedSurface === 'plm'
+      || requestedSurface === 'memory'
       ? requestedSurface
       : 'start'
     const runtimeUrl = `${url.protocol}//${url.host}`
@@ -247,7 +495,15 @@ async function serveBrowserShell(url: URL): Promise<Response | null> {
     return null
   }
 
-  if (pathname === '/app' || pathname === '/app/' || pathname === '/app/start' || pathname === '/app/graph' || pathname === '/app/plm' || pathname === '/app/crew') {
+  if (
+    pathname === '/app'
+    || pathname === '/app/'
+    || pathname === '/app/start'
+    || pathname === '/app/graph'
+    || pathname === '/app/plm'
+    || pathname === '/app/crew'
+    || pathname === '/app/memory'
+  ) {
     return new Response(await readFile(indexPath), {
       headers: {
         'content-type': 'text/html; charset=utf-8',
@@ -681,6 +937,15 @@ async function dispatch(channel: string, payload: unknown): Promise<unknown> {
 
     case 'runtime:shutdown':
       return shutdownRuntime(payload as RuntimeShutdownRequest | undefined)
+
+    case 'basicMemory:list':
+      return listBasicMemoryNotes(payload as BasicMemoryListRequest | undefined)
+
+    case 'basicMemory:read':
+      return readBasicMemoryNote(payload as BasicMemoryReadRequest | undefined)
+
+    case 'basicMemory:write':
+      return writeBasicMemoryNote(payload as BasicMemoryWriteRequest | undefined)
 
     case 'drama:graph:load':
       return loadDramaGraph(payload as DramaGraphLoadOptions | undefined)

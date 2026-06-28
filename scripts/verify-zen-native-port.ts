@@ -6,7 +6,7 @@ import { promisify } from 'node:util'
 
 import { classifyDramaPlmSurface } from '../packages/drama-host/src/index.ts'
 
-type Surface = 'graph' | 'plm' | 'crew'
+type Surface = 'graph' | 'plm' | 'crew' | 'memory'
 type DetectorState = 'pass' | 'fail' | 'not-run'
 type ReadinessState = 'ready' | 'pending' | 'blocked'
 
@@ -62,7 +62,7 @@ interface ScreenshotAnalysis {
 }
 
 const execFileAsync = promisify(execFile)
-const SURFACES: Surface[] = ['graph', 'plm', 'crew']
+const SURFACES: Surface[] = ['graph', 'plm', 'crew', 'memory']
 const DEFAULT_RUNTIME_URL = 'http://127.0.0.1:3198'
 const DEFAULT_ZEN_APP = '/Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app'
 const OMNI_RESOURCE_PATH = 'chrome/browser/content/browser/drama/app/index.html'
@@ -73,7 +73,8 @@ function usage(): never {
 Options:
   --zen-app PATH                 Zen Browser.app to inspect or launch.
   --runtime-url URL              Drama runtime base URL. Default: ${DEFAULT_RUNTIME_URL}
-  --surface graph|plm|crew|all   Surface to verify. Repeatable. Default: all.
+  --surface graph|plm|crew|memory|all
+                                  Surface to verify. Repeatable. Default: all.
   --output PATH                  JSON output path.
   --screenshot-dir PATH          Directory for captured screenshots.
   --capture                      Open Zen and capture macOS screenshots.
@@ -97,7 +98,7 @@ function expandHome(path: string): string {
 }
 
 function parseSurface(value: string): Surface {
-  if (value === 'graph' || value === 'plm' || value === 'crew') return value
+  if (value === 'graph' || value === 'plm' || value === 'crew' || value === 'memory') return value
   throw new Error(`Invalid surface: ${value}`)
 }
 

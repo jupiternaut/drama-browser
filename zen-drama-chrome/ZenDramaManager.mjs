@@ -100,6 +100,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
     this.#bindCommand("cmd_zenDramaOpenGraph", () => this.open("graph"));
     this.#bindCommand("cmd_zenDramaOpenPlm", () => this.open("plm"));
     this.#bindCommand("cmd_zenDramaOpenCrew", () => this.open("crew"));
+    this.#bindCommand("cmd_zenDramaOpenMemory", () => this.open("memory"));
     this.#bindCommand("cmd_zenDramaOpenInTab", () => this.openInTab());
   }
 
@@ -419,6 +420,12 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
         image: "chrome://browser/content/zen-icons/drama-crew.svg",
         tooltip: "Skill Crew",
       },
+      {
+        id: "zen-drama-memory-sidebar-button",
+        command: "cmd_zenDramaOpenMemory",
+        image: "chrome://browser/content/zen-icons/drama-memory.svg",
+        tooltip: "Basic Memory",
+      },
     ];
     const insertBefore = document.getElementById("zen-create-new-button");
 
@@ -555,7 +562,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
 
   get startSurface() {
     const surface = this.#getStringPref(DRAMA_START_SURFACE_PREF, "start").trim();
-    return surface === "start" || surface === "plm" || surface === "crew" || surface === "graph" ? surface : "start";
+    return surface === "start" || surface === "plm" || surface === "crew" || surface === "graph" || surface === "memory" ? surface : "start";
   }
 
   get productionFixtureEnabled() {
@@ -762,6 +769,7 @@ class nsZenDramaManager extends nsZenDOMOperatedFeature {
       graph: ["zen-drama-graph-button", "zen-drama-graph-sidebar-button"],
       plm: ["zen-drama-plm-button", "zen-drama-plm-sidebar-button", "zen-drama-plm-pinned-sidebar-entry"],
       crew: ["zen-drama-crew-button", "zen-drama-crew-sidebar-button"],
+      memory: ["zen-drama-memory-button", "zen-drama-memory-sidebar-button"],
     };
     const panelVisible = Boolean(this.panel && !this.panel.hidden);
 
