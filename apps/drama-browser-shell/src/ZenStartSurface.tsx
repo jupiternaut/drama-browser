@@ -4,10 +4,16 @@ const referenceSlides = [
   {
     src: 'reader-assets/brave-start-reference-street.png',
     label: 'Dark street billboard reference',
+    imageWidth: '152%',
+    anchorTranslateX: '-51.57%',
+    anchorTranslateY: '-55.66%',
   },
   {
     src: 'reader-assets/brave-start-reference-station.png',
     label: 'Station billboard reference',
+    imageWidth: '141%',
+    anchorTranslateX: '-50.3%',
+    anchorTranslateY: '-57.2%',
   },
 ]
 
@@ -32,9 +38,58 @@ function resolveSearchTarget(value: string): string {
 export function ZenStartSurface() {
   const [slideIndex, setSlideIndex] = React.useState(0)
   const activeSlide = referenceSlides[slideIndex] ?? fallbackSlide
+  const wheelGestureRef = React.useRef({ deltaX: 0, lastSwitchAt: 0 })
+  const pointerStartXRef = React.useRef<number | null>(null)
+
+  const switchSlide = React.useCallback((direction: 1 | -1) => {
+    setSlideIndex((index) => (index + direction + referenceSlides.length) % referenceSlides.length)
+  }, [])
+
+  const handleWheel = React.useCallback((event: React.WheelEvent<HTMLElement>) => {
+    if (Math.abs(event.deltaX) < Math.abs(event.deltaY) * 1.15 || Math.abs(event.deltaX) < 8) return
+
+    event.preventDefault()
+    const gesture = wheelGestureRef.current
+    gesture.deltaX += event.deltaX
+
+    const now = Date.now()
+    if (Math.abs(gesture.deltaX) < 72 || now - gesture.lastSwitchAt < 520) return
+
+    switchSlide(gesture.deltaX > 0 ? 1 : -1)
+    gesture.deltaX = 0
+    gesture.lastSwitchAt = now
+  }, [switchSlide])
+
+  const handlePointerDown = React.useCallback((event: React.PointerEvent<HTMLElement>) => {
+    if (event.button !== 0) return
+    pointerStartXRef.current = event.clientX
+  }, [])
+
+  const handlePointerUp = React.useCallback((event: React.PointerEvent<HTMLElement>) => {
+    const startX = pointerStartXRef.current
+    pointerStartXRef.current = null
+    if (startX === null) return
+
+    const deltaX = event.clientX - startX
+    if (Math.abs(deltaX) < 72) return
+    switchSlide(deltaX < 0 ? 1 : -1)
+  }, [switchSlide])
+
+  const slideStyle = {
+    '--start-image-width': activeSlide.imageWidth,
+    '--start-anchor-translate-x': activeSlide.anchorTranslateX,
+    '--start-anchor-translate-y': activeSlide.anchorTranslateY,
+  } as React.CSSProperties
 
   return (
-    <section className="zen-start-surface zen-start-reference-surface" aria-label="Zen Start">
+    <section
+      className="zen-start-surface zen-start-reference-surface"
+      style={slideStyle}
+      aria-label="Zen Start"
+      onWheel={handleWheel}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+    >
       <img className="zen-start-reference-image" src={activeSlide.src} alt="" draggable={false} />
 
       <button className="zen-start-reference-settings" type="button" aria-label="Settings" />
@@ -69,13 +124,13 @@ export function ZenStartSurface() {
         className="zen-start-reference-carousel zen-start-reference-carousel-prev"
         type="button"
         aria-label="Previous billboard"
-        onClick={() => setSlideIndex((index) => (index + referenceSlides.length - 1) % referenceSlides.length)}
+        onClick={() => switchSlide(-1)}
       />
       <button
         className="zen-start-reference-carousel zen-start-reference-carousel-next"
         type="button"
         aria-label="Next billboard"
-        onClick={() => setSlideIndex((index) => (index + 1) % referenceSlides.length)}
+        onClick={() => switchSlide(1)}
       />
 
       <span className="zen-start-reference-status" aria-live="polite">

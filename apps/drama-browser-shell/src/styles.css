@@ -2149,17 +2149,24 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   background: #000;
   color: #fff;
 }
 
 .zen-start-reference-image {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
+  inset-inline-start: 50%;
+  inset-block-start: 56%;
+  width: var(--start-image-width, 152%);
+  max-width: none;
+  height: auto;
+  transform: translate(
+    var(--start-anchor-translate-x, -51.57%),
+    var(--start-anchor-translate-y, -55.66%)
+  );
+  transition: transform 260ms ease, width 260ms ease;
   pointer-events: none;
   user-select: none;
 }
