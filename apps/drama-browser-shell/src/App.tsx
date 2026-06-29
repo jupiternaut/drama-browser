@@ -3,6 +3,9 @@ import {
   Activity,
   Bot,
   BookOpenText,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Clock3,
   Compass,
@@ -10,14 +13,22 @@ import {
   FolderOpen,
   GitBranch,
   ListChecks,
+  LockKeyhole,
+  MessageCircle,
   MessageSquareText,
+  MoreHorizontal,
   Network,
   Palette,
+  PanelLeft,
+  Plus,
+  Puzzle,
   Radio,
   RefreshCw,
   RotateCcw,
   ScrollText,
+  Search,
   ShieldCheck,
+  Sparkles,
   TriangleAlert,
   UsersRound,
 } from 'lucide-react'
@@ -93,6 +104,19 @@ const surfaces: SurfaceDescriptor[] = [
 ]
 
 const PRODUCT_NAME = 'Drama Browser'
+
+function addressForSurface(surface: Surface, activeSurface: SurfaceDescriptor): string {
+  const route = surface === 'start' ? 'start' : `workspace/${surface}`
+  return `drama://${route} / ${activeSurface.title}`
+}
+
+function normalizeBrowserAddress(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed
+  if (/^[\w.-]+\.[a-z]{2,}(?:[/:?#].*)?$/i.test(trimmed)) return `https://${trimmed}`
+  return `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`
+}
 
 function documentHasStyleRule(fragment: string): boolean {
   for (const sheet of Array.from(document.styleSheets)) {
@@ -619,6 +643,110 @@ function SkinSwitcher({
   )
 }
 
+function BrowserChromeBar({
+  surface,
+  activeSurface,
+  runtimeStatus,
+  shellState,
+  onAddressSubmit,
+  onGoBack,
+  onGoForward,
+  onRefresh,
+  onNewTab,
+  onOpenMemory,
+  onOpenChat,
+}: {
+  surface: Surface
+  activeSurface: SurfaceDescriptor
+  runtimeStatus: DramaRuntimeStatus
+  shellState: ShellState
+  onAddressSubmit: (value: string) => void
+  onGoBack: () => void
+  onGoForward: () => void
+  onRefresh: () => void
+  onNewTab: () => void
+  onOpenMemory: () => void
+  onOpenChat: () => void
+}) {
+  const resolvedAddress = React.useMemo(() => addressForSurface(surface, activeSurface), [activeSurface, surface])
+  const [addressDraft, setAddressDraft] = React.useState(resolvedAddress)
+
+  React.useEffect(() => {
+    setAddressDraft(resolvedAddress)
+  }, [resolvedAddress])
+
+  return (
+    <div className="drama-browser-chrome" role="toolbar" aria-label="Drama Browser navigation">
+      <div className="drama-browser-chrome-workspace">
+        <button type="button" className="drama-browser-icon-button" title="Toggle sidebar" aria-label="Toggle sidebar">
+          <PanelLeft />
+        </button>
+        <button type="button" className="drama-workspace-menu" title="Drama workspace">
+          <span className="drama-workspace-avatar" aria-hidden="true">D</span>
+          <span className="drama-workspace-name">Drama</span>
+          <ChevronDown className="drama-workspace-chevron" aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="drama-browser-nav-cluster">
+        <button type="button" className="drama-browser-icon-button" onClick={onGoBack} title="Back" aria-label="Back">
+          <ChevronLeft />
+        </button>
+        <button type="button" className="drama-browser-icon-button" onClick={onGoForward} title="Forward" aria-label="Forward">
+          <ChevronRight />
+        </button>
+        <button type="button" className="drama-browser-icon-button" onClick={onRefresh} title="Reload" aria-label="Reload">
+          <RefreshCw />
+        </button>
+      </div>
+
+      <form
+        className="drama-address-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          onAddressSubmit(addressDraft)
+        }}
+      >
+        <LockKeyhole className="drama-address-lock" aria-hidden="true" />
+        <input
+          className="drama-address-input"
+          value={addressDraft}
+          aria-label="Search or enter address"
+          spellCheck={false}
+          onChange={(event) => setAddressDraft(event.currentTarget.value)}
+          onFocus={(event) => event.currentTarget.select()}
+        />
+        <Search className="drama-address-search" aria-hidden="true" />
+      </form>
+
+      <div className="drama-browser-extension-strip" aria-label="Drama Browser tools">
+        <button type="button" className="drama-extension-button" title={shellState.message} aria-label={shellState.label}>
+          <Sparkles />
+        </button>
+        <button type="button" className="drama-extension-button" onClick={onOpenMemory} title="Basic Memory" aria-label="Basic Memory">
+          <BookOpenText />
+        </button>
+        <button type="button" className="drama-extension-button" title="Extensions" aria-label="Extensions">
+          <Puzzle />
+        </button>
+        <button type="button" className="drama-extension-button" title={runtimeStatus.message} aria-label={`Runtime ${runtimeStatus.state}`}>
+          <span className={['runtime-status-dot', `runtime-status-dot-${runtimeStatus.state}`].join(' ')} />
+        </button>
+        <button type="button" className="drama-chat-button" onClick={onOpenChat}>
+          <MessageCircle />
+          <span>Chat</span>
+        </button>
+        <button type="button" className="drama-browser-icon-button" onClick={onNewTab} title="New tab" aria-label="New tab">
+          <Plus />
+        </button>
+        <button type="button" className="drama-browser-icon-button" title="More" aria-label="More">
+          <MoreHorizontal />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function DramaWorkbenchShell({
   surface,
   surfaces,
@@ -635,6 +763,11 @@ function DramaWorkbenchShell({
   runtimeStateLabel,
   shellState,
   onSwitchSurface,
+  onAddressSubmit,
+  onGoBack,
+  onGoForward,
+  onRefresh,
+  onNewTab,
   onSkinChange,
   children,
 }: {
@@ -653,6 +786,11 @@ function DramaWorkbenchShell({
   runtimeStateLabel: string
   shellState: ShellState
   onSwitchSurface: (surface: Surface) => void
+  onAddressSubmit: (value: string) => void
+  onGoBack: () => void
+  onGoForward: () => void
+  onRefresh: () => void
+  onNewTab: () => void
   onSkinChange: (skinId: DramaSkinId) => void
   children: React.ReactNode
 }) {
@@ -696,6 +834,19 @@ function DramaWorkbenchShell({
       ) : null}
 
       <main className="drama-main" data-drama-surface={surface}>
+        <BrowserChromeBar
+          surface={surface}
+          activeSurface={activeSurface}
+          runtimeStatus={runtimeStatus}
+          shellState={shellState}
+          onAddressSubmit={onAddressSubmit}
+          onGoBack={onGoBack}
+          onGoForward={onGoForward}
+          onRefresh={onRefresh}
+          onNewTab={onNewTab}
+          onOpenMemory={() => onSwitchSurface('memory')}
+          onOpenChat={() => onSwitchSurface('crew')}
+        />
         <header className="drama-workbench-bar">
           <div className="drama-workbench-left">
             {hostedChrome ? <div className="drama-mark drama-mark-inline" aria-hidden="true">D</div> : null}
@@ -1008,6 +1159,40 @@ export function App() {
     globalThis.history?.pushState?.({}, '', nextUrl)
   }, [hostAdapter, runtimeBaseUrl])
 
+  const openAddress = React.useCallback((rawValue: string) => {
+    const rawAddress = rawValue.trim()
+    if (!rawAddress) return
+
+    const routeAddress = rawAddress.split(/\s+\/\s+/)[0] ?? rawAddress
+    if (routeAddress.startsWith('drama://')) {
+      const route = routeAddress.replace(/^drama:\/\//, '').replace(/^workspace\//, '').split(/[/?#]/)[0]
+      if (isSurfaceId(route)) {
+        switchSurface(route)
+        return
+      }
+    }
+
+    const targetUrl = normalizeBrowserAddress(rawAddress)
+    if (!targetUrl) return
+    void (browserHost.navigation?.openUrl(targetUrl) ?? browserHost.shell.openUrl(targetUrl))
+  }, [browserHost, switchSurface])
+
+  const openNewTab = React.useCallback(() => {
+    void (browserHost.navigation?.newTab?.('about:newtab') ?? browserHost.shell.openUrl('about:newtab'))
+  }, [browserHost])
+
+  const goBack = React.useCallback(() => {
+    globalThis.history?.back()
+  }, [])
+
+  const goForward = React.useCallback(() => {
+    globalThis.history?.forward()
+  }, [])
+
+  const refreshShell = React.useCallback(() => {
+    globalThis.location?.reload()
+  }, [])
+
   const writeCrewSuggestion = React.useCallback(() => {
     void (async () => {
       try {
@@ -1142,6 +1327,11 @@ export function App() {
         runtimeStateLabel={runtimeStateLabel}
         shellState={shellState}
         onSwitchSurface={switchSurface}
+        onAddressSubmit={openAddress}
+        onGoBack={goBack}
+        onGoForward={goForward}
+        onRefresh={refreshShell}
+        onNewTab={openNewTab}
         onSkinChange={setActiveSkinId}
       >
         {surface === 'start' ? (

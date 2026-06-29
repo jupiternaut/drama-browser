@@ -128,12 +128,237 @@
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: 40px minmax(0, 1fr);
+  grid-template-rows: 42px 40px minmax(0, 1fr);
   background: var(--drama-bg);
 }
 
 .drama-shell.zen-host .drama-main {
-  grid-template-rows: 44px minmax(0, 1fr);
+  grid-template-rows: 46px 38px minmax(0, 1fr);
+}
+
+.drama-browser-chrome {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto auto minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--drama-border) 78%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--drama-sheen) 72%, transparent), transparent),
+    color-mix(in srgb, var(--drama-surface-strong) 94%, black 6%);
+  padding: 6px 10px;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--drama-sheen-weak) 80%, transparent);
+}
+
+.drama-shell.zen-host .drama-browser-chrome {
+  border: 1px solid color-mix(in srgb, var(--drama-border) 72%, transparent);
+  border-top: 0;
+  border-radius: 0;
+  padding-inline: 8px 10px;
+}
+
+.drama-browser-chrome-workspace,
+.drama-browser-nav-cluster,
+.drama-browser-extension-strip {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.drama-browser-nav-cluster {
+  gap: 2px;
+}
+
+.drama-browser-extension-strip {
+  justify-content: flex-end;
+}
+
+.drama-browser-icon-button,
+.drama-extension-button,
+.drama-chat-button,
+.drama-workspace-menu {
+  display: inline-flex;
+  height: 30px;
+  min-width: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--drama-radius-md);
+  background: transparent;
+  color: var(--drama-text-muted);
+  cursor: pointer;
+  transition:
+    background var(--drama-transition),
+    border-color var(--drama-transition),
+    color var(--drama-transition),
+    box-shadow var(--drama-transition);
+}
+
+.drama-browser-icon-button:hover,
+.drama-browser-icon-button:focus-visible,
+.drama-extension-button:hover,
+.drama-extension-button:focus-visible,
+.drama-chat-button:hover,
+.drama-chat-button:focus-visible,
+.drama-workspace-menu:hover,
+.drama-workspace-menu:focus-visible {
+  border-color: color-mix(in srgb, var(--drama-border-strong) 78%, transparent);
+  background: var(--drama-surface-hover);
+  color: var(--drama-text);
+  outline: none;
+}
+
+.drama-browser-icon-button svg,
+.drama-extension-button svg,
+.drama-chat-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.drama-workspace-menu {
+  min-width: 110px;
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 0 8px 0 5px;
+  color: var(--drama-text);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.drama-workspace-avatar {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--drama-border-strong);
+  border-radius: var(--drama-radius-sm);
+  background: var(--drama-surface-selected);
+  color: var(--drama-text);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.drama-workspace-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drama-workspace-chevron {
+  width: 13px;
+  height: 13px;
+  margin-left: auto;
+  color: var(--drama-text-subtle);
+}
+
+.drama-address-form {
+  display: grid;
+  min-width: 0;
+  height: 32px;
+  grid-template-columns: 18px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--drama-border) 84%, transparent);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, white 4%, transparent), transparent),
+    color-mix(in srgb, var(--drama-control-bg) 92%, black 8%);
+  padding: 0 12px;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 6%, transparent),
+    0 1px 8px color-mix(in srgb, black 18%, transparent);
+}
+
+.drama-address-form:focus-within {
+  border-color: color-mix(in srgb, var(--drama-accent) 42%, var(--drama-border));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--drama-accent) 18%, transparent),
+    0 1px 10px color-mix(in srgb, black 20%, transparent);
+}
+
+.drama-address-lock,
+.drama-address-search {
+  width: 14px;
+  height: 14px;
+  color: var(--drama-text-subtle);
+}
+
+.drama-address-input {
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--drama-text);
+  font-size: 12px;
+  font-weight: 620;
+  line-height: 1;
+}
+
+.drama-address-input::selection {
+  background: color-mix(in srgb, var(--drama-accent) 34%, transparent);
+}
+
+.drama-extension-button {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+}
+
+.drama-extension-button .runtime-status-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.drama-chat-button {
+  min-width: 74px;
+  gap: 7px;
+  border-color: color-mix(in srgb, var(--drama-border) 72%, transparent);
+  background: var(--drama-control-bg);
+  color: var(--drama-text);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+@media (max-width: 980px) {
+  .drama-browser-chrome {
+    grid-template-columns: auto auto minmax(180px, 1fr) auto;
+    gap: 6px;
+  }
+
+  .drama-workspace-name,
+  .drama-chat-button span,
+  .drama-browser-extension-strip .drama-extension-button:nth-of-type(2),
+  .drama-browser-extension-strip .drama-extension-button:nth-of-type(3) {
+    display: none;
+  }
+
+  .drama-workspace-menu {
+    min-width: 52px;
+  }
+}
+
+@media (max-width: 720px) {
+  .drama-main,
+  .drama-shell.zen-host .drama-main {
+    grid-template-rows: 44px 38px minmax(0, 1fr);
+  }
+
+  .drama-browser-chrome {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .drama-browser-chrome-workspace {
+    display: none;
+  }
+
+  .drama-browser-nav-cluster .drama-browser-icon-button:nth-child(2) {
+    display: none;
+  }
 }
 
 .drama-workbench-bar,
@@ -2914,7 +3139,7 @@
 
 .drama-main[data-drama-surface="start"],
 .drama-shell.zen-host .drama-main[data-drama-surface="start"] {
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: 46px minmax(0, 1fr);
   background: #000;
 }
 
@@ -2929,7 +3154,7 @@
 
 .drama-main[data-drama-surface="memory"],
 .drama-shell.zen-host .drama-main[data-drama-surface="memory"] {
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: 46px minmax(0, 1fr);
   background: #fbfaf7;
 }
 
