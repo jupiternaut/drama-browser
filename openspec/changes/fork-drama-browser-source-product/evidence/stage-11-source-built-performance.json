@@ -1,0 +1,233 @@
+{
+  "ok": true,
+  "schema": "drama-source-built-performance-gate.v1",
+  "generatedAt": "2026-06-29T05:27:52.180186+00:00",
+  "sourceWorkspace": "/Users/gengrf/zen-browser-desktop",
+  "artifactKind": "loose-source-built-internal-ui-artifact",
+  "appExecutable": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/Drama Browser.app/Contents/MacOS/drama-browser",
+  "identityGate": {
+    "path": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-09-source-product.json",
+    "ok": true,
+    "summary": "Source-built Drama Browser product identity verifier passed."
+  },
+  "checks": [
+    {
+      "id": "identity-gate",
+      "ok": true,
+      "detail": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-09-source-product.json"
+    },
+    {
+      "id": "first-viewport-budget",
+      "ok": true,
+      "detail": "138.147 <= 2000"
+    },
+    {
+      "id": "runtime-budget",
+      "ok": true,
+      "detail": "151.587 <= 8000"
+    },
+    {
+      "id": "sidecar-budget",
+      "ok": true,
+      "detail": "176.467 <= 45000"
+    },
+    {
+      "id": "startup-main-thread-budget",
+      "ok": true,
+      "detail": "13.149 <= 100"
+    },
+    {
+      "id": "route-switch-budget",
+      "ok": true,
+      "detail": "[{\"surface\": \"graph\", \"ok\": true, \"elapsedMs\": 37.45570833333295, \"waitedMs\": 36.48512500000106, \"timedOut\": false, \"shellRemounted\": false, \"shellState\": \"runtime-ready\"}, {\"surface\": \"crew\", \"ok\": true, \"elapsedMs\": 40.51020833333314, \"waitedMs\": 39.93404166666551, \"timedOut\": false, \"shellRemounted\": false, \"shellState\": \"runtime-ready\"}, {\"surface\": \"memory\", \"ok\": true, \"elapsedMs\": 20.40370833333327, \"waitedMs\": 20.0154583333333, \"timedOut\": false, \"shellRemounted\": false, \"shellState\": \"runtime-ready\"}, {\"surface\": \"plm\", \"ok\": true, \"elapsedMs\": 38.188749999999345, \"waitedMs\": 37.84920833333126, \"timedOut\": false, \"shellRemounted\": false, \"shellState\": \"workspace-missing\"}]"
+    },
+    {
+      "id": "listener-counts-recorded",
+      "ok": true,
+      "detail": "dramaRuntimePollers=1"
+    }
+  ],
+  "budgets": {
+    "firstStyledViewportMs": 2000,
+    "runtimeReadyOrUnavailableMs": 8000,
+    "sidecarReadyOrUnavailableMs": 45000,
+    "routeSwitchMs": 500,
+    "startupMainThreadTaskMs": 100
+  },
+  "sourcePerformance": {
+    "budgets": {
+      "firstStyledViewportMs": 2000,
+      "runtimeReadyOrUnavailableMs": 8000,
+      "sidecarReadyOrUnavailableMs": 45000,
+      "routeSwitchMs": 500,
+      "startupMainThreadTaskMs": 100
+    },
+    "measurements": {
+      "firstStyledViewportMs": 138.147,
+      "runtimeReadyMs": 151.587,
+      "sidecarReadyMs": 176.467,
+      "startupMainThreadTaskMs": 13.149,
+      "shellState": "parity-blocked"
+    },
+    "responsiveness": {
+      "startedAt": 38.397,
+      "endedAt": 5082.253374999999,
+      "status": "complete",
+      "durationMs": 5000,
+      "intervalMs": 50,
+      "thresholdMs": 100,
+      "samples": 86,
+      "supportedLongTasks": false,
+      "maxLongTaskDurationMs": 0,
+      "maxEventLoopDelayMs": 95.25345833333333,
+      "p95EventLoopDelayMs": 13.148750000000291,
+      "maxStartupBlockingMs": 13.148750000000291
+    },
+    "routeSwitches": {
+      "ok": true,
+      "switches": [
+        {
+          "surface": "graph",
+          "ok": true,
+          "elapsedMs": 37.45570833333295,
+          "waitedMs": 36.48512500000106,
+          "timedOut": false,
+          "shellRemounted": false,
+          "shellState": "runtime-ready"
+        },
+        {
+          "surface": "crew",
+          "ok": true,
+          "elapsedMs": 40.51020833333314,
+          "waitedMs": 39.93404166666551,
+          "timedOut": false,
+          "shellRemounted": false,
+          "shellState": "runtime-ready"
+        },
+        {
+          "surface": "memory",
+          "ok": true,
+          "elapsedMs": 20.40370833333327,
+          "waitedMs": 20.0154583333333,
+          "timedOut": false,
+          "shellRemounted": false,
+          "shellState": "runtime-ready"
+        },
+        {
+          "surface": "plm",
+          "ok": true,
+          "elapsedMs": 38.188749999999345,
+          "waitedMs": 37.84920833333126,
+          "timedOut": false,
+          "shellRemounted": false,
+          "shellState": "workspace-missing"
+        }
+      ],
+      "finalSurface": "plm",
+      "shellRemounted": false
+    }
+  },
+  "comparisonToWrapper": {
+    "wrapperPath": "/Users/gengrf/drama-browser/docs/verification/zen-drama-mac-marionette-performance-plm-current.json",
+    "sourcePath": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-marionette-performance-plm-current.json",
+    "measurementsDeltaMs": {
+      "firstStyledViewportMs": 47.919,
+      "runtimeReadyMs": 46.841,
+      "sidecarReadyMs": -61.981,
+      "startupMainThreadTaskMs": 5.105
+    },
+    "wrapperMeasurements": {
+      "firstStyledViewportMs": 90.228,
+      "runtimeReadyMs": 104.746,
+      "sidecarReadyMs": 238.448,
+      "startupMainThreadTaskMs": 8.044,
+      "shellState": "ai-unavailable"
+    },
+    "sourceMeasurements": {
+      "firstStyledViewportMs": 138.147,
+      "runtimeReadyMs": 151.587,
+      "sidecarReadyMs": 176.467,
+      "startupMainThreadTaskMs": 13.149,
+      "shellState": "parity-blocked"
+    },
+    "wrapperRouteSwitches": [
+      {
+        "surface": "graph",
+        "ok": true,
+        "elapsedMs": 33.46354166666606,
+        "waitedMs": 32.17733333333308,
+        "timedOut": false,
+        "shellRemounted": false,
+        "shellState": "runtime-ready"
+      },
+      {
+        "surface": "crew",
+        "ok": true,
+        "elapsedMs": 44.72124999999869,
+        "waitedMs": 44.204249999998865,
+        "timedOut": false,
+        "shellRemounted": false,
+        "shellState": "runtime-ready"
+      },
+      {
+        "surface": "plm",
+        "ok": true,
+        "elapsedMs": 48.04437500000131,
+        "waitedMs": 47.672833333332164,
+        "timedOut": false,
+        "shellRemounted": false,
+        "shellState": "ai-unavailable"
+      }
+    ],
+    "sourceRouteSwitches": [
+      {
+        "surface": "graph",
+        "ok": true,
+        "elapsedMs": 37.45570833333295,
+        "waitedMs": 36.48512500000106,
+        "timedOut": false,
+        "shellRemounted": false,
+        "shellState": "runtime-ready"
+      },
+      {
+        "surface": "crew",
+        "ok": true,
+        "elapsedMs": 40.51020833333314,
+        "waitedMs": 39.93404166666551,
+        "timedOut": false,
+        "shellRemounted": false,
+        "shellState": "runtime-ready"
+      },
+      {
+        "surface": "memory",
+        "ok": true,
+        "elapsedMs": 20.40370833333327,
+        "waitedMs": 20.0154583333333,
+        "timedOut": false,
+        "shellRemounted": false,
+        "shellState": "runtime-ready"
+      },
+      {
+        "surface": "plm",
+        "ok": true,
+        "elapsedMs": 38.188749999999345,
+        "waitedMs": 37.84920833333126,
+        "timedOut": false,
+        "shellRemounted": false,
+        "shellState": "workspace-missing"
+      }
+    ]
+  },
+  "listenerCounts": {
+    "dramaRuntimePollers": "1"
+  },
+  "regressions": [
+    "firstStyledViewportMs is slower than wrapper baseline by 47.919 ms but remains well inside the 2000 ms budget.",
+    "Loose source-built app is not promoted as the default daily-use replacement until packed distributable chrome/component manifest and signing evidence are unified."
+  ],
+  "replacementDecision": {
+    "canReplaceWrapperForDailyUse": false,
+    "reason": "Performance gate passes, but packed distributable and loose UI artifact evidence are not yet unified into one signed source-built app bundle.",
+    "recommendedUse": "source-built development verification only; keep wrapper launcher for daily use until Stage 12 final distributable evidence is unified."
+  }
+}

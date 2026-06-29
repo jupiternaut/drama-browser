@@ -23,6 +23,7 @@ const DRAMA_RUNTIME_LAUNCH_TIMEOUT_MS_PREF = ["drama.browser.runtime-launch.time
 const DRAMA_OPEN_ON_STARTUP_PREF = ["drama.browser.open-on-startup", "zen.drama.open-on-startup"];
 const DRAMA_START_SURFACE_PREF = ["drama.browser.start-surface", "zen.drama.start-surface"];
 const DRAMA_PRODUCTION_FIXTURE_ENABLED_PREF = ["drama.browser.production-fixture.enabled", "zen.drama.production-fixture.enabled"];
+const DRAMA_LEGACY_ZEN_PREF_MIGRATED = "drama.browser.legacy-zen-pref-migrated";
 const DRAMA_NATIVE_SIDEBAR_VISIBILITY_PREF = "sidebar.visibility";
 const DRAMA_NATIVE_SIDEBAR_EXPAND_ON_HOVER_PREF = "sidebar.expandOnHover";
 const DRAMA_ZEN_SIDEBAR_EXPANDED_PREF = "zen.view.sidebar-expanded";
@@ -50,6 +51,7 @@ class DramaBrowserChromeManager extends nsZenDOMOperatedFeature {
     }
     this.#initialized = true;
 
+    this.#migrateLegacyZenDramaPrefs();
     this.#prepareChromeShell();
     this.#bindNativeSidebarPinning();
     this.#bindSidebarMountObserver();
@@ -926,6 +928,64 @@ class DramaBrowserChromeManager extends nsZenDOMOperatedFeature {
 
     this.#setStatus("Drama runtime offline");
     return false;
+  }
+
+  #migrateLegacyZenDramaPrefs() {
+    try {
+      if (Services.prefs.getBoolPref(DRAMA_LEGACY_ZEN_PREF_MIGRATED, false)) {
+        return;
+      }
+    } catch {
+      // Continue with best-effort migration if the sentinel is unreadable.
+    }
+
+    const migrations = [
+      DRAMA_BASE_URL_PREF,
+      DRAMA_RUNTIME_URL_PREF,
+      DRAMA_INTERNAL_APP_ENABLED_PREF,
+      DRAMA_INTERNAL_APP_URL_PREF,
+      DRAMA_RUNTIME_LAUNCH_ENABLED_PREF,
+      DRAMA_RUNTIME_LAUNCH_COMMAND_PREF,
+      DRAMA_RUNTIME_LAUNCH_ARGS_PREF,
+      DRAMA_RUNTIME_LAUNCH_CWD_PREF,
+      DRAMA_RUNTIME_LAUNCH_TIMEOUT_MS_PREF,
+      DRAMA_OPEN_ON_STARTUP_PREF,
+      DRAMA_START_SURFACE_PREF,
+      DRAMA_PRODUCTION_FIXTURE_ENABLED_PREF,
+      DRAMA_PINNED_ENTRY_STYLE_PREF,
+    ];
+
+    for (const [canonicalName, legacyName] of migrations) {
+      this.#copyLegacyPrefIfNeeded(canonicalName, legacyName);
+    }
+
+    try {
+      Services.prefs.setBoolPref(DRAMA_LEGACY_ZEN_PREF_MIGRATED, true);
+    } catch (error) {
+      console.warn("[DramaBrowserChrome] Failed to mark legacy pref migration:", error);
+    }
+  }
+
+  #copyLegacyPrefIfNeeded(canonicalName, legacyName) {
+    try {
+      if (
+        Services.prefs.prefHasUserValue(canonicalName) ||
+        !Services.prefs.prefHasUserValue(legacyName)
+      ) {
+        return;
+      }
+
+      const type = Services.prefs.getPrefType(legacyName);
+      if (type === Services.prefs.PREF_STRING) {
+        Services.prefs.setStringPref(canonicalName, Services.prefs.getStringPref(legacyName));
+      } else if (type === Services.prefs.PREF_BOOL) {
+        Services.prefs.setBoolPref(canonicalName, Services.prefs.getBoolPref(legacyName));
+      } else if (type === Services.prefs.PREF_INT) {
+        Services.prefs.setIntPref(canonicalName, Services.prefs.getIntPref(legacyName));
+      }
+    } catch (error) {
+      console.warn(`[DramaBrowserChrome] Failed to import legacy pref ${legacyName}:`, error);
+    }
   }
 
   #getStringPref(names, fallback) {

@@ -1,0 +1,324 @@
+{
+  "ok": true,
+  "schema": "zen-drama-marionette-verification.v2",
+  "surfaceClassification": "product-zen-panel",
+  "surface": "graph",
+  "platform": "darwin",
+  "zenApp": null,
+  "zenBin": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/Drama Browser.app/Contents/MacOS/drama-browser",
+  "runtimeUrl": "http://127.0.0.1:3198",
+  "expectedShellState": null,
+  "productionFixture": false,
+  "expectedProductionEvidence": false,
+  "expectedProductionReady": false,
+  "profile": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-profile-t_agdavb",
+  "logPath": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-1782710289.log",
+  "durationMs": 11622,
+  "marionette": {
+    "hello": {
+      "applicationType": "gecko",
+      "marionetteProtocol": 3
+    },
+    "session": {
+      "sessionId": "99b6d489-fd19-4abe-a7b2-efbca574aba1",
+      "capabilities": {
+        "acceptInsecureCerts": false,
+        "browserName": "drama browser",
+        "browserVersion": "1.21.2b",
+        "platformName": "mac",
+        "setWindowRect": true,
+        "unhandledPromptBehavior": "dismiss and notify",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:152.0) Gecko/20100101 Firefox/152.0",
+        "moz:buildID": "20260628205739",
+        "moz:headless": false,
+        "moz:platformVersion": "25.4.0",
+        "moz:processID": 48188,
+        "moz:profile": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-profile-t_agdavb",
+        "moz:shutdownTimeout": 60000,
+        "pageLoadStrategy": "normal",
+        "timeouts": {
+          "implicit": 0,
+          "pageLoad": 300000,
+          "script": 30000
+        },
+        "strictFileInteractability": false,
+        "moz:accessibilityChecks": false,
+        "moz:webdriverClick": true,
+        "moz:windowless": false,
+        "proxy": {}
+      }
+    }
+  },
+  "result": {
+    "managerType": "object",
+    "managerConstructor": "DramaBrowserChromeManager",
+    "panelExists": true,
+    "panelHidden": false,
+    "panelDisplay": "flex",
+    "panelParentId": "zen-main-app-wrapper",
+    "panelRect": {
+      "width": 875,
+      "height": 560,
+      "top": 0,
+      "left": 0,
+      "right": 875,
+      "bottom": 560
+    },
+    "appcontentRect": {
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "left": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "nativeSidebarExists": true,
+    "nativeSidebarRect": {
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "left": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "nativeSidebarVisible": false,
+    "nativeSidebarExpandedAttr": "true",
+    "nativeSidebarPinnedAttr": "true",
+    "nativeSidebarCoveredByPanel": false,
+    "sidebarVisibilityPref": "always-show",
+    "sidebarExpandOnHoverPref": false,
+    "zenSidebarExpandedPref": true,
+    "launcherExists": true,
+    "launcherBound": "true",
+    "launcherLabel": "Drama",
+    "launcherActive": "true",
+    "launcherDisplay": "flex",
+    "launcherRect": {
+      "width": 79.08332824707031,
+      "height": 34,
+      "top": 508,
+      "left": 777.9166870117188
+    },
+    "lockButtonExists": true,
+    "lockButtonTooltip": "Lock Drama and release panel memory",
+    "browserExists": true,
+    "currentURI": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+    "statusValue": "Runtime ready / graph",
+    "sidebarButtons": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "content": {
+      "uri": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+      "readyState": "complete",
+      "title": "Drama Graph - Drama Browser",
+      "dataset": {
+        "dramaSkin": "host-follow",
+        "dramaActiveSkin": "host-follow",
+        "dramaStyles": "ready",
+        "dramaShellMounted": "true",
+        "dramaSurface": "graph",
+        "dramaHost": "drama",
+        "dramaHostAdapter": "zen-gecko",
+        "dramaRuntimePollers": "1",
+        "dramaShellState": "runtime-ready",
+        "dramaFirstStyledViewport": "ready",
+        "dramaRuntimeReady": "ready",
+        "dramaStartupMaxTaskMs": "11"
+      },
+      "rootExists": true,
+      "rootChildCount": 3,
+      "rootText": "DDrama StartDrama GraphDrama PLMSkill CrewBasic MemoryDrama BrowserDrama Graph状态机画布SkinClassicHostMidnightSolarPaperJadeOpalTriadDrama Browser · Zen/Geckohost=drama · Zen/Geckoreadyruntime readyDrama Graph原生原生Drama Runtime Graph/0 nodes / 0 edges/autosave当前图没有节点已加载图数据，但当前没有可渲染的节点。重新读取Inspectordrama.storylet_native_graph.v1状态机诊断边关系、章节链和孤立节点E 0W 0I 0当前图没有发现关系冲突。版本历史备份、事件日志和恢复依据B 0E 16暂无备份；首次写入后会生成可恢复版本。plm.chapter.generate.failed06/20 12:15drama:plm-uiplm.chapter.generate.requested06/20 12:15drama:plm-uiplm.production.stage9.readyEvidence06/20 06:05drama:plm-uiplm.memory.postChapterSync.visualized06/20 06:05drama:plm-uiplm.production.fixture.loaded06/20 06:05drama:plm-ui.drama/graphs/graph-events.jsonl未选择节点点击画布节点或关系边查看正式编辑面板。",
+      "shellExists": true,
+      "shellText": "DDrama StartDrama GraphDrama PLMSkill CrewBasic MemoryDrama BrowserDrama Graph状态机画布SkinClassicHostMidnightSolarPaperJadeOpalTriadDrama Browser · Zen/Geckohost=drama · Zen/Geckoreadyruntime readyDrama Graph原生原生Drama Runtime Graph/0 nodes / 0 edges/autosave当前图没有节点已加载图数据，但当前没有可渲染的节点。重新读取Inspectordrama.storylet_native_graph.v1状态机诊断边关系、章节链和孤立节点E 0W 0I 0当前图没有发现关系冲突。版本历史备份、事件日志和恢复依据B 0E 16暂无备份；首次写入后会生成可恢复版本。plm.chapter.generate.failed06/20 12:15drama:plm-uiplm.chapter.generate.requested06/20 12:15drama:plm-uiplm.production.stage9.readyEvidence06/20 06:05drama:plm-uiplm.memory.postChapterSync.visualized06/20 06:05drama:plm-uiplm.production.fixture.loaded06/20 06:05drama:plm-ui.drama/graphs/graph-events.jsonl未选择节点点击画布节点或关系边查看正式编辑面板。",
+      "shellRect": {
+        "width": 873,
+        "height": 516,
+        "top": 0,
+        "left": 0
+      },
+      "lazyLayout": null,
+      "readerModuleExists": false,
+      "controlRailExists": false,
+      "readerModuleRect": null,
+      "controlRailRect": null,
+      "readerBeforeControlRail": false,
+      "elementCount": 222,
+      "scripts": [
+        "chrome://browser/content/drama/app/assets/index-CVq4q5mq.js"
+      ],
+      "stylesheets": 2,
+      "productionEvidence": {
+        "exists": false,
+        "itemCount": 0,
+        "items": []
+      },
+      "marks": {
+        "shell-document-load": {
+          "name": "shell-document-load",
+          "markedAt": 146.819375,
+          "url": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+          "surface": null,
+          "state": "interactive",
+          "detail": null
+        },
+        "first-styled-viewport": {
+          "name": "first-styled-viewport",
+          "markedAt": 152.974125,
+          "url": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": {
+            "activeSkinId": "host-follow"
+          }
+        },
+        "route-ready": {
+          "name": "route-ready",
+          "markedAt": 202.60725,
+          "url": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "hostAdapter": "zen-gecko",
+            "canonicalClassification": "product-drama-browser",
+            "productPath": true,
+            "activeSkinId": "host-follow"
+          }
+        },
+        "runtime-ready": {
+          "name": "runtime-ready",
+          "markedAt": 200.8947083333333,
+          "url": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": {
+            "runtimeBaseUrl": "http://127.0.0.1:3198",
+            "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace"
+          }
+        }
+      },
+      "events": [
+        {
+          "name": "shell-document-load",
+          "markedAt": 146.819375,
+          "url": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+          "surface": null,
+          "state": "interactive",
+          "detail": null
+        },
+        {
+          "name": "first-styled-viewport",
+          "markedAt": 152.974125,
+          "url": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": {
+            "activeSkinId": "host-follow"
+          }
+        },
+        {
+          "name": "route-ready",
+          "markedAt": 152.990875,
+          "url": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "hostAdapter": "zen-gecko",
+            "canonicalClassification": "product-drama-browser",
+            "productPath": true,
+            "activeSkinId": "host-follow"
+          }
+        },
+        {
+          "name": "runtime-ready",
+          "markedAt": 200.8947083333333,
+          "url": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": {
+            "runtimeBaseUrl": "http://127.0.0.1:3198",
+            "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace"
+          }
+        },
+        {
+          "name": "route-ready",
+          "markedAt": 202.60725,
+          "url": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+          "surface": "graph",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "hostAdapter": "zen-gecko",
+            "canonicalClassification": "product-drama-browser",
+            "productPath": true,
+            "activeSkinId": "host-follow"
+          }
+        }
+      ],
+      "responsiveness": {
+        "startedAt": 146.85229166666667,
+        "endedAt": 5176.139958333332,
+        "status": "complete",
+        "durationMs": 5000,
+        "intervalMs": 50,
+        "thresholdMs": 100,
+        "samples": 89,
+        "supportedLongTasks": false,
+        "maxLongTaskDurationMs": 0,
+        "maxEventLoopDelayMs": 21.23470833333249,
+        "p95EventLoopDelayMs": 11.488333333333685,
+        "maxStartupBlockingMs": 11.488333333333685
+      }
+    },
+    "documentTitle": "Drama Browser",
+    "location": "chrome://browser/content/browser.xhtml"
+  },
+  "launcherReopen": null,
+  "lockRelease": null,
+  "screenshot": {
+    "path": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-graph-current.png",
+    "captured": true,
+    "width": 1750,
+    "height": 1120,
+    "averageLuma": 27.546,
+    "darkRatio": 0.645055,
+    "brightRatio": 4.8e-05,
+    "uniqueColorBuckets": 162
+  },
+  "performance": {
+    "budgets": {
+      "firstStyledViewportMs": 2000,
+      "runtimeReadyOrUnavailableMs": 8000,
+      "sidecarReadyOrUnavailableMs": 45000,
+      "routeSwitchMs": 500,
+      "startupMainThreadTaskMs": 100
+    },
+    "measurements": {
+      "firstStyledViewportMs": 6.155,
+      "runtimeReadyMs": 54.075,
+      "sidecarReadyMs": null,
+      "startupMainThreadTaskMs": 11.488,
+      "shellState": "runtime-ready"
+    },
+    "responsiveness": {
+      "startedAt": 146.85229166666667,
+      "endedAt": 5176.139958333332,
+      "status": "complete",
+      "durationMs": 5000,
+      "intervalMs": 50,
+      "thresholdMs": 100,
+      "samples": 89,
+      "supportedLongTasks": false,
+      "maxLongTaskDurationMs": 0,
+      "maxEventLoopDelayMs": 21.23470833333249,
+      "p95EventLoopDelayMs": 11.488333333333685,
+      "maxStartupBlockingMs": 11.488333333333685
+    },
+    "routeSwitches": null
+  },
+  "failureReasons": []
+}

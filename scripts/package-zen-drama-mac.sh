@@ -318,6 +318,9 @@ if [[ -f "$INFO_PLIST" ]]; then
 fi
 install_direct_app_launcher "$APP_DEST" "$REPO_ROOT"
 
+# Transitional adapter path only.
+# Source-built Drama Browser registers these resources through browser/base/jar.mn
+# and must not use this post-copy injection as source-level acceptance evidence.
 RESOURCE_ROOT="$APP_DEST/Contents/Resources/browser/chrome/browser/content/browser"
 APP_RESOURCE_DIR="$RESOURCE_ROOT/drama/app"
 COMPONENT_DIR="$RESOURCE_ROOT/zen-components"

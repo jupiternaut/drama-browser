@@ -5,6 +5,10 @@
 @source "../../../packages/drama-graph-ui/src/**/*.{ts,tsx}";
 @source "../../../packages/drama-plm-ui/src/**/*.{ts,tsx}";
 
+.drama-css-probe {
+  --drama-css-ready: ready;
+}
+
 .drama-shell {
   position: relative;
   display: grid;

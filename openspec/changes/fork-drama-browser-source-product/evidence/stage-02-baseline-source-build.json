@@ -1,0 +1,79 @@
+{
+  "schema": "drama-source-stage-02-baseline.v1",
+  "date": "2026-06-28",
+  "sourceWorkspace": "/Users/gengrf/zen-browser-desktop",
+  "packageCommand": "PATH=\"$HOME/.cargo/bin:$PATH\" SURFER_PLATFORM=darwin SURFER_COMPAT=aarch64 ZEN_RELEASE=1 ZEN_GA_DISABLE_PGO=true npm run package",
+  "packageResult": {
+    "exitCode": 0,
+    "warnings": [
+      "Frozen Firefox version 152.0 differs from latest 152.0.3",
+      "packager.py AttributeError: 'NoneType' object has no attribute 'open'",
+      "Missing updater executable at dist/Zen.app/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater during browser/app tools step",
+      "Nested mach package-multi-locale make step reported non-zero status before Surfer completed successfully"
+    ]
+  },
+  "artifact": {
+    "dmg": "/Users/gengrf/zen-browser-desktop/dist/zen-1.21.2b.en-US.mac.dmg",
+    "mountedApp": "/tmp/zen-baseline-dmg-36119/Zen.app",
+    "crc32": "$D5C42F54",
+    "totalBytes": 314085376,
+    "sourceStamp": "eb4cae5bf6e25cbdfe9215c6d4a800fb43274c79"
+  },
+  "identity": {
+    "bundleId": "app.zen-browser.zen",
+    "bundleName": "Zen",
+    "executable": "zen",
+    "iconFile": "firefox.icns",
+    "urlSchemes": ["http", "https", "file"],
+    "applicationIni": {
+      "Vendor": "Mozilla",
+      "Name": "Zen",
+      "RemotingName": "zen",
+      "Profile": "zen",
+      "UpdateURL": "https://updates.zen-browser.app/updates/browser/%BUILD_TARGET%/%CHANNEL%/update.xml"
+    }
+  },
+  "helpers": [
+    {
+      "kind": "gpu",
+      "bundleId": "app.zen-browser.zen-gpu-helper",
+      "executable": "Zen GPU Helper"
+    },
+    {
+      "kind": "media-plugin",
+      "bundleId": "app.zen-browser.zen-media-plugin-helper",
+      "executable": "Zen Media Plugin Helper"
+    },
+    {
+      "kind": "plugin-container",
+      "bundleId": "app.zen-browser.plugincontainer",
+      "executable": "plugin-container"
+    },
+    {
+      "kind": "updater",
+      "bundleId": "org.mozilla.updater",
+      "executable": "org.mozilla.updater"
+    }
+  ],
+  "runtime": {
+    "forcedProfile": "/tmp/drama-stage02-zen-baseline-run-forced-profile/profile",
+    "defaultProfileObserved": "/Users/gengrf/Library/Application Support/Zen/Profiles/ym72roow.Default (release)-6",
+    "mainProcess": "/tmp/zen-baseline-dmg-36119/Zen.app/Contents/MacOS/zen",
+    "childProcessObserved": "/tmp/zen-baseline-dmg-36119/Zen.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container"
+  },
+  "performance": {
+    "baselineHeadlessScreenshotMs": [762.9, 757.8, 731.1],
+    "baselineHeadlessMeanMs": 750.6,
+    "wrapperComparison": {
+      "source": "/Users/gengrf/drama-browser/docs/verification/zen-drama-mac-marionette-performance-plm-current.json",
+      "classification": "product-zen-panel",
+      "durationMs": 10885,
+      "firstStyledViewportMs": 179.9,
+      "runtimeReadyMs": 194.4,
+      "sidecarReadyMs": 328.1,
+      "routeReadyMs": 399.3,
+      "maxStartupBlockingMs": 8.0
+    }
+  }
+}
+

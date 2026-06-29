@@ -94,6 +94,19 @@ const surfaces: SurfaceDescriptor[] = [
 
 const PRODUCT_NAME = 'Drama Browser'
 
+function documentHasStyleRule(fragment: string): boolean {
+  for (const sheet of Array.from(document.styleSheets)) {
+    try {
+      for (const rule of Array.from(sheet.cssRules)) {
+        if (rule.cssText.includes(fragment)) return true
+      }
+    } catch {
+      // Cross-origin stylesheets are not expected for the chrome resource shell.
+    }
+  }
+  return false
+}
+
 function isSurfaceId(value: string | null | undefined): value is Surface {
   return value === 'start' || value === 'plm' || value === 'crew' || value === 'graph' || value === 'memory'
 }
@@ -212,7 +225,9 @@ function useStyleReadiness() {
       }
 
       const cssReady = window.getComputedStyle(cssProbe).getPropertyValue('--drama-css-ready').trim() === 'ready'
+        || documentHasStyleRule('drama-css-probe')
       const tailwindReady = window.getComputedStyle(tailwindProbe).display === 'flex'
+        || documentHasStyleRule('.flex')
       const ready = cssReady && tailwindReady
       document.documentElement.dataset.dramaStyles = ready ? 'ready' : 'missing'
       setStyleReadiness(ready ? 'ready' : 'missing')

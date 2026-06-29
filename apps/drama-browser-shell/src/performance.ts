@@ -27,6 +27,9 @@ export interface DramaStartupResponsiveness {
   maxEventLoopDelayMs: number
   p95EventLoopDelayMs: number
   maxStartupBlockingMs: number
+  expectedSamples: number
+  sampleCoverageRatio: number
+  timerThrottled: boolean
 }
 
 interface DramaProductPathWindow {
@@ -95,7 +98,9 @@ export function setDramaReadySignal(name: string, value: string): void {
 }
 
 function updateStartupBlocking(state: DramaStartupResponsiveness): void {
-  const eventLoopBudgetSignal = state.supportedLongTasks ? 0 : state.p95EventLoopDelayMs
+  const eventLoopBudgetSignal = state.supportedLongTasks || state.timerThrottled
+    ? 0
+    : state.p95EventLoopDelayMs
   state.maxStartupBlockingMs = Math.max(state.maxLongTaskDurationMs, eventLoopBudgetSignal)
   setDramaReadySignal('dramaStartupMaxTaskMs', String(Math.round(state.maxStartupBlockingMs)))
 }
@@ -127,6 +132,9 @@ export function startDramaStartupResponsivenessMonitor({
     maxEventLoopDelayMs: 0,
     p95EventLoopDelayMs: 0,
     maxStartupBlockingMs: 0,
+    expectedSamples: 0,
+    sampleCoverageRatio: 1,
+    timerThrottled: false,
   }
   target.__DRAMA_PRODUCT_PATH_RESPONSIVENESS__ = state
   const eventLoopDelaySamples: number[] = []
@@ -154,6 +162,11 @@ export function startDramaStartupResponsivenessMonitor({
     const elapsed = now - state.startedAt
     const delay = Math.max(0, now - expectedAt)
     state.samples += 1
+    state.expectedSamples = Math.max(1, Math.floor(elapsed / intervalMs))
+    state.sampleCoverageRatio = state.samples / state.expectedSamples
+    state.timerThrottled = !state.supportedLongTasks
+      && elapsed >= Math.min(1_000, durationMs)
+      && state.sampleCoverageRatio < 0.25
     eventLoopDelaySamples.push(delay)
     const sortedDelays = [...eventLoopDelaySamples].sort((left, right) => left - right)
     const p95Index = Math.max(0, Math.ceil(sortedDelays.length * 0.95) - 1)

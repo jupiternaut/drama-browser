@@ -1,0 +1,144 @@
+{
+  "ok": true,
+  "sourceWorkspace": "/Users/gengrf/zen-browser-desktop",
+  "generatedAt": "2026-06-29T02:38:56.563Z",
+  "checks": [
+    {
+      "id": "source-workspace",
+      "ok": true,
+      "detail": "/Users/gengrf/zen-browser-desktop"
+    },
+    {
+      "id": "surfer-name",
+      "ok": true,
+      "detail": "name=Drama Browser"
+    },
+    {
+      "id": "surfer-vendor",
+      "ok": true,
+      "detail": "vendor=Drama Browser Team"
+    },
+    {
+      "id": "surfer-app-id",
+      "ok": true,
+      "detail": "appId=local"
+    },
+    {
+      "id": "release-brand",
+      "ok": true,
+      "detail": "{\"brandShortName\":\"Drama Browser\",\"brandFullName\":\"Drama Browser\"}"
+    },
+    {
+      "id": "twilight-brand",
+      "ok": true,
+      "detail": "{\"brandShortName\":\"Drama Twilight\",\"brandFullName\":\"Drama Browser Twilight\"}"
+    },
+    {
+      "id": "update-host-owned",
+      "ok": true,
+      "detail": "updateHostname=updates.drama-browser.local"
+    },
+    {
+      "id": "mozconfig-app-basename",
+      "ok": true,
+      "detail": "Drama Browser basename is set in configs/common/mozconfig"
+    },
+    {
+      "id": "branding-confvars",
+      "ok": true,
+      "detail": "macOS bundle id suffix and brand strings are provided by source branding confvars"
+    },
+    {
+      "id": "mozconfig-vendor-profile",
+      "ok": true,
+      "detail": "profile and vendor are provided by toolkit configure defaults"
+    },
+    {
+      "id": "mozconfig-distribution",
+      "ok": true,
+      "detail": "distribution id and user app dir are Drama-owned"
+    },
+    {
+      "id": "mozconfig-source-repo",
+      "ok": true,
+      "detail": "source repository metadata points at Drama Browser"
+    },
+    {
+      "id": "toolkit-defaults",
+      "ok": true,
+      "detail": "toolkit moz.configure patch no longer defaults to Zen identity"
+    },
+    {
+      "id": "build-update-host-default",
+      "ok": true,
+      "detail": "application.ini update host default is Drama-owned"
+    },
+    {
+      "id": "drama-url-scheme-source-patch",
+      "ok": true,
+      "detail": "drama:// is registered by a source patch, not a post-build plist edit"
+    },
+    {
+      "id": "branding-icons",
+      "ok": true,
+      "detail": "release/twilight source branding icons exist"
+    }
+  ],
+  "files": {
+    "surfer": {
+      "exists": true,
+      "sha256": "1c0dc4fdcd674b0b6aa4f9947c7a56e774a4c4b9dabb8f87e1271550985cb2a0",
+      "bytes": 1397
+    },
+    "commonMozconfig": {
+      "exists": true,
+      "sha256": "645ba4360ccd4490747500459a8d1b4e7c52a2ae239248e525d1eaa927eb5ccc",
+      "bytes": 3493
+    },
+    "releaseConfigure": {
+      "exists": true,
+      "sha256": "f2252c0c5673269cd60f67b1e2f02afe6f28083ad8c3f46af948bf6619b0fd8d",
+      "bytes": 270
+    },
+    "releaseBrandProperties": {
+      "exists": true,
+      "sha256": "9d841ef1e711eb75c2d4313ba23d503fcd9d02b4e2d5199708e8e09cf276bb19",
+      "bytes": 315
+    },
+    "toolkitPatch": {
+      "exists": true,
+      "sha256": "8722e36bd980056d8a8424dd049a84fa2f0d7ef2d536039e2d19f49bce867eb5",
+      "bytes": 6081
+    },
+    "buildPatch": {
+      "exists": true,
+      "sha256": "f3f114a604329c7132028056b7806c769932f5eb88d0bedc4282c738fd3a94f1",
+      "bytes": 557
+    },
+    "infoPlistPatch": {
+      "exists": true,
+      "sha256": "3cb8acb17f19950a583413940939188fb2e382ca20a81db178be2d8de75c97a2",
+      "bytes": 595
+    },
+    "releaseLogo": {
+      "exists": true,
+      "sha256": "2e9cd580f8729737b3b0a471a243a210f71a26d42385b1a42e7549ed600ed3ac",
+      "bytes": 514483
+    },
+    "releaseMacLogo": {
+      "exists": true,
+      "sha256": "2e9cd580f8729737b3b0a471a243a210f71a26d42385b1a42e7549ed600ed3ac",
+      "bytes": 514483
+    },
+    "twilightLogo": {
+      "exists": true,
+      "sha256": "2e9cd580f8729737b3b0a471a243a210f71a26d42385b1a42e7549ed600ed3ac",
+      "bytes": 514483
+    },
+    "twilightMacLogo": {
+      "exists": true,
+      "sha256": "2e9cd580f8729737b3b0a471a243a210f71a26d42385b1a42e7549ed600ed3ac",
+      "bytes": 514483
+    }
+  }
+}

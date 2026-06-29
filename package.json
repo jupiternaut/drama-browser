@@ -79,6 +79,8 @@
     "runtime:launch:mac": "bash scripts/launch-drama-runtime.sh",
     "runtime:launch:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch-drama-runtime.ps1",
     "runtime:typecheck": "cd apps/drama-runtime && bun run typecheck",
+    "plm:workbuddy:bridge": "bun run scripts/workbuddy-deepseek-bridge.ts",
+    "plm:workbuddy:smoke": "printf '只输出 OK\\n' | bun run scripts/workbuddy-deepseek-bridge.ts --once",
     "drama:start:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch-drama.ps1",
     "drama:shortcut:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-zen-drama-shortcut.ps1",
     "zen:drama:check:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-zen-drama-embedding.ps1",

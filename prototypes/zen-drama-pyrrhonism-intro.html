@@ -1,0 +1,1612 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zen Drama Pyrrhonism Intro - 皮浪主义纲要</title>
+  <style>
+    :root {
+      --bg: #020406;
+      --ink: #f4f7f7;
+      --muted: rgba(244, 247, 247, 0.68);
+      --faint: rgba(244, 247, 247, 0.42);
+      --line: rgba(255, 255, 255, 0.16);
+      --panel: rgba(8, 13, 17, 0.82);
+      --panel-strong: rgba(7, 10, 13, 0.96);
+      --cyan: #8fdbe3;
+      --amber: #f0b36b;
+      --rose: #e68f7d;
+      --green: #9fc5a2;
+      --shadow: 0 28px 90px rgba(0, 0, 0, 0.52);
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--bg);
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #020406;
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .start-page {
+      position: relative;
+      min-height: 100vh;
+      isolation: isolate;
+      padding: 26px clamp(16px, 4vw, 64px) 64px;
+    }
+
+    .start-page::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.1) 33%, rgba(0, 0, 0, 0.64) 100%),
+        url("../docs/verification/drama-start-surface-desktop.png") center top / cover no-repeat;
+      filter: saturate(0.92) contrast(1.04);
+      transform: scale(1.01);
+    }
+
+    .start-page::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.56) 16%, rgba(0, 0, 0, 0.18) 34%, transparent 48%),
+        radial-gradient(ellipse at 50% 36%, rgba(33, 85, 96, 0.3), transparent 38%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.72) 74%);
+    }
+
+    .quick-row {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(62px, 76px));
+      justify-content: center;
+      gap: 18px;
+      margin: 0 auto 20px;
+    }
+
+    .quick-item {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      min-width: 0;
+      color: rgba(255, 255, 255, 0.86);
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .quick-mark {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.48);
+      color: #121719;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        0 9px 24px rgba(0, 0, 0, 0.32);
+      font-size: 19px;
+      font-weight: 780;
+      line-height: 1;
+    }
+
+    .quick-item:nth-child(1) .quick-mark { color: #123c44; background: linear-gradient(145deg, #f7ffff, #80d8e1 52%, #e6a276); }
+    .quick-item:nth-child(2) .quick-mark { color: #4b391c; background: linear-gradient(145deg, #fff7cb, #f1c666 54%, #766a77); }
+    .quick-item:nth-child(3) .quick-mark { color: #1d2831; background: linear-gradient(145deg, #ffffff, #bfc7cf 52%, #657681); }
+    .quick-item:nth-child(4) .quick-mark { color: #1f3045; background: linear-gradient(145deg, #eaf4ff, #77a7d8 52%, #284d75); }
+    .quick-item:nth-child(5) .quick-mark { color: #3f2425; background: linear-gradient(145deg, #fff1da, #f4a96e 52%, #a54c49); }
+    .quick-item:nth-child(6) .quick-mark { color: #223525; background: linear-gradient(145deg, #eff7e7, #9fc5a2 52%, #3c6a53); }
+
+    .quick-label {
+      max-width: 76px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 680;
+      text-shadow: 0 1px 10px rgba(0, 0, 0, 0.62);
+    }
+
+    .pager-dots {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 9px;
+      height: 22px;
+      margin-bottom: 42px;
+    }
+
+    .pager-dots span {
+      display: block;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.34);
+    }
+
+    .pager-dots span:first-child {
+      width: 32px;
+    }
+
+    .search-bar {
+      width: min(696px, calc(100vw - 36px));
+      height: 80px;
+      margin: 0 auto 8px;
+      display: grid;
+      grid-template-columns: 38px 1fr auto;
+      align-items: center;
+      gap: 14px;
+      padding: 0 24px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.96);
+      color: rgba(18, 22, 26, 0.74);
+      box-shadow:
+        0 22px 48px rgba(0, 0, 0, 0.24),
+        inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+    }
+
+    .search-emblem {
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: #f26745;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .search-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: clamp(18px, 2vw, 24px);
+      font-weight: 520;
+      letter-spacing: 0;
+    }
+
+    .search-meta {
+      color: rgba(18, 22, 26, 0.5);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .billboard {
+      width: min(1456px, calc(100vw - 48px));
+      max-width: 100%;
+      margin: 0 auto;
+      transform: translateY(0);
+    }
+
+    .billboard-frame {
+      position: relative;
+      padding: 20px 20px 18px;
+      background:
+        linear-gradient(180deg, #050708 0, #020202 68%, #101113 100%);
+      box-shadow: var(--shadow);
+    }
+
+    .billboard-frame::before {
+      content: "";
+      position: absolute;
+      inset: -9px 0 auto;
+      height: 18px;
+      background: #000;
+      opacity: 0.96;
+      pointer-events: none;
+    }
+
+    .billboard-frame::after {
+      content: "";
+      position: absolute;
+      inset: auto 8% -74px;
+      height: 74px;
+      background:
+        linear-gradient(180deg, rgba(8, 9, 10, 0.9), rgba(7, 8, 8, 0.2)),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 18px);
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+    }
+
+    .billboard-screen {
+      position: relative;
+      min-height: 520px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background:
+        linear-gradient(180deg, rgba(96, 160, 176, 0.66), rgba(64, 111, 124, 0.52) 38%, rgba(226, 126, 96, 0.46) 100%),
+        #314f58;
+    }
+
+    .billboard-screen::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 49% 40%, rgba(2, 8, 10, 0.9) 0 11%, transparent 27%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.18), transparent 21%, transparent 68%, rgba(0, 0, 0, 0.18));
+      opacity: 0.75;
+    }
+
+    .billboard-screen::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.22;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      background-size: 4px 4px;
+      mix-blend-mode: overlay;
+    }
+
+    .carousel-viewport {
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+      min-height: 520px;
+      touch-action: pan-y;
+    }
+
+    .carousel-track {
+      display: flex;
+      min-height: 520px;
+      transition: transform 220ms ease;
+      will-change: transform;
+    }
+
+    .story-card {
+      flex: 0 0 100%;
+      min-width: 0;
+      min-height: 520px;
+    }
+
+    .hero-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(220px, 0.72fr) minmax(330px, 1fr);
+      gap: clamp(22px, 4vw, 58px);
+      min-height: 520px;
+      padding: clamp(36px, 5vw, 72px) clamp(34px, 7vw, 96px);
+      align-items: center;
+    }
+
+    .hero-grid > * {
+      min-width: 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 16px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero-title {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.93);
+      font-size: clamp(38px, 5vw, 68px);
+      font-weight: 680;
+      letter-spacing: 0;
+      line-height: 0.98;
+      text-wrap: balance;
+      overflow-wrap: anywhere;
+    }
+
+    .hero-title span {
+      display: block;
+      color: rgba(255, 255, 255, 0.68);
+      font-weight: 460;
+      overflow-wrap: anywhere;
+    }
+
+    .card-label {
+      margin: 0 0 12px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .slide-title {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.95);
+      font-size: clamp(34px, 4.4vw, 58px);
+      font-weight: 760;
+      letter-spacing: 0;
+      line-height: 1.06;
+      text-wrap: balance;
+      overflow-wrap: anywhere;
+    }
+
+    .slide-kicker {
+      margin: 18px 0 0;
+      max-width: 34rem;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: clamp(18px, 2vw, 28px);
+      font-weight: 680;
+      line-height: 1.34;
+      text-wrap: balance;
+    }
+
+    .slide-image-card {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      align-self: stretch;
+      align-content: center;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .slide-image {
+      display: block;
+      width: min(360px, 100%);
+      height: min(360px, 32vw);
+      min-height: 250px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.36);
+      background: rgba(7, 13, 15, 0.72);
+      box-shadow:
+        0 30px 70px rgba(0, 0, 0, 0.42),
+        -16px 18px 0 rgba(4, 11, 13, 0.46);
+    }
+
+    .slide-image-card figcaption {
+      width: min(360px, 100%);
+      margin: 0;
+      color: rgba(255, 255, 255, 0.66);
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .slide-copy {
+      display: grid;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .content-fragment {
+      margin: 0;
+      padding: 14px 16px;
+      border-left: 2px solid var(--cyan);
+      border-radius: 0 7px 7px 0;
+      background: rgba(143, 219, 227, 0.1);
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .content-fragment span {
+      display: block;
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.56);
+      font-size: 12px;
+    }
+
+    .slide-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .slide-tags span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 5px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      background: rgba(3, 8, 10, 0.34);
+      color: rgba(255, 255, 255, 0.74);
+      font-size: 12px;
+      font-weight: 680;
+    }
+
+    .paired-lines {
+      display: grid;
+      gap: 12px;
+      margin-top: 26px;
+    }
+
+    .paired-lines p,
+    .idea-card p,
+    .method-line p {
+      margin: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .paired-lines span:first-child,
+    .idea-card span:first-child,
+    .method-line span:first-child {
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .paired-lines span:last-child,
+    .idea-card span:last-child,
+    .method-line span:last-child {
+      color: rgba(255, 255, 255, 0.54);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .cover-stack {
+      display: grid;
+      justify-items: center;
+      gap: 14px;
+      margin: 0;
+      align-self: stretch;
+      align-content: center;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .book-cover {
+      width: min(220px, 100%);
+      aspect-ratio: 0.66;
+      object-fit: cover;
+      border-radius: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow:
+        0 30px 70px rgba(0, 0, 0, 0.42),
+        -16px 18px 0 rgba(4, 11, 13, 0.52);
+      background: #162024;
+    }
+
+    .visual-caption {
+      width: 100%;
+      max-width: 260px;
+      margin: 0;
+      color: rgba(255, 255, 255, 0.66);
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .callout {
+      display: grid;
+      gap: 20px;
+      justify-items: start;
+    }
+
+    .callout-title {
+      margin: 0;
+      color: #fff;
+      font-size: clamp(28px, 4vw, 54px);
+      font-weight: 760;
+      line-height: 1.05;
+      text-wrap: balance;
+    }
+
+    .classification {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .classification li {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 5px 8px;
+      background: rgba(3, 8, 10, 0.34);
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .route-note {
+      margin: 0;
+      max-width: 28rem;
+      color: rgba(255, 255, 255, 0.74);
+      font-size: clamp(16px, 1.7vw, 22px);
+      line-height: 1.45;
+    }
+
+    .billboard-controls {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 22px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .round-button {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 999px;
+      background: rgba(2, 5, 7, 0.54);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .mini-dots {
+      display: flex;
+      gap: 7px;
+    }
+
+    .mini-dots span {
+      display: block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .mini-dots span.is-active {
+      width: 18px;
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    .content-shell {
+      width: min(1456px, calc(100vw - 48px));
+      max-width: 100%;
+      margin: 122px auto 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(312px, 0.55fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .reading-panel,
+    .route-panel,
+    .prompt-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(8, 13, 17, 0.88), rgba(5, 8, 10, 0.78));
+      box-shadow: 0 18px 54px rgba(0, 0, 0, 0.36);
+      backdrop-filter: blur(18px);
+    }
+
+    .reading-panel {
+      padding: clamp(22px, 3vw, 34px);
+    }
+
+    .section-label {
+      margin: 0 0 10px;
+      color: var(--amber);
+      font-size: 12px;
+      font-weight: 820;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      margin: 0 0 20px;
+      color: #fff;
+      font-size: clamp(24px, 3vw, 40px);
+      font-weight: 700;
+      letter-spacing: 0;
+      line-height: 1.12;
+    }
+
+    .intro-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 22px;
+      margin-bottom: 22px;
+    }
+
+    .portrait {
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: #101619;
+    }
+
+    .portrait img {
+      display: block;
+      width: 100%;
+      height: 244px;
+      object-fit: cover;
+      filter: saturate(0.82) contrast(1.08);
+    }
+
+    .portrait figcaption {
+      margin: 0;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .method-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 22px 0;
+    }
+
+    .method-line {
+      padding: 14px;
+      min-height: 120px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .idea-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .idea-card {
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      background: rgba(2, 7, 9, 0.38);
+    }
+
+    .idea-card h3 {
+      margin: 0 0 14px;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    .quote {
+      margin: 15px 0;
+      padding: 12px 14px;
+      border-left: 2px solid var(--cyan);
+      background: rgba(143, 219, 227, 0.08);
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 18px;
+      position: sticky;
+      top: 18px;
+    }
+
+    .route-panel,
+    .prompt-panel {
+      padding: 18px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 780;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(159, 197, 162, 0.12);
+      color: rgba(213, 242, 218, 0.86);
+      font-size: 11px;
+      font-weight: 760;
+    }
+
+    .hour-list {
+      display: grid;
+      gap: 7px;
+      max-height: 520px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .hour-button {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 10px;
+      width: 100%;
+      min-height: 54px;
+      padding: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.04);
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .hour-button:hover,
+    .hour-button.is-active {
+      border-color: rgba(143, 219, 227, 0.38);
+      background: rgba(143, 219, 227, 0.08);
+    }
+
+    .hour {
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .hour-copy {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+
+    .hour-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 720;
+      line-height: 1.2;
+    }
+
+    .hour-meta {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: rgba(255, 255, 255, 0.54);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .prompt-panel textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.28);
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .action-button {
+      min-height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 6px;
+      padding: 0 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 12px;
+      font-weight: 760;
+      cursor: pointer;
+    }
+
+    .action-button.primary {
+      border-color: rgba(240, 179, 107, 0.48);
+      background: rgba(240, 179, 107, 0.14);
+    }
+
+    .source-note {
+      width: min(1456px, calc(100vw - 48px));
+      max-width: 100%;
+      margin: 24px auto 0;
+      color: rgba(255, 255, 255, 0.52);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1120px) {
+      .hero-grid {
+        grid-template-columns: 1fr 0.7fr;
+      }
+
+      .callout {
+        grid-column: 1 / -1;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .content-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .side-stack {
+        position: static;
+      }
+
+      .intro-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .portrait img {
+        height: 320px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .start-page {
+        padding: 34vh 10px 36px;
+      }
+
+      .start-page::before {
+        background:
+          linear-gradient(180deg, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.08) 42%, rgba(0, 0, 0, 0.76) 100%),
+          url("../docs/verification/drama-start-surface-narrow.png") center top / cover no-repeat;
+      }
+
+      .quick-row {
+        grid-template-columns: repeat(6, minmax(42px, 48px));
+        gap: 9px;
+        margin-bottom: 12px;
+      }
+
+      .quick-mark {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        font-size: 13px;
+      }
+
+      .quick-label {
+        max-width: 48px;
+        font-size: 8px;
+      }
+
+      .pager-dots {
+        margin-bottom: 18px;
+      }
+
+      .search-bar {
+        height: 48px;
+        grid-template-columns: 22px 1fr;
+        gap: 8px;
+        padding: 0 12px;
+        border-radius: 8px;
+      }
+
+      .search-emblem {
+        width: 16px;
+        height: 16px;
+        border-radius: 5px;
+        font-size: 8px;
+      }
+
+      .search-text {
+        font-size: 11px;
+      }
+
+      .search-meta {
+        display: none;
+      }
+
+      .billboard {
+        width: calc(100vw - 28px);
+      }
+
+      .billboard-frame {
+        padding: 9px;
+      }
+
+      .billboard-screen {
+        min-height: 500px;
+      }
+
+      .carousel-viewport,
+      .carousel-track,
+      .story-card {
+        min-height: 500px;
+      }
+
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 22px;
+        min-height: 500px;
+        padding: 26px 22px 30px;
+      }
+
+      .hero-title {
+        font-size: 34px;
+      }
+
+      .slide-title {
+        font-size: 30px;
+      }
+
+      .slide-kicker {
+        font-size: 18px;
+      }
+
+      .slide-image {
+        width: min(260px, 100%);
+        height: 190px;
+        min-height: 190px;
+        justify-self: center;
+      }
+
+      .slide-image-card figcaption {
+        justify-self: center;
+      }
+
+      .callout-title {
+        font-size: 25px;
+      }
+
+      .book-cover {
+        width: min(180px, 60vw);
+      }
+
+      .paired-lines span:first-child,
+      .idea-card span:first-child,
+      .method-line span:first-child {
+        font-size: 14px;
+      }
+
+      .paired-lines span:last-child,
+      .idea-card span:last-child,
+      .method-line span:last-child {
+        font-size: 12px;
+      }
+
+      .content-shell,
+      .source-note {
+        width: calc(100vw - 18px);
+        margin-top: 96px;
+      }
+
+      .method-grid,
+      .idea-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .portrait img {
+        height: 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="start-page">
+    <nav class="quick-row" aria-label="阅读系统快捷入口">
+      <a class="quick-item" href="#book"><span class="quick-mark">00</span><span class="quick-label">Today</span></a>
+      <a class="quick-item" href="#route"><span class="quick-mark">24</span><span class="quick-label">Route</span></a>
+      <a class="quick-item" href="#method"><span class="quick-mark">6</span><span class="quick-label">Method</span></a>
+      <a class="quick-item" href="#ideas"><span class="quick-mark">4</span><span class="quick-label">Ideas</span></a>
+      <a class="quick-item" href="#prompt"><span class="quick-mark">P</span><span class="quick-label">Prompt</span></a>
+      <a class="quick-item" href="#question"><span class="quick-mark">Q</span><span class="quick-label">Question</span></a>
+    </nav>
+
+    <div class="pager-dots" aria-hidden="true"><span></span><span></span></div>
+
+    <div class="search-bar" role="search" aria-label="书籍检索">
+      <span class="search-emblem" aria-hidden="true">B</span>
+      <span class="search-text" id="searchText">Ask a book, find a lens...</span>
+      <span class="search-meta">Bilingual Classic</span>
+    </div>
+
+    <section class="billboard" id="book" aria-label="书籍主视觉">
+      <div class="billboard-frame">
+        <div class="billboard-screen">
+          <div class="carousel-viewport" id="cardViewport" aria-label="书籍介绍卡片，可左右滑动">
+            <div class="carousel-track" id="cardTrack"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="billboard-controls">
+        <button class="round-button" type="button" id="prevCard" aria-label="上一张卡片">‹</button>
+        <div class="mini-dots" id="cardDots"></div>
+        <button class="round-button" type="button" id="nextCard" aria-label="下一张卡片">›</button>
+      </div>
+    </section>
+
+    <section class="content-shell">
+      <article class="reading-panel">
+        <p class="section-label">Entrance</p>
+        <h2 class="section-title">书籍入口 / Entrance</h2>
+        <div class="intro-grid">
+          <div class="paired-lines">
+            <p><span>塞克斯都写这本书时，不是在制造新教条。</span><span>Sextus was not manufacturing a new doctrine.</span></p>
+            <p><span>他更像在训练一种停顿。</span><span>He was training a pause.</span></p>
+            <p><span>面对相互冲突的理由，他先不急着站队。</span><span>Before rival reasons, he does not rush to take sides.</span></p>
+            <p><span>他要保护的，是判断还没有成熟前的清醒。</span><span>He protects clarity before judgment is ripe.</span></p>
+          </div>
+
+          <figure class="portrait">
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Sextus_Empiricus_-_Les_Hipotiposes_pirroniennes.djvu/page1-500px-Sextus_Empiricus_-_Les_Hipotiposes_pirroniennes.djvu.jpg"
+              alt="Early page from a Pyrrhonian text"
+            />
+            <figcaption>
+              配图说明：旧版书页。它把“怀疑主义”从抽象标签带回到一部可阅读、可翻译、可争辩的文本。
+            </figcaption>
+          </figure>
+        </div>
+
+        <section id="method">
+          <p class="section-label">Six Bones</p>
+          <h2 class="section-title">这套页面的六条骨架</h2>
+          <div class="method-grid">
+            <div class="method-line"><p><span>一书。</span><span>One book.</span></p><p><span>每次只让一本书占据屏幕。</span><span>Let one book own the screen.</span></p></div>
+            <div class="method-line"><p><span>一镜。</span><span>One lens.</span></p><p><span>视角先限定，理解才会变深。</span><span>A fixed lens makes reading deeper.</span></p></div>
+            <div class="method-line"><p><span>一句一译。</span><span>One line, one mirror.</span></p><p><span>中文短句之后，英文立刻回应。</span><span>English answers the Chinese line at once.</span></p></div>
+            <div class="method-line"><p><span>一段一图。</span><span>One scene, one image.</span></p><p><span>图像不是装饰，是进入文本的门。</span><span>Images are doors, not decoration.</span></p></div>
+            <div class="method-line"><p><span>一观点一故事。</span><span>One idea, one story.</span></p><p><span>观点必须有场景支撑。</span><span>An idea needs a scene beneath it.</span></p></div>
+            <div class="method-line"><p><span>一原文一展开。</span><span>One quote, one unfolding.</span></p><p><span>短原文之后，要说出伦理后果。</span><span>A short quote must change conduct.</span></p></div>
+          </div>
+        </section>
+
+        <section id="ideas">
+          <p class="section-label">Core Ideas</p>
+          <h2 class="section-title">四个核心观点 / Four Core Ideas</h2>
+          <div class="idea-grid">
+            <div class="idea-card">
+              <h3>核心观点一：悬置判断是一种诚实。</h3>
+              <p><span>当证据还不够时，立刻下结论是一种虚荣。</span><span>When evidence is thin, instant conclusion is vanity.</span></p>
+              <div class="quote">短原文意译：怀疑者暂停同意。</div>
+              <p><span>伦理含义是，不把不确定伪装成确定去伤人。</span><span>Ethically, uncertainty should not be disguised as certainty.</span></p>
+            </div>
+
+            <div class="idea-card">
+              <h3>核心观点二：现象可以承认，本质不要急判。</h3>
+              <p><span>我觉得冷，这个经验可以成立。</span><span>If I feel cold, the experience can stand.</span></p>
+              <div class="quote">短原文意译：按现象生活。</div>
+              <p><span>行动责任是照顾当下事实，而不是夸大成宇宙真理。</span><span>Responsibility begins with facts, not cosmic exaggeration.</span></p>
+            </div>
+
+            <div class="idea-card">
+              <h3>核心观点三：反论证不是抬杠。</h3>
+              <p><span>每个自信的理由，都要经受相反理由的压力。</span><span>Every confident reason must meet pressure from its opposite.</span></p>
+              <div class="quote">短原文意译：论证与反论证相互对置。</div>
+              <p><span>伦理含义是，让自己的立场先经过训练，再要求别人服从。</span><span>Ethically, train your position before demanding obedience.</span></p>
+            </div>
+
+            <div class="idea-card">
+              <h3>核心观点四：安宁来自少一点独断。</h3>
+              <p><span>争论不再要求你立刻成为某个阵营的人。</span><span>Argument no longer forces you into instant tribal identity.</span></p>
+              <div class="quote">短原文意译：悬置之后，安宁随之而来。</div>
+              <p><span>它改变人的欲望：少一点赢，更多一点看清。</span><span>It changes desire: less need to win, more need to see.</span></p>
+            </div>
+          </div>
+        </section>
+
+        <section id="question" style="margin-top: 28px;">
+          <p class="section-label">Question For Today</p>
+          <h2 class="section-title">今日问题 / Question for Today</h2>
+          <div class="paired-lines">
+            <p><span>今天你最想立刻下结论的事是什么。</span><span>What are you most tempted to judge immediately today?</span></p>
+            <p><span>你能不能先把证据和情绪分开放一小时。</span><span>Can you separate evidence from emotion for one hour first?</span></p>
+          </div>
+        </section>
+      </article>
+
+      <aside class="side-stack">
+        <section class="route-panel" id="route">
+          <div class="panel-head">
+            <h2>24 小时路线</h2>
+            <span class="status-pill">daily loop</span>
+          </div>
+          <div class="hour-list" id="hourList" aria-label="24小时书单路线"></div>
+        </section>
+
+        <section class="prompt-panel" id="prompt">
+          <div class="panel-head">
+            <h2>固定母提示词</h2>
+            <span class="status-pill">copy ready</span>
+          </div>
+          <textarea id="promptText" readonly>你是一位双语深度阅读策展人、图书馆学分类员、思想史讲述者和伦理学旁白者。
+请根据我给你的【书名】【作者】【思想/宗教/哲学视角】【学科分类】【图书馆学分类】，生成一篇中英双语深度阅读推送。
+硬性格式：
+1. 必须一句中文短句，下一行一句英文短句。
+2. 不允许先写完整中文段落，再写完整英文段落。
+3. 每 4-6 组中英短句形成一个视觉段落。
+4. 每个视觉段落末尾必须有一张配图说明。
+5. 必须包含封面、作者命运、主要内容、四个核心观点、读法和今日问题。
+6. 每个核心观点必须由一个故事、历史场景或一段短原文支撑，并展开伦理意义。</textarea>
+          <div class="action-row">
+            <button class="action-button primary" type="button" id="copyPrompt">复制提示词</button>
+            <button class="action-button" type="button" id="jumpTop">回到巨幕</button>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+    <p class="source-note">
+      Prototype note: 视觉参考来自本地 Drama Browser Start surface 截图；书封通过 Open Library Covers 服务加载；作者画像通过 Wikimedia Commons Special:FilePath 加载。该文件是独立 HTML，不覆盖任何现有组件。
+    </p>
+  </main>
+
+  <script>
+    const books = [
+      ["00:00", "马可·奥勒留", "《沉思录》", "Meditations", "斯多葛伦理", "伦理学", "B580 / Roman philosophy", "你的心灵，不必把外界当作主人。"],
+      ["01:00", "爱比克泰德", "《谈话录》和《手册》", "Discourses and Enchiridion", "实践哲学", "道德实践", "B580 / Stoicism", "自由从分清可控之事开始。"],
+      ["02:00", "塞涅卡", "《斯多葛书信》", "Letters from a Stoic", "罗马道德书信", "伦理书信", "B580 / Roman essays", "时间不是财产，而是生命本身。"],
+      ["03:00", "柏拉图", "《理想国》", "Republic", "政治哲学", "城邦与正义", "B395 / Plato", "灵魂的秩序，决定城邦的秩序。"],
+      ["04:00", "亚里士多德", "《尼各马可伦理学》", "Nicomachean Ethics", "德性伦理学", "德性与习惯", "B430 / Aristotle", "好生活不是情绪，而是训练。"],
+      ["05:00", "卢克莱修", "《物性论》", "On the Nature of Things", "自然哲学与诗", "自然哲学", "B570 / Epicureanism", "恐惧常来自对自然的误读。"],
+      ["06:00", "第欧根尼·拉尔修", "《名哲言行录》", "Lives of Eminent Philosophers", "哲学传记", "犬儒学派", "B104 / Biography", "哲学有时以生活方式保存。"],
+      ["07:00", "塞克斯都·恩披里柯", "《皮浪主义纲要》", "Outlines of Pyrrhonism", "怀疑主义", "认识论", "B837 / Skepticism", "暂停判断，也是一种训练。"],
+      ["08:00", "普罗提诺", "《九章集》", "Enneads", "新柏拉图主义", "形而上学", "B693 / Neoplatonism", "灵魂向内走，也是在向上走。"],
+      ["09:00", "索福克勒斯", "《安提戈涅》", "Antigone", "悲剧与法伦理", "古希腊戏剧", "PA4414 / Tragedy", "法律不能吞掉亲情与良知。"],
+      ["10:00", "黑塞", "《悉达多》", "Siddhartha", "禅宗视角", "精神小说", "PT2617 / German fiction", "一个人必须亲自走过理解。"],
+      ["11:00", "彼得·马修森", "《雪豹》", "The Snow Leopard", "禅宗与旅行", "自然书写", "PS3563 / Travel writing", "寻找动物时，也在看见欲望。"],
+      ["12:00", "奥古斯丁", "《忏悔录》", "Confessions", "基督教忏悔", "神学自传", "BR65 / Patristics", "记忆是一座向神敞开的房间。"],
+      ["13:00", "但丁", "《神曲》", "Divine Comedy", "基督教诗学", "神学史诗", "PQ4315 / Italian poetry", "走出黑林，需要承认迷路。"],
+      ["14:00", "克尔凯郭尔", "《恐惧与战栗》", "Fear and Trembling", "基督教存在主义", "信仰哲学", "B4373 / Kierkegaard", "信仰不是轻松的答案。"],
+      ["15:00", "陀思妥耶夫斯基", "《卡拉马佐夫兄弟》", "The Brothers Karamazov", "俄国基督教伦理", "小说伦理", "PG3326 / Russian fiction", "自由若没有爱，会变成审判。"],
+      ["16:00", "匿名", "《约伯记》", "Book of Job", "犹太智慧", "苦难哲学", "BS1415 / Wisdom literature", "不是所有痛苦都能被解释。"],
+      ["17:00", "威廉·詹姆斯", "《宗教经验之种种》", "Varieties of Religious Experience", "比较宗教学", "心理学与宗教", "BL53 / Psychology of religion", "经验先于体系，颤动先于教义。"],
+      ["18:00", "西塞罗", "《论义务》", "On Duties", "儒家视角读公共伦理", "公共责任", "PA6296 / Roman ethics", "职位不是装饰，是义务的入口。"],
+      ["19:00", "亚里士多德", "《政治学》", "Politics", "儒家视角读城邦秩序", "政治哲学", "JC71 / Political science", "共同体塑造人，也要求人负责。"],
+      ["20:00", "梭罗", "《瓦尔登湖》", "Walden", "道家视角读自然修养", "自然写作", "PS3048 / American prose", "减法不是贫乏，而是恢复尺度。"],
+      ["21:00", "蒙田", "《随笔集》", "Essays", "道家视角读自我观察", "随笔", "PQ1642 / French essays", "观察自己，比证明自己更难。"],
+      ["22:00", "达尔文", "《物种起源》", "On the Origin of Species", "科学理性", "生命秩序", "QH365 / Evolution", "生命没有停止在人的想象里。"],
+      ["23:00", "福柯", "《词与物》", "The Order of Things", "知识秩序", "图书馆学视角", "BD161 / Knowledge", "分类不是中立的柜子。"]
+    ];
+
+    const imageSources = {
+      meditationsCover: "https://covers.openlibrary.org/b/isbn/9780140449334-L.jpg",
+      pyrrhonismCover: "https://covers.openlibrary.org/b/title/Outlines%20of%20Pyrrhonism-L.jpg",
+      sextusPortrait: "https://upload.wikimedia.org/wikipedia/commons/5/51/Sextus_Empiricus_-_engraving_by_G._F._Riedel_-_1801.jpg",
+      pyrrhonianPage: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Sextus_Empiricus_-_Les_Hipotiposes_pirroniennes.djvu/page1-500px-Sextus_Empiricus_-_Les_Hipotiposes_pirroniennes.djvu.jpg",
+      marcusBust: "https://commons.wikimedia.org/wiki/Special:FilePath/Marcus%20Aurelius%20Glyptothek%20Munich.jpg?width=900",
+      schoolAthens: "https://commons.wikimedia.org/wiki/Special:FilePath/Raphael%20School%20of%20Athens.jpg?width=900",
+      augustus: "https://commons.wikimedia.org/wiki/Special:FilePath/Statue-Augustus.jpg?width=900"
+    };
+
+    const state = { index: 0, card: 0 };
+    const hourList = document.getElementById("hourList");
+    const cardTrack = document.getElementById("cardTrack");
+    const cardDots = document.getElementById("cardDots");
+    const cardViewport = document.getElementById("cardViewport");
+    const searchText = document.getElementById("searchText");
+
+    function getCards(book) {
+      if (book[2] === "《沉思录》") {
+        return [
+          {
+            label: `${book[0]} / ${book[4]}`,
+            title: `${book[2]}<span>${book[3]}</span>`,
+            titleClass: "hero-title",
+            kicker: "一个皇帝给自己写的夜间备忘录。",
+            image: imageSources.meditationsCover,
+            imageAlt: "Meditations book cover",
+            caption: "配图说明：优先使用书封；这里以 Penguin Classics 版本作为书籍入口。",
+            tags: [book[1], book[4], book[5], book[6]],
+            pairs: [
+              ["这本书不是公开演说。", "This book is not a public speech."],
+              ["它更像一个人对自己的审判。", "It is a private trial of the self."],
+              ["马可·奥勒留身处战争、瘟疫和宫廷压力之中。", "Marcus Aurelius lived among war, plague, and court pressure."],
+              ["他反复问：我还能怎样保持正直。", "He keeps asking how integrity can still be kept."]
+            ],
+            quote: "书籍简介：十二卷札记没有系统章节，却有一个清晰核心：外界不可控，判断仍可训练。"
+          },
+          {
+            label: "Stoic School",
+            title: "斯多葛学派是什么",
+            kicker: "它不是压抑情绪，而是训练判断。",
+            image: imageSources.schoolAthens,
+            imageAlt: "Raphael School of Athens",
+            caption: "配图说明：拉斐尔《雅典学院》。不是斯多葛专属图像，但适合呈现古典哲学作为精神训练场。",
+            tags: ["Zeno", "Logos", "Virtue", "Control"],
+            pairs: [
+              ["斯多葛学派从芝诺开始。", "Stoicism begins with Zeno."],
+              ["它相信世界有秩序，人也应训练内在秩序。", "It sees order in the world and asks for order within."],
+              ["它区分可控与不可控。", "It separates what is ours from what is not."],
+              ["真正的善，不是财富、名声或胜利。", "The true good is not wealth, fame, or victory."],
+              ["真正的善，是德性，是判断和行动的正直。", "The true good is virtue: right judgment and right action."]
+            ],
+            quote: "斯多葛视角：先问我能控制什么，再问我应承担什么。"
+          },
+          {
+            label: "Fragments",
+            title: "内容片段",
+            kicker: "短句不是格言墙，而是行动命令。",
+            image: imageSources.marcusBust,
+            imageAlt: "Bust of Marcus Aurelius",
+            caption: "配图说明：作者画像。皇帝的脸被放回书页，是为了提醒权力也要接受自我约束。",
+            tags: ["判断", "欲望", "死亡", "公共责任"],
+            pairs: [
+              ["片段一：你能支配的是自己的心。", "Fragment one: what you can rule is your own mind."],
+              ["这不是逃避现实。", "This is not escape from reality."],
+              ["这是先夺回反应的主权。", "It is reclaiming sovereignty over response."],
+              ["片段二：不要再争论好人应当怎样。", "Fragment two: stop arguing what a good person should be."],
+              ["直接去成为那样的人。", "Become that person directly."]
+            ],
+            quote: "短原文：You have power over your mind. / Waste no more time arguing."
+          },
+          {
+            label: "Now",
+            title: "对现在的影响",
+            kicker: "它适合算法时代、职场压力和创作焦虑。",
+            image: imageSources.augustus,
+            imageAlt: "Statue of Augustus",
+            caption: "配图说明：罗马权力图像。用它不是崇拜权力，而是反问：拥有权力的人如何不被权力拥有。",
+            tags: ["注意力", "领导力", "抗焦虑", "责任"],
+            pairs: [
+              ["今天的外界，变成了通知、舆论和即时评价。", "Today the outside world appears as notifications, opinion, and instant scores."],
+              ["斯多葛提醒你：先不要把判断权交出去。", "Stoicism says: do not give away judgment first."],
+              ["它影响现代心理训练、领导力写作和自我管理。", "It shapes modern mental training, leadership writing, and self-management."],
+              ["但它不是冷漠。", "But it is not indifference."],
+              ["它要求你在不可控之中，仍承担可控的责任。", "It asks you to carry controllable responsibility amid the uncontrollable."]
+            ],
+            quote: "今日问题：这件事真的伤害了我，还是只触发了我未经训练的判断。"
+          }
+        ];
+      }
+
+      if (book[2] === "《理想国》") {
+        return [
+          {
+            label: `${book[0]} / ${book[4]}`,
+            title: `${book[2]}<span>${book[3]}</span>`,
+            titleClass: "hero-title",
+            kicker: "这不是乌托邦蓝图，而是一场关于正义的灵魂实验。",
+            image: imageSources.schoolAthens,
+            imageAlt: "Raphael School of Athens",
+            caption: "配图说明：拉斐尔《雅典学院》。柏拉图与亚里士多德位于中心，适合作为《理想国》的思想入口。",
+            tags: [book[1], book[4], book[5], book[6]],
+            pairs: [
+              ["苏格拉底从一个问题开始：什么是正义。", "Socrates begins with one question: what is justice."],
+              ["城邦被放大，是为了看清灵魂。", "The city is enlarged so the soul can be seen."],
+              ["统治、欲望、教育和谎言都被放上审判台。", "Rule, desire, education, and falsehood all stand trial."],
+              ["它问的不是谁赢，而是谁配得上掌权。", "It asks not who wins, but who deserves to rule."]
+            ],
+            quote: "书籍简介：用城邦结构照见灵魂结构，政治哲学最终回到人的秩序。"
+          },
+          {
+            label: "Stoic Lens",
+            title: "用斯多葛读柏拉图",
+            kicker: "斯多葛会把《理想国》的问题收回到判断与德性。",
+            image: imageSources.marcusBust,
+            imageAlt: "Bust of Marcus Aurelius",
+            caption: "配图说明：马可·奥勒留画像。用后来的斯多葛皇帝回望柏拉图，可以看见政治秩序如何变成自我训练。",
+            tags: ["德性", "判断", "内在城邦", "公共责任"],
+            pairs: [
+              ["柏拉图问：谁应当治理城邦。", "Plato asks who should govern the city."],
+              ["斯多葛会追问：谁能治理自己。", "Stoicism asks who can govern the self."],
+              ["没有内在秩序，公共秩序会变成表演。", "Without inner order, public order becomes performance."],
+              ["所以哲人王不是头衔。", "The philosopher-king is not a title."],
+              ["它是一种不被欲望牵走的判断能力。", "It is a capacity for judgment not dragged by desire."]
+            ],
+            quote: "斯多葛视角：先治理自己的冲动，再谈治理共同体。"
+          },
+          {
+            label: "Fragments",
+            title: "内容片段",
+            kicker: "洞穴寓言是认识论，也是伦理学。",
+            image: imageSources.schoolAthens,
+            imageAlt: "Raphael School of Athens",
+            caption: "配图说明：世界名画作为哲学场景。它帮助把抽象争论还原为师徒、城邦和公共讨论。",
+            tags: ["洞穴", "教育", "正义", "灵魂三分"],
+            pairs: [
+              ["洞穴里的人，把影子当作真实。", "The cave-dwellers take shadows for reality."],
+              ["走出洞穴，不只是获得知识。", "Leaving the cave is not merely gaining knowledge."],
+              ["它意味着承担重新回去说明的责任。", "It means bearing the duty to return and explain."],
+              ["灵魂也有城邦：理性、意气、欲望。", "The soul also has a city: reason, spirit, desire."],
+              ["正义就是各居其位。", "Justice is each part keeping its proper place."]
+            ],
+            quote: "短原文：until philosophers rule... / 影子、洞穴、回返，构成全书最强的伦理场景。"
+          },
+          {
+            label: "Now",
+            title: "对现在的影响",
+            kicker: "它解释平台、教育、治理和自我叙事。",
+            image: imageSources.augustus,
+            imageAlt: "Statue of Augustus",
+            caption: "配图说明：罗马权力图像。它把《理想国》的问题推到今天：权力是否仍受德性约束。",
+            tags: ["平台治理", "教育", "公共理性", "欲望管理"],
+            pairs: [
+              ["今天的洞穴，可能是信息流。", "Today the cave may be the feed."],
+              ["今天的影子，可能是热榜、标签和人设。", "Today the shadows may be rankings, labels, and personas."],
+              ["《理想国》提醒我们，教育不是灌输答案。", "Republic reminds us that education is not answer injection."],
+              ["教育是让灵魂转向更真实的东西。", "Education turns the soul toward what is more real."],
+              ["斯多葛会补一句：看见之后，要负责行动。", "Stoicism adds: after seeing, act responsibly."]
+            ],
+            quote: "今日问题：我现在相信的，是事实、影子，还是让我舒服的秩序。"
+          }
+        ];
+      }
+
+      if (book[2] === "《皮浪主义纲要》") {
+        return [
+          {
+            label: `${book[0]} / ${book[4]}`,
+            title: `${book[2]}<span>${book[3]}</span>`,
+            titleClass: "hero-title",
+            kicker: "这不是怀疑一切的姿态，而是训练自己不要仓促同意。",
+            image: imageSources.pyrrhonismCover,
+            imageAlt: "Outlines of Pyrrhonism book cover",
+            caption: "配图说明：优先使用书封；以 Open Library Covers 的《Outlines of Pyrrhonism》封面作为书籍入口。",
+            tags: [book[1], book[4], book[5], book[6]],
+            pairs: [
+              ["塞克斯都·恩披里柯像一位临床医生。", "Sextus Empiricus writes like a physician."],
+              ["他处理的疾病，是判断过快。", "The illness he treats is assent given too quickly."],
+              ["《皮浪主义纲要》不是建立体系。", "Outlines of Pyrrhonism does not build a system."],
+              ["它教人把彼此相持的理由放在同一张桌上。", "It teaches us to place rival reasons on the same table."],
+              ["当理由势均力敌，心就学会停一下。", "When reasons balance, the mind learns to pause."]
+            ],
+            quote: "书籍简介：全书说明皮浪主义者如何通过对立论证达到悬置判断，并由此获得较少纷扰的心。"
+          },
+          {
+            label: "Pyrrhonism",
+            title: "皮浪主义是什么",
+            kicker: "它不是虚无主义，而是一种反独断的精神纪律。",
+            image: imageSources.sextusPortrait,
+            imageAlt: "Sextus Empiricus portrait engraving",
+            caption: "配图说明：作者画像。Sextus Empiricus 的近代版画让文本从抽象学派回到一个写作者的面孔。",
+            tags: ["Epoché", "Isostheneia", "Ataraxia", "Phenomena"],
+            pairs: [
+              ["皮浪主义先承认现象。", "Pyrrhonism first accepts appearances."],
+              ["我觉得冷，这个经验可以承认。", "If I feel cold, that experience can be admitted."],
+              ["但它谨慎对待关于本质的断言。", "But it is careful with claims about essence."],
+              ["悬置判断，叫 epoché。", "Suspension of judgment is called epoche."],
+              ["理由等力相持，叫 isostheneia。", "The equal force of reasons is called isostheneia."],
+              ["纷争暂息后的安宁，叫 ataraxia。", "The quiet after contention is called ataraxia."]
+            ],
+            quote: "学派简介：不急着说世界必然如此，也不急着把自己的感受伪装成真理。"
+          },
+          {
+            label: "Fragments",
+            title: "内容片段",
+            kicker: "它的短句感，不是鸡汤，而是给判断减速。",
+            image: imageSources.pyrrhonianPage,
+            imageAlt: "Early page from a Pyrrhonian text",
+            caption: "配图说明：手稿/旧版书页优先于概念图。这里用法文旧版《皮浪主义纲要》书页呈现文本的历史触感。",
+            tags: ["悬置判断", "对立论证", "现象", "安宁"],
+            pairs: [
+              ["片段一：对每个论证，寻找相反的论证。", "Fragment one: for each argument, seek the opposing argument."],
+              ["这不是为了赢辩论。", "This is not for winning debate."],
+              ["这是为了看见自己的证据是否过轻。", "It is for seeing whether one evidence is too light."],
+              ["片段二：随现象生活，而不把现象变成教条。", "Fragment two: live by appearances without turning them into dogma."],
+              ["人仍然吃饭、写作、判断风险。", "One still eats, writes, and judges risk."],
+              ["只是少了一层自以为绝对的怒气。", "There is simply less anger pretending to be certainty."]
+            ],
+            quote: "短原文意译：反对论证与论证相互对置之后，怀疑者暂停同意。"
+          },
+          {
+            label: "Now",
+            title: "对现在的影响",
+            kicker: "它适合信息流、AI 答案、投资判断和身份争论。",
+            image: imageSources.schoolAthens,
+            imageAlt: "Raphael School of Athens",
+            caption: "配图说明：拉斐尔《雅典学院》。它不是皮浪主义专属图像，但能显示古典哲学共同的公共辩论现场。",
+            tags: ["信息流", "AI 判断", "投资纪律", "公共讨论"],
+            pairs: [
+              ["今天最稀缺的能力，不是立刻表态。", "Today the rare skill is not instant opinion."],
+              ["而是知道证据还没有到位。", "It is knowing when evidence has not yet arrived."],
+              ["读它可以训练你对热搜、模型回答和群体情绪降速。", "It trains you to slow down before trends, model answers, and crowd emotion."],
+              ["它不鼓励瘫痪。", "It does not encourage paralysis."],
+              ["它鼓励低信心时少下注，高证据时再行动。", "It encourages smaller bets under low confidence and action when evidence strengthens."],
+              ["伦理含义是：不要把不确定性转嫁成对别人的伤害。", "Ethically, do not turn uncertainty into harm imposed on others."]
+            ],
+            quote: "今日问题：我现在要坚持的，是看见的现象，还是未经检验却让我上头的解释。"
+          }
+        ];
+      }
+
+      return [
+        {
+          label: `${book[0]} / ${book[4]}`,
+          title: `${book[2]}<span>${book[3]}</span>`,
+          titleClass: "hero-title",
+          kicker: `${book[1]}把一个古老问题推到你面前：人应如何判断、行动和承担责任。`,
+          image: imageSources.schoolAthens,
+          imageAlt: "Raphael School of Athens",
+          caption: "配图说明：找不到直接书封时，使用世界名画作为思想史入口，强调古典问题仍在公共讨论中延续。",
+          tags: [book[1], book[4], book[5], book[6]],
+          pairs: [
+            ["先把这本书当作一个判断训练场。", "First treat this book as a training ground for judgment."],
+            ["它不只给知识，也暴露欲望。", "It gives knowledge, and exposes desire."],
+            ["读它时，先问它如何改变行动。", "When reading it, ask how it changes action."],
+            ["再问它如何改变责任。", "Then ask how it changes responsibility."]
+          ],
+          quote: "书籍简介：本页会按同一模板，把书、视角、故事、短原文和伦理展开放进卡片。"
+        },
+        {
+          label: "Stoic Lens",
+          title: "用斯多葛读这本书",
+          kicker: "不管主题是什么，先看它怎样训练判断。",
+          image: imageSources.marcusBust,
+          imageAlt: "Bust of Marcus Aurelius",
+          caption: "配图说明：斯多葛代表马可·奥勒留。这里作为统一阅读镜头，提醒读者把外部情节转成内部判断。",
+          tags: ["可控", "不可控", "德性", "行动"],
+          pairs: [
+            ["斯多葛不会先问我喜欢什么。", "Stoicism does not first ask what I like."],
+            ["它先问我能控制什么。", "It first asks what I can control."],
+            ["然后问我是否按德性行动。", "Then it asks whether I act with virtue."],
+            ["用这个镜头读书，摘要会变成修身。", "With this lens, summary becomes self-training."]
+          ],
+          quote: "斯多葛视角：把故事里的冲突，翻译成判断、欲望和责任。"
+        },
+        {
+          label: "Fragments",
+          title: "内容片段",
+          kicker: "每本书都需要一个场景、一个短句、一次展开。",
+          image: imageSources.schoolAthens,
+          imageAlt: "Raphael School of Athens",
+          caption: "配图说明：以哲学场景承托文本片段，避免内容变成没有画面的摘要。",
+          tags: ["故事", "短原文", "伦理展开"],
+          pairs: [
+            ["先选一个场景。", "Choose one scene first."],
+            ["再放一句短原文。", "Then place one short source line."],
+            ["最后说它怎样改变判断。", "Finally say how it changes judgment."],
+            ["这就是卡片的阅读节奏。", "This is the rhythm of the card."]
+          ],
+          quote: "内容片段：故事 + 短原文 + 判断变化。"
+        },
+        {
+          label: "Now",
+          title: "对现在的影响",
+          kicker: "经典不是远处的纪念碑，而是今天的判断工具。",
+          image: imageSources.augustus,
+          imageAlt: "Statue of Augustus",
+          caption: "配图说明：权力、秩序和责任的古典图像，用来连接现代生活里的管理、平台和自我约束。",
+          tags: ["现代问题", "行动", "责任"],
+          pairs: [
+            ["今天的问题常换了外衣。", "Today problems often wear new clothes."],
+            ["焦虑、舆论、权力和欲望仍然相似。", "Anxiety, opinion, power, and desire remain familiar."],
+            ["经典的影响，不是让人显得有文化。", "The influence of classics is not cultural display."],
+            ["它让人更难逃避自己的责任。", "It makes responsibility harder to evade."]
+          ],
+          quote: "今日问题：这本书要求我今天少一点什么，多承担什么。"
+        }
+      ];
+    }
+
+    function renderPairs(pairs) {
+      return pairs.map(([zh, en]) => `<p><span>${zh}</span><span>${en}</span></p>`).join("");
+    }
+
+    function renderCards() {
+      const book = books[state.index];
+      const cards = getCards(book);
+      cardTrack.innerHTML = cards.map((card) => `
+        <article class="story-card">
+          <div class="hero-grid">
+            <div class="slide-copy">
+              <p class="card-label">${card.label}</p>
+              <h1 class="${card.titleClass ?? "slide-title"}">${card.title}</h1>
+              <p class="slide-kicker">${card.kicker}</p>
+              <div class="paired-lines">${renderPairs(card.pairs.slice(0, 3))}</div>
+            </div>
+            <figure class="slide-image-card">
+              <img class="slide-image" src="${card.image}" alt="${card.imageAlt}" />
+              <figcaption>${card.caption}</figcaption>
+            </figure>
+            <div class="slide-copy">
+              <div class="slide-tags">${card.tags.map((tag) => `<span>${tag}</span>`).join("")}</div>
+              <div class="content-fragment">${card.quote}<span>Card ${cards.indexOf(card) + 1} / ${cards.length}</span></div>
+              <div class="paired-lines">${renderPairs(card.pairs.slice(3))}</div>
+            </div>
+          </div>
+        </article>
+      `).join("");
+      cardDots.innerHTML = cards.map((_, index) => `<span class="${index === state.card ? "is-active" : ""}"></span>`).join("");
+      cardTrack.style.transform = `translateX(${-state.card * 100}%)`;
+    }
+
+    function setCard(index) {
+      const max = getCards(books[state.index]).length;
+      state.card = (index + max) % max;
+      renderCards();
+    }
+
+    function renderRoute() {
+      hourList.innerHTML = "";
+      books.forEach((book, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "hour-button" + (index === state.index ? " is-active" : "");
+        button.innerHTML = `
+          <span class="hour">${book[0]}</span>
+          <span class="hour-copy">
+            <span class="hour-title">${book[2]}</span>
+            <span class="hour-meta">${book[1]} / ${book[4]}</span>
+          </span>
+        `;
+        button.addEventListener("click", () => setBook(index));
+        hourList.appendChild(button);
+      });
+    }
+
+    function setBook(index) {
+      state.index = (index + books.length) % books.length;
+      state.card = 0;
+      const book = books[state.index];
+      searchText.textContent = `${book[0]} ${book[2]} - ${book[4]}`;
+      renderCards();
+      renderRoute();
+    }
+
+    document.getElementById("prevCard").addEventListener("click", () => setCard(state.card - 1));
+    document.getElementById("nextCard").addEventListener("click", () => setCard(state.card + 1));
+    document.getElementById("jumpTop").addEventListener("click", () => document.getElementById("book").scrollIntoView({ behavior: "smooth" }));
+    document.getElementById("copyPrompt").addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      const text = document.getElementById("promptText").value;
+      try {
+        await navigator.clipboard.writeText(text);
+        button.textContent = "已复制";
+      } catch {
+        document.getElementById("promptText").select();
+        button.textContent = "已选中";
+      }
+      window.setTimeout(() => { button.textContent = "复制提示词"; }, 1600);
+    });
+
+    let startX = null;
+    cardViewport.addEventListener("pointerdown", (event) => {
+      startX = event.clientX;
+    });
+    cardViewport.addEventListener("pointerup", (event) => {
+      if (startX === null) return;
+      const delta = event.clientX - startX;
+      startX = null;
+      if (Math.abs(delta) < 42) return;
+      setCard(state.card + (delta < 0 ? 1 : -1));
+    });
+
+    setBook(7);
+  </script>
+</body>
+</html>

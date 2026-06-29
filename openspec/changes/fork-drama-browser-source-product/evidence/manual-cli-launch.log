@@ -1,0 +1,60 @@
+JavaScript error: , line 0: Error: Failed to load resource://services-settings/remote-settings.sys.mjs
+JavaScript error: resource://gre/modules/FingerprintingWebCompatService.sys.mjs, line 114: Error: Failed to load resource://services-settings/remote-settings.sys.mjs
+JavaScript error: resource://gre/modules/EssentialDomainsRemoteSettings.sys.mjs, line 44: Error: Failed to load resource://services-settings/remote-settings.sys.mjs
+JavaScript error: resource://gre/modules/SimpleURIUnknownSchemesRemoteObserver.sys.mjs, line 49: Error: Failed to load resource://services-settings/remote-settings.sys.mjs
+JavaScript error: resource://gre/modules/URLQueryStrippingListService.sys.mjs, line 173: Error: Failed to load resource://services-settings/remote-settings.sys.mjs
+WARNING: A blocker encountered an error while we were waiting.
+          Blocker:  maybeInstallBuiltinAddon: default-theme@mozilla.org
+          Phase: quit-application
+          State: (none)
+WARNING: TypeError: can't access property "normalize", type is undefined
+WARNING: normalize@resource://gre/modules/Schemas.sys.mjs:3906:18
+normalize@resource://gre/modules/Schemas.sys.mjs:4120:28
+_getNormalizedManifest@resource://gre/modules/Extension.sys.mjs:1682:25
+parseManifest@resource://gre/modules/Extension.sys.mjs:1809:33
+
+2026-06-29 04:47:33.328 Drama Browser GPU Helper[21777:36022769] Failure on line 688 in function id scheduleApplicationNotification(LSNotificationCode, NSWorkspaceNotificationCenter *): noErr == _LSModifyNotification(notificationID, 1, &code, 0, NULL, NULL, NULL)
+*** Preventing external load of chrome: URI into browser window
+    Use --chrome <uri> instead
+JavaScript warning: moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs, line 291: unreachable code after return statement
+2026-06-29 04:47:33.380 Drama Browser GPU Helper[21777:36022783] Connection Invalid error for service com.apple.hiservices-xpcservice.
+2026-06-29 04:47:33.380 Drama Browser GPU Helper[21777:36022769] Error received in message reply handler: Connection invalid
+JavaScript error: resource://gre/modules/Schemas.sys.mjs, line 3906: TypeError: can't access property "normalize", type is undefined
+JavaScript error: resource://gre/modules/Schemas.sys.mjs, line 3906: TypeError: can't access property "normalize", type is undefined
+JavaScript error: resource://gre/modules/Schemas.sys.mjs, line 3906: TypeError: can't access property "normalize", type is undefined
+JavaScript error: chrome://global/content/editMenuOverlay.js, line 43: ReferenceError: MozXULElement is not defined
+JavaScript error: chrome://browser/content/nonbrowser-mac.js, line 106: Error: Failed to load resource://services-common/observers.sys.mjs
+JavaScript warning: chrome://browser/content/tabbrowser/drag-and-drop.js, line 1345: unreachable code after return statement
+JavaScript warning: chrome://browser/content/tabbrowser/tabbrowser.js, line 515: unreachable code after return statement
+JavaScript warning: chrome://browser/content/tabbrowser/tabs.js, line 1025: unreachable code after return statement
+JavaScript error: chrome://browser/content/urlbar/UrlbarInput.mjs, line 279: Error: Failed to load resource://services-common/observers.sys.mjs
+JavaScript error: chrome://browser/content/tabbrowser/tabs.js, line 1205: Error: Shouldn't call this without arrowscrollbox
+JavaScript error: chrome://browser/content/browser-init.js, line 270: TypeError: gURLBar.addGBrowserListeners is not a function
+JavaScript error: chrome://browser/content/ZenUIManager.mjs, line 985: TypeError: can't access property "tabContainer", gBrowser is undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: resource://gre/modules/Schemas.sys.mjs, line 3906: TypeError: can't access property "normalize", type is undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: , line 0: uncaught exception: undefined
+JavaScript error: chrome://browser/content/browser-init.js, line 311: TypeError: can't access property "addEventListener", gBrowser is undefined
+JavaScript error: resource:///modules/zen/ZenSpaceManager.mjs, line 1686: TypeError: can't access property "tabs", gBrowser is undefined
+UNSUPPORTED (log once): POSSIBLE ISSUE: unit 1 GLD_TEXTURE_INDEX_2D is unloadable and bound to sampler type (Float) - using zero texture because texture unloadable
+JavaScript error: chrome://browser/content/ZenUIManager.mjs, line 1241: TypeError: gURLBar.zenFormatURLValue is not a function
+JavaScript error: chrome://browser/content/tabbrowser/tabs.js, line 1205: Error: Shouldn't call this without arrowscrollbox
+JavaScript error: chrome://browser/content/tabbrowser/tabs.js, line 1205: Error: Shouldn't call this without arrowscrollbox

@@ -14,7 +14,7 @@ from pathlib import Path
 
 DEFAULT_ZEN_APP = Path("/Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app")
 DEFAULT_RUNTIME_URL = "http://127.0.0.1:3198"
-SURFACES = {"graph", "plm", "crew", "memory"}
+SURFACES = {"start", "graph", "plm", "crew", "memory"}
 FIRST_VIEWPORT_BUDGET_MS = 2000
 RUNTIME_READY_BUDGET_MS = 8000
 SIDECAR_READY_BUDGET_MS = 45000
@@ -23,9 +23,9 @@ STARTUP_TASK_BUDGET_MS = 100
 
 
 class MarionetteClient:
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int, timeout_seconds: float = 30):
         self.sock = socket.create_connection((host, port), timeout=1)
-        self.sock.settimeout(30)
+        self.sock.settimeout(timeout_seconds)
         self.next_id = 0
         self.hello = self.recv()
 
@@ -87,6 +87,7 @@ def parse_args():
     parser.add_argument("--check-launcher-reopen", action="store_true", help="Verify the persistent chrome entry can reopen PLM after a normal tab hides the panel.")
     parser.add_argument("--check-lock-release", action="store_true", help="Verify the lock command releases the embedded browser surface and PLM can be restored.")
     parser.add_argument("--expect-shell-state", default=None, help="Require documentElement.dataset.dramaShellState to equal this value.")
+    parser.add_argument("--expect-host", default="zen", choices=["zen", "drama"], help="Require documentElement.dataset.dramaHost to equal this host id.")
     parser.add_argument("--production-fixture", action="store_true", help="Ask the Zen PLM panel to bootstrap the deterministic production parity fixture.")
     parser.add_argument("--expect-production-evidence", action="store_true", help="Require PLM production evidence DOM markers for project, chapter, prompt, memory, and autopilot.")
     parser.add_argument("--expect-production-ready", action="store_true", help="Require Stage 9.2 PLM production evidence to be ready for Prompt, Memory, Hosted Write, and Autopilot.")
@@ -120,6 +121,13 @@ def write_profile(profile_dir: Path, port: int, runtime_url: str, surface: str, 
                 'user_pref("sidebar.visibility", "always-show");',
                 'user_pref("sidebar.expandOnHover", false);',
                 'user_pref("zen.view.sidebar-expanded", true);',
+                f'user_pref("drama.browser.runtime-url", "{runtime_url}");',
+                'user_pref("drama.browser.internal-app.enabled", true);',
+                'user_pref("drama.browser.internal-app-url", "chrome://browser/content/drama/app/index.html");',
+                'user_pref("drama.browser.runtime-launch.enabled", false);',
+                'user_pref("drama.browser.open-on-startup", true);',
+                f'user_pref("drama.browser.start-surface", "{surface}");',
+                f'user_pref("drama.browser.production-fixture.enabled", {str(production_fixture).lower()});',
                 f'user_pref("zen.drama.runtime-url", "{runtime_url}");',
                 'user_pref("zen.drama.internal-app.enabled", true);',
                 'user_pref("zen.drama.internal-app-url", "chrome://browser/content/drama/app/index.html");',
@@ -141,7 +149,7 @@ def connect_marionette(port: int, process: subprocess.Popen, timeout_ms: int) ->
         if process.poll() is not None:
             raise RuntimeError(f"Zen exited before Marionette opened: {process.returncode}")
         try:
-            return MarionetteClient("127.0.0.1", port)
+            return MarionetteClient("127.0.0.1", port, max(30, timeout_ms / 1000))
         except OSError as error:
             last_error = error
             time.sleep(0.25)
@@ -856,7 +864,7 @@ def lock_release_reasons(result):
     return reasons
 
 
-def failure_reasons(result, surface: str):
+def failure_reasons(result, surface: str, expected_host: str):
     content = result.get("content") if isinstance(result, dict) else None
     dataset = content.get("dataset", {}) if isinstance(content, dict) else {}
     current_uri = result.get("currentURI") if isinstance(result, dict) else None
@@ -864,8 +872,8 @@ def failure_reasons(result, surface: str):
     shell_rect = content.get("shellRect") if isinstance(content, dict) else None
     reasons = []
 
-    if result.get("managerConstructor") != "nsZenDramaManager":
-        reasons.append("ZenDramaManager did not initialize in browser.xhtml.")
+    if result.get("managerConstructor") not in ("DramaBrowserChromeManager", "nsZenDramaManager"):
+        reasons.append("DramaBrowserChromeManager did not initialize in browser.xhtml.")
     if result.get("panelExists") is not True or result.get("panelHidden") is True:
         reasons.append("zen-drama-panel is missing or hidden.")
     if result.get("launcherExists") is not True:
@@ -897,8 +905,8 @@ def failure_reasons(result, surface: str):
         reasons.append("dramaShellMounted signal is not true.")
     if dataset.get("dramaFirstStyledViewport") != "ready":
         reasons.append("first styled viewport did not report ready.")
-    if dataset.get("dramaHost") != "zen":
-        reasons.append("content did not report dramaHost=zen.")
+    if dataset.get("dramaHost") != expected_host:
+        reasons.append(f"content did not report dramaHost={expected_host}.")
     if dataset.get("dramaSurface") != surface:
         reasons.append(f"content did not report dramaSurface={surface}.")
     if not any("chrome://browser/content/drama/app/assets/" in script for script in scripts):
@@ -1043,7 +1051,7 @@ def main() -> int:
             ).get("value")
         performance, performance_reasons = performance_report(inspected, args.surface, args, route_switch_result)
         reasons = (
-            failure_reasons(inspected, args.surface)
+            failure_reasons(inspected, args.surface, args.expect_host)
             + expected_shell_state_reasons(inspected, args.expect_shell_state)
             + production_evidence_reasons(inspected, args.expect_production_evidence, args.expect_production_ready)
             + performance_reasons

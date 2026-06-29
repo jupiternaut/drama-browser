@@ -1,0 +1,292 @@
+{
+  "ok": true,
+  "schema": "drama-source-built-ui-runtime-parity.v1",
+  "generatedAt": "2026-06-29T05:22:05.395462+00:00",
+  "sourceWorkspace": "/Users/gengrf/zen-browser-desktop",
+  "appBundle": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/Drama Browser.app",
+  "artifactKind": "loose-source-built-internal",
+  "summary": "Source-built Drama Browser UI/runtime parity passed for Start, Graph, PLM, Skill Crew, and Basic Memory.",
+  "checks": [
+    {
+      "id": "all-surfaces-pass",
+      "ok": true,
+      "detail": "start=True, graph=True, plm=True, crew=True, memory=True"
+    },
+    {
+      "id": "nonblank-screenshots",
+      "ok": true,
+      "detail": "{\"start\": {\"width\": 1750, \"height\": 1120, \"averageLuma\": 44.791, \"darkRatio\": 0.365639, \"brightRatio\": 0.016959, \"uniqueColorBuckets\": 1114}, \"graph\": {\"width\": 1750, \"height\": 1120, \"averageLuma\": 27.546, \"darkRatio\": 0.645055, \"brightRatio\": 4.8e-05, \"uniqueColorBuckets\": 162}, \"plm\": {\"width\": 1750, \"height\": 1120, \"averageLuma\": 205.184, \"darkRatio\": 0.006121, \"brightRatio\": 0.349705, \"uniqueColorBuckets\": 401}, \"crew\": {\"width\": 1750, \"height\": 1120, \"averageLuma\": 39.469, \"darkRatio\": 0.018459, \"brightRatio\": 4.8e-05, \"uniqueColorBuckets\": 202}, \"memory\": {\"width\": 1750, \"height\": 1120, \"averageLuma\": 241.392, \"darkRatio\": 0.0, \"brightRatio\": 0.715272, \"uniqueColorBuckets\": 178}}"
+    },
+    {
+      "id": "visible-panel-viewport",
+      "ok": true,
+      "detail": "{\"start\": {\"panel\": {\"width\": 875, \"height\": 560, \"top\": 0, \"left\": 0, \"right\": 875, \"bottom\": 560}, \"shell\": {\"width\": 873, \"height\": 558, \"top\": 0, \"left\": 0}}, \"graph\": {\"panel\": {\"width\": 875, \"height\": 560, \"top\": 0, \"left\": 0, \"right\": 875, \"bottom\": 560}, \"shell\": {\"width\": 873, \"height\": 516, \"top\": 0, \"left\": 0}}, \"plm\": {\"panel\": {\"width\": 875, \"height\": 560, \"top\": 0, \"left\": 0, \"right\": 875, \"bottom\": 560}, \"shell\": {\"width\": 873, \"height\": 516, \"top\": 0, \"left\": 0}}, \"crew\": {\"panel\": {\"width\": 875, \"height\": 560, \"top\": 0, \"left\": 0, \"right\": 875, \"bottom\": 560}, \"shell\": {\"width\": 873, \"height\": 516, \"top\": 0, \"left\": 0}}, \"memory\": {\"panel\": {\"width\": 875, \"height\": 560, \"top\": 0, \"left\": 0, \"right\": 875, \"bottom\": 560}, \"shell\": {\"width\": 873, \"height\": 516, \"top\": 0, \"left\": 0}}}"
+    },
+    {
+      "id": "drama-host-identity",
+      "ok": true,
+      "detail": "{\"start\": {\"host\": \"drama\", \"adapter\": \"zen-gecko\", \"title\": \"Drama Browser\"}, \"graph\": {\"host\": \"drama\", \"adapter\": \"zen-gecko\", \"title\": \"Drama Graph - Drama Browser\"}, \"plm\": {\"host\": \"drama\", \"adapter\": \"zen-gecko\", \"title\": \"Drama PLM - Drama Browser\"}, \"crew\": {\"host\": \"drama\", \"adapter\": \"zen-gecko\", \"title\": \"Skill Crew - Drama Browser\"}, \"memory\": {\"host\": \"drama\", \"adapter\": \"zen-gecko\", \"title\": \"Basic Memory - Drama Browser\"}}"
+    },
+    {
+      "id": "plm-runtime-states-visible",
+      "ok": true,
+      "detail": "{\"surface\": \"plm\", \"ok\": true, \"json\": \"/Users/gengrf/drama-browser/docs/verification/drama-source-built-plm-current.json\", \"screenshot\": \"/Users/gengrf/drama-browser/docs/verification/drama-source-built-plm-current.png\", \"title\": \"Drama PLM - Drama Browser\", \"documentTitle\": null, \"currentURI\": \"chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm&productionFixture=1\", \"host\": \"drama\", \"hostAdapter\": \"zen-gecko\", \"shellState\": \"parity-blocked\", \"runtimeReady\": \"ready\", \"sidecarReady\": \"ready\", \"panelParentId\": \"zen-main-app-wrapper\", \"panelRect\": {\"width\": 875, \"height\": 560, \"top\": 0, \"left\": 0, \"right\": 875, \"bottom\": 560}, \"shellRect\": {\"width\": 873, \"height\": 516, \"top\": 0, \"left\": 0}, \"screenshotMetrics\": {\"width\": 1750, \"height\": 1120, \"averageLuma\": 205.184, \"darkRatio\": 0.006121, \"brightRatio\": 0.349705, \"uniqueColorBuckets\": 401}, \"performance\": {\"firstStyledViewportMs\": 39.989, \"runtimeReadyMs\": 52.659, \"sidecarReadyMs\": 52.741, \"startupMainThreadTaskMs\": 10.485, \"shellState\": \"parity-blocked\"}, \"productionEvidence\": {\"exists\": false, \"itemCount\": 0, \"items\": []}, \"failureReasons\": []}"
+    }
+  ],
+  "surfaces": [
+    {
+      "surface": "start",
+      "ok": true,
+      "json": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-start-current.json",
+      "screenshot": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-start-current.png",
+      "title": "Drama Browser",
+      "documentTitle": null,
+      "currentURI": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=start",
+      "host": "drama",
+      "hostAdapter": "zen-gecko",
+      "shellState": "runtime-ready",
+      "runtimeReady": "ready",
+      "sidecarReady": null,
+      "panelParentId": "zen-main-app-wrapper",
+      "panelRect": {
+        "width": 875,
+        "height": 560,
+        "top": 0,
+        "left": 0,
+        "right": 875,
+        "bottom": 560
+      },
+      "shellRect": {
+        "width": 873,
+        "height": 558,
+        "top": 0,
+        "left": 0
+      },
+      "screenshotMetrics": {
+        "width": 1750,
+        "height": 1120,
+        "averageLuma": 44.791,
+        "darkRatio": 0.365639,
+        "brightRatio": 0.016959,
+        "uniqueColorBuckets": 1114
+      },
+      "performance": {
+        "firstStyledViewportMs": 4.771,
+        "runtimeReadyMs": 7.563,
+        "sidecarReadyMs": null,
+        "startupMainThreadTaskMs": 10.733,
+        "shellState": "runtime-ready"
+      },
+      "productionEvidence": {
+        "exists": false,
+        "itemCount": 0,
+        "items": []
+      },
+      "failureReasons": []
+    },
+    {
+      "surface": "graph",
+      "ok": true,
+      "json": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-graph-current.json",
+      "screenshot": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-graph-current.png",
+      "title": "Drama Graph - Drama Browser",
+      "documentTitle": null,
+      "currentURI": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+      "host": "drama",
+      "hostAdapter": "zen-gecko",
+      "shellState": "runtime-ready",
+      "runtimeReady": "ready",
+      "sidecarReady": null,
+      "panelParentId": "zen-main-app-wrapper",
+      "panelRect": {
+        "width": 875,
+        "height": 560,
+        "top": 0,
+        "left": 0,
+        "right": 875,
+        "bottom": 560
+      },
+      "shellRect": {
+        "width": 873,
+        "height": 516,
+        "top": 0,
+        "left": 0
+      },
+      "screenshotMetrics": {
+        "width": 1750,
+        "height": 1120,
+        "averageLuma": 27.546,
+        "darkRatio": 0.645055,
+        "brightRatio": 4.8e-05,
+        "uniqueColorBuckets": 162
+      },
+      "performance": {
+        "firstStyledViewportMs": 6.155,
+        "runtimeReadyMs": 54.075,
+        "sidecarReadyMs": null,
+        "startupMainThreadTaskMs": 11.488,
+        "shellState": "runtime-ready"
+      },
+      "productionEvidence": {
+        "exists": false,
+        "itemCount": 0,
+        "items": []
+      },
+      "failureReasons": []
+    },
+    {
+      "surface": "plm",
+      "ok": true,
+      "json": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-plm-current.json",
+      "screenshot": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-plm-current.png",
+      "title": "Drama PLM - Drama Browser",
+      "documentTitle": null,
+      "currentURI": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm&productionFixture=1",
+      "host": "drama",
+      "hostAdapter": "zen-gecko",
+      "shellState": "parity-blocked",
+      "runtimeReady": "ready",
+      "sidecarReady": "ready",
+      "panelParentId": "zen-main-app-wrapper",
+      "panelRect": {
+        "width": 875,
+        "height": 560,
+        "top": 0,
+        "left": 0,
+        "right": 875,
+        "bottom": 560
+      },
+      "shellRect": {
+        "width": 873,
+        "height": 516,
+        "top": 0,
+        "left": 0
+      },
+      "screenshotMetrics": {
+        "width": 1750,
+        "height": 1120,
+        "averageLuma": 205.184,
+        "darkRatio": 0.006121,
+        "brightRatio": 0.349705,
+        "uniqueColorBuckets": 401
+      },
+      "performance": {
+        "firstStyledViewportMs": 39.989,
+        "runtimeReadyMs": 52.659,
+        "sidecarReadyMs": 52.741,
+        "startupMainThreadTaskMs": 10.485,
+        "shellState": "parity-blocked"
+      },
+      "productionEvidence": {
+        "exists": false,
+        "itemCount": 0,
+        "items": []
+      },
+      "failureReasons": []
+    },
+    {
+      "surface": "crew",
+      "ok": true,
+      "json": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-crew-current.json",
+      "screenshot": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-crew-current.png",
+      "title": "Skill Crew - Drama Browser",
+      "documentTitle": null,
+      "currentURI": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+      "host": "drama",
+      "hostAdapter": "zen-gecko",
+      "shellState": "runtime-ready",
+      "runtimeReady": "ready",
+      "sidecarReady": null,
+      "panelParentId": "zen-main-app-wrapper",
+      "panelRect": {
+        "width": 875,
+        "height": 560,
+        "top": 0,
+        "left": 0,
+        "right": 875,
+        "bottom": 560
+      },
+      "shellRect": {
+        "width": 873,
+        "height": 516,
+        "top": 0,
+        "left": 0
+      },
+      "screenshotMetrics": {
+        "width": 1750,
+        "height": 1120,
+        "averageLuma": 39.469,
+        "darkRatio": 0.018459,
+        "brightRatio": 4.8e-05,
+        "uniqueColorBuckets": 202
+      },
+      "performance": {
+        "firstStyledViewportMs": 7.919,
+        "runtimeReadyMs": 66.339,
+        "sidecarReadyMs": null,
+        "startupMainThreadTaskMs": 10.348,
+        "shellState": "runtime-ready"
+      },
+      "productionEvidence": {
+        "exists": false,
+        "itemCount": 0,
+        "items": []
+      },
+      "failureReasons": []
+    },
+    {
+      "surface": "memory",
+      "ok": true,
+      "json": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-memory-current.json",
+      "screenshot": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-memory-current.png",
+      "title": "Basic Memory - Drama Browser",
+      "documentTitle": null,
+      "currentURI": "chrome://browser/content/drama/app/index.html?host=drama&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=memory",
+      "host": "drama",
+      "hostAdapter": "zen-gecko",
+      "shellState": "runtime-ready",
+      "runtimeReady": "ready",
+      "sidecarReady": null,
+      "panelParentId": "zen-main-app-wrapper",
+      "panelRect": {
+        "width": 875,
+        "height": 560,
+        "top": 0,
+        "left": 0,
+        "right": 875,
+        "bottom": 560
+      },
+      "shellRect": {
+        "width": 873,
+        "height": 516,
+        "top": 0,
+        "left": 0
+      },
+      "screenshotMetrics": {
+        "width": 1750,
+        "height": 1120,
+        "averageLuma": 241.392,
+        "darkRatio": 0.0,
+        "brightRatio": 0.715272,
+        "uniqueColorBuckets": 178
+      },
+      "performance": {
+        "firstStyledViewportMs": 5.391,
+        "runtimeReadyMs": 22.181,
+        "sidecarReadyMs": null,
+        "startupMainThreadTaskMs": 12.507,
+        "shellState": "runtime-ready"
+      },
+      "productionEvidence": {
+        "exists": false,
+        "itemCount": 0,
+        "items": []
+      },
+      "failureReasons": []
+    }
+  ],
+  "notes": [
+    "PLM production fixture loads and sidecar is ready; shellState remains parity-blocked because production evidence panel markers are not exposed in this source-built shell yet.",
+    "The source chrome manager falls back from hidden zen-appcontent-wrapper to visible zen-main-app-wrapper for source-built layout parity."
+  ]
+}
