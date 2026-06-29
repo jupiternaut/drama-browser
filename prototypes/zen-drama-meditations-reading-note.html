@@ -1,0 +1,1547 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zen Drama Meditations Reading Note - 沉思录读书分享</title>
+  <style>
+    :root {
+      --bg: #020406;
+      --ink: #f4f7f7;
+      --muted: rgba(244, 247, 247, 0.68);
+      --faint: rgba(244, 247, 247, 0.42);
+      --line: rgba(255, 255, 255, 0.16);
+      --panel: rgba(8, 13, 17, 0.82);
+      --panel-strong: rgba(7, 10, 13, 0.96);
+      --cyan: #8fdbe3;
+      --amber: #f0b36b;
+      --rose: #e68f7d;
+      --green: #9fc5a2;
+      --shadow: 0 28px 90px rgba(0, 0, 0, 0.52);
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--bg);
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #020406;
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .start-page {
+      position: relative;
+      min-height: 100vh;
+      isolation: isolate;
+      padding: 26px clamp(16px, 4vw, 64px) 64px;
+    }
+
+    .start-page::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.1) 33%, rgba(0, 0, 0, 0.64) 100%),
+        url("../docs/verification/drama-start-surface-desktop.png") center top / cover no-repeat;
+      filter: saturate(0.92) contrast(1.04);
+      transform: scale(1.01);
+    }
+
+    .start-page::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.56) 16%, rgba(0, 0, 0, 0.18) 34%, transparent 48%),
+        radial-gradient(ellipse at 50% 36%, rgba(33, 85, 96, 0.3), transparent 38%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.72) 74%);
+    }
+
+    .quick-row {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(62px, 76px));
+      justify-content: center;
+      gap: 18px;
+      margin: 0 auto 20px;
+    }
+
+    .quick-item {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      min-width: 0;
+      color: rgba(255, 255, 255, 0.86);
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .quick-mark {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.48);
+      color: #121719;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        0 9px 24px rgba(0, 0, 0, 0.32);
+      font-size: 19px;
+      font-weight: 780;
+      line-height: 1;
+    }
+
+    .quick-item:nth-child(1) .quick-mark { color: #123c44; background: linear-gradient(145deg, #f7ffff, #80d8e1 52%, #e6a276); }
+    .quick-item:nth-child(2) .quick-mark { color: #4b391c; background: linear-gradient(145deg, #fff7cb, #f1c666 54%, #766a77); }
+    .quick-item:nth-child(3) .quick-mark { color: #1d2831; background: linear-gradient(145deg, #ffffff, #bfc7cf 52%, #657681); }
+    .quick-item:nth-child(4) .quick-mark { color: #1f3045; background: linear-gradient(145deg, #eaf4ff, #77a7d8 52%, #284d75); }
+    .quick-item:nth-child(5) .quick-mark { color: #3f2425; background: linear-gradient(145deg, #fff1da, #f4a96e 52%, #a54c49); }
+    .quick-item:nth-child(6) .quick-mark { color: #223525; background: linear-gradient(145deg, #eff7e7, #9fc5a2 52%, #3c6a53); }
+
+    .quick-label {
+      max-width: 76px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 680;
+      text-shadow: 0 1px 10px rgba(0, 0, 0, 0.62);
+    }
+
+    .pager-dots {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 9px;
+      height: 22px;
+      margin-bottom: 42px;
+    }
+
+    .pager-dots span {
+      display: block;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.34);
+    }
+
+    .pager-dots span:first-child {
+      width: 32px;
+    }
+
+    .search-bar {
+      width: min(696px, calc(100vw - 36px));
+      height: 80px;
+      margin: 0 auto 8px;
+      display: grid;
+      grid-template-columns: 38px 1fr auto;
+      align-items: center;
+      gap: 14px;
+      padding: 0 24px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.96);
+      color: rgba(18, 22, 26, 0.74);
+      box-shadow:
+        0 22px 48px rgba(0, 0, 0, 0.24),
+        inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+    }
+
+    .search-emblem {
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: #f26745;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .search-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: clamp(18px, 2vw, 24px);
+      font-weight: 520;
+      letter-spacing: 0;
+    }
+
+    .search-meta {
+      color: rgba(18, 22, 26, 0.5);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .billboard {
+      width: min(1456px, calc(100vw - 48px));
+      max-width: 100%;
+      margin: 0 auto;
+      transform: translateY(0);
+    }
+
+    .billboard-frame {
+      position: relative;
+      padding: 20px 20px 18px;
+      background:
+        linear-gradient(180deg, #050708 0, #020202 68%, #101113 100%);
+      box-shadow: var(--shadow);
+    }
+
+    .billboard-frame::before {
+      content: "";
+      position: absolute;
+      inset: -9px 0 auto;
+      height: 18px;
+      background: #000;
+      opacity: 0.96;
+      pointer-events: none;
+    }
+
+    .billboard-frame::after {
+      content: "";
+      position: absolute;
+      inset: auto 8% -74px;
+      height: 74px;
+      background:
+        linear-gradient(180deg, rgba(8, 9, 10, 0.9), rgba(7, 8, 8, 0.2)),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 18px);
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+    }
+
+    .billboard-screen {
+      position: relative;
+      min-height: 650px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background:
+        linear-gradient(180deg, rgba(96, 160, 176, 0.66), rgba(64, 111, 124, 0.52) 38%, rgba(226, 126, 96, 0.46) 100%),
+        #314f58;
+    }
+
+    .billboard-screen::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 49% 40%, rgba(2, 8, 10, 0.9) 0 11%, transparent 27%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.18), transparent 21%, transparent 68%, rgba(0, 0, 0, 0.18));
+      opacity: 0.75;
+    }
+
+    .billboard-screen::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.22;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      background-size: 4px 4px;
+      mix-blend-mode: overlay;
+    }
+
+    .carousel-viewport {
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+      min-height: 650px;
+      touch-action: pan-y;
+    }
+
+    .carousel-track {
+      display: flex;
+      min-height: 650px;
+      transition: transform 220ms ease;
+      will-change: transform;
+    }
+
+    .story-card {
+      flex: 0 0 100%;
+      min-width: 0;
+      min-height: 650px;
+    }
+
+    .hero-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(220px, 0.72fr) minmax(330px, 1fr);
+      gap: clamp(22px, 4vw, 58px);
+      min-height: 650px;
+      padding: clamp(36px, 5vw, 72px) clamp(34px, 7vw, 96px);
+      align-items: center;
+    }
+
+    .hero-grid > * {
+      min-width: 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 16px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero-title {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.93);
+      font-size: clamp(38px, 5vw, 68px);
+      font-weight: 680;
+      letter-spacing: 0;
+      line-height: 0.98;
+      text-wrap: balance;
+      overflow-wrap: anywhere;
+    }
+
+    .hero-title span {
+      display: block;
+      color: rgba(255, 255, 255, 0.68);
+      font-weight: 460;
+      overflow-wrap: anywhere;
+    }
+
+    .card-label {
+      margin: 0 0 12px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .slide-title {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.95);
+      font-size: clamp(32px, 4vw, 54px);
+      font-weight: 760;
+      letter-spacing: 0;
+      line-height: 1.06;
+      text-wrap: balance;
+      overflow-wrap: anywhere;
+    }
+
+    .slide-kicker {
+      margin: 18px 0 0;
+      max-width: 34rem;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: clamp(17px, 1.6vw, 23px);
+      font-weight: 680;
+      line-height: 1.34;
+      text-wrap: balance;
+    }
+
+    .slide-image-card {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      align-self: stretch;
+      align-content: center;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .slide-image {
+      display: block;
+      width: min(360px, 100%);
+      height: min(430px, 36vw);
+      min-height: 310px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.36);
+      background: rgba(7, 13, 15, 0.72);
+      box-shadow:
+        0 30px 70px rgba(0, 0, 0, 0.42),
+        -16px 18px 0 rgba(4, 11, 13, 0.46);
+    }
+
+    .slide-image-card figcaption {
+      width: min(360px, 100%);
+      margin: 0;
+      color: rgba(255, 255, 255, 0.66);
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .slide-copy {
+      display: grid;
+      gap: 15px;
+      min-width: 0;
+    }
+
+    .content-fragment {
+      margin: 0;
+      padding: 14px 16px;
+      border-left: 2px solid var(--cyan);
+      border-radius: 0 7px 7px 0;
+      background: rgba(143, 219, 227, 0.1);
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 14px;
+      line-height: 1.62;
+    }
+
+    .content-fragment span {
+      display: block;
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.56);
+      font-size: 12px;
+    }
+
+    .slide-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .slide-tags span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 5px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      background: rgba(3, 8, 10, 0.34);
+      color: rgba(255, 255, 255, 0.74);
+      font-size: 12px;
+      font-weight: 680;
+    }
+
+    .paired-lines {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .paired-lines p,
+    .idea-card p,
+    .method-line p {
+      margin: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .paired-lines span:first-child,
+    .idea-card span:first-child,
+    .method-line span:first-child {
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .paired-lines span:last-child,
+    .idea-card span:last-child,
+    .method-line span:last-child {
+      color: rgba(255, 255, 255, 0.54);
+      font-size: 13px;
+      line-height: 1.48;
+    }
+
+    .cover-stack {
+      display: grid;
+      justify-items: center;
+      gap: 14px;
+      margin: 0;
+      align-self: stretch;
+      align-content: center;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .book-cover {
+      width: min(220px, 100%);
+      aspect-ratio: 0.66;
+      object-fit: cover;
+      border-radius: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow:
+        0 30px 70px rgba(0, 0, 0, 0.42),
+        -16px 18px 0 rgba(4, 11, 13, 0.52);
+      background: #162024;
+    }
+
+    .visual-caption {
+      width: 100%;
+      max-width: 260px;
+      margin: 0;
+      color: rgba(255, 255, 255, 0.66);
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .callout {
+      display: grid;
+      gap: 20px;
+      justify-items: start;
+    }
+
+    .callout-title {
+      margin: 0;
+      color: #fff;
+      font-size: clamp(28px, 4vw, 54px);
+      font-weight: 760;
+      line-height: 1.05;
+      text-wrap: balance;
+    }
+
+    .classification {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .classification li {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 5px 8px;
+      background: rgba(3, 8, 10, 0.34);
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .route-note {
+      margin: 0;
+      max-width: 28rem;
+      color: rgba(255, 255, 255, 0.74);
+      font-size: clamp(16px, 1.7vw, 22px);
+      line-height: 1.45;
+    }
+
+    .billboard-controls {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 22px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .round-button {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 999px;
+      background: rgba(2, 5, 7, 0.54);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .mini-dots {
+      display: flex;
+      gap: 7px;
+    }
+
+    .mini-dots span {
+      display: block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .mini-dots span.is-active {
+      width: 18px;
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    .content-shell {
+      width: min(1456px, calc(100vw - 48px));
+      max-width: 100%;
+      margin: 122px auto 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(312px, 0.55fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .reading-panel,
+    .route-panel,
+    .prompt-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(8, 13, 17, 0.88), rgba(5, 8, 10, 0.78));
+      box-shadow: 0 18px 54px rgba(0, 0, 0, 0.36);
+      backdrop-filter: blur(18px);
+    }
+
+    .reading-panel {
+      padding: clamp(22px, 3vw, 34px);
+    }
+
+    .section-label {
+      margin: 0 0 10px;
+      color: var(--amber);
+      font-size: 12px;
+      font-weight: 820;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      margin: 0 0 20px;
+      color: #fff;
+      font-size: clamp(24px, 3vw, 40px);
+      font-weight: 700;
+      letter-spacing: 0;
+      line-height: 1.12;
+    }
+
+    .intro-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 22px;
+      margin-bottom: 22px;
+    }
+
+    .portrait {
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: #101619;
+    }
+
+    .portrait img {
+      display: block;
+      width: 100%;
+      height: 244px;
+      object-fit: cover;
+      filter: saturate(0.82) contrast(1.08);
+    }
+
+    .portrait figcaption {
+      margin: 0;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .method-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 22px 0;
+    }
+
+    .method-line {
+      padding: 14px;
+      min-height: 120px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .idea-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .idea-card {
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      background: rgba(2, 7, 9, 0.38);
+    }
+
+    .idea-card h3 {
+      margin: 0 0 14px;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    .quote {
+      margin: 15px 0;
+      padding: 12px 14px;
+      border-left: 2px solid var(--cyan);
+      background: rgba(143, 219, 227, 0.08);
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 18px;
+      position: sticky;
+      top: 18px;
+    }
+
+    .route-panel,
+    .prompt-panel {
+      padding: 18px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 780;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(159, 197, 162, 0.12);
+      color: rgba(213, 242, 218, 0.86);
+      font-size: 11px;
+      font-weight: 760;
+    }
+
+    .hour-list {
+      display: grid;
+      gap: 7px;
+      max-height: 520px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .hour-button {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 10px;
+      width: 100%;
+      min-height: 54px;
+      padding: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.04);
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .hour-button:hover,
+    .hour-button.is-active {
+      border-color: rgba(143, 219, 227, 0.38);
+      background: rgba(143, 219, 227, 0.08);
+    }
+
+    .hour {
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .hour-copy {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+
+    .hour-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 720;
+      line-height: 1.2;
+    }
+
+    .hour-meta {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: rgba(255, 255, 255, 0.54);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .prompt-panel textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.28);
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .action-button {
+      min-height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 6px;
+      padding: 0 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 12px;
+      font-weight: 760;
+      cursor: pointer;
+    }
+
+    .action-button.primary {
+      border-color: rgba(240, 179, 107, 0.48);
+      background: rgba(240, 179, 107, 0.14);
+    }
+
+    .source-note {
+      width: min(1456px, calc(100vw - 48px));
+      max-width: 100%;
+      margin: 24px auto 0;
+      color: rgba(255, 255, 255, 0.52);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1120px) {
+      .hero-grid {
+        grid-template-columns: 1fr 0.7fr;
+      }
+
+      .callout {
+        grid-column: 1 / -1;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .content-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .side-stack {
+        position: static;
+      }
+
+      .intro-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .portrait img {
+        height: 320px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .start-page {
+        padding: 34vh 10px 36px;
+      }
+
+      .start-page::before {
+        background:
+          linear-gradient(180deg, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.08) 42%, rgba(0, 0, 0, 0.76) 100%),
+          url("../docs/verification/drama-start-surface-narrow.png") center top / cover no-repeat;
+      }
+
+      .quick-row {
+        grid-template-columns: repeat(6, minmax(42px, 48px));
+        gap: 9px;
+        margin-bottom: 12px;
+      }
+
+      .quick-mark {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        font-size: 13px;
+      }
+
+      .quick-label {
+        max-width: 48px;
+        font-size: 8px;
+      }
+
+      .pager-dots {
+        margin-bottom: 18px;
+      }
+
+      .search-bar {
+        height: 48px;
+        grid-template-columns: 22px 1fr;
+        gap: 8px;
+        padding: 0 12px;
+        border-radius: 8px;
+      }
+
+      .search-emblem {
+        width: 16px;
+        height: 16px;
+        border-radius: 5px;
+        font-size: 8px;
+      }
+
+      .search-text {
+        font-size: 11px;
+      }
+
+      .search-meta {
+        display: none;
+      }
+
+      .billboard {
+        width: calc(100vw - 28px);
+      }
+
+      .billboard-frame {
+        padding: 9px;
+      }
+
+      .billboard-screen {
+        min-height: 500px;
+      }
+
+      .carousel-viewport,
+      .carousel-track,
+      .story-card {
+        min-height: 500px;
+      }
+
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 22px;
+        min-height: 500px;
+        padding: 26px 22px 30px;
+      }
+
+      .hero-title {
+        font-size: 34px;
+      }
+
+      .slide-title {
+        font-size: 30px;
+      }
+
+      .slide-kicker {
+        font-size: 18px;
+      }
+
+      .slide-image {
+        width: min(260px, 100%);
+        height: 190px;
+        min-height: 190px;
+        justify-self: center;
+      }
+
+      .slide-image-card figcaption {
+        justify-self: center;
+      }
+
+      .callout-title {
+        font-size: 25px;
+      }
+
+      .book-cover {
+        width: min(180px, 60vw);
+      }
+
+      .paired-lines span:first-child,
+      .idea-card span:first-child,
+      .method-line span:first-child {
+        font-size: 14px;
+      }
+
+      .paired-lines span:last-child,
+      .idea-card span:last-child,
+      .method-line span:last-child {
+        font-size: 12px;
+      }
+
+      .content-shell,
+      .source-note {
+        width: calc(100vw - 18px);
+        margin-top: 96px;
+      }
+
+      .method-grid,
+      .idea-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .portrait img {
+        height: 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="start-page">
+    <nav class="quick-row" aria-label="阅读系统快捷入口">
+      <a class="quick-item" href="#book"><span class="quick-mark">00</span><span class="quick-label">Today</span></a>
+      <a class="quick-item" href="#route"><span class="quick-mark">24</span><span class="quick-label">Route</span></a>
+      <a class="quick-item" href="#method"><span class="quick-mark">6</span><span class="quick-label">Method</span></a>
+      <a class="quick-item" href="#ideas"><span class="quick-mark">4</span><span class="quick-label">Ideas</span></a>
+      <a class="quick-item" href="#prompt"><span class="quick-mark">P</span><span class="quick-label">Prompt</span></a>
+      <a class="quick-item" href="#question"><span class="quick-mark">Q</span><span class="quick-label">Question</span></a>
+    </nav>
+
+    <div class="pager-dots" aria-hidden="true"><span></span><span></span></div>
+
+    <div class="search-bar" role="search" aria-label="书籍检索">
+      <span class="search-emblem" aria-hidden="true">B</span>
+      <span class="search-text" id="searchText">Ask a book, find a lens...</span>
+      <span class="search-meta">Bilingual Classic</span>
+    </div>
+
+    <section class="billboard" id="book" aria-label="书籍主视觉">
+      <div class="billboard-frame">
+        <div class="billboard-screen">
+          <div class="carousel-viewport" id="cardViewport" aria-label="书籍介绍卡片，可左右滑动">
+            <div class="carousel-track" id="cardTrack"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="billboard-controls">
+        <button class="round-button" type="button" id="prevCard" aria-label="上一张卡片">‹</button>
+        <div class="mini-dots" id="cardDots"></div>
+        <button class="round-button" type="button" id="nextCard" aria-label="下一张卡片">›</button>
+      </div>
+    </section>
+
+    <section class="content-shell">
+      <article class="reading-panel">
+        <p class="section-label">Entrance</p>
+        <h2 class="section-title">读书入口 / Reading Entrance</h2>
+        <div class="intro-grid">
+          <div class="paired-lines">
+            <p><span>《沉思录》最动人的地方，是它不像一本准备出版的书。</span><span>What makes Meditations powerful is that it was not shaped like a book for publication.</span></p>
+            <p><span>它更像一位皇帝在军营、病痛、边境压力和行政疲劳之间，给自己留下的夜间手账。</span><span>It reads like a night notebook written among camps, illness, frontier pressure, and administrative exhaustion.</span></p>
+            <p><span>马可·奥勒留没有把自己写成胜利者，他反复把自己拉回一件小事：今天这一刻，我还能不能做一个正直的人。</span><span>Marcus does not pose as a victor; he returns to one small test: can I still act uprightly in this moment?</span></p>
+            <p><span>所以这次分享不把它当成格言集，而把它当成一套判断训练：怎样早晨醒来，怎样受伤之后不立刻反击，怎样面对死亡，怎样仍然对他人有用。</span><span>This sharing treats it not as a wall of quotes, but as training in judgment: waking, being hurt, meeting death, and remaining useful to others.</span></p>
+          </div>
+
+          <figure class="portrait">
+            <img
+              src="./assets/meditations-standard-ebooks-cover.jpg"
+              alt="Standard Ebooks Meditations cover artwork"
+            />
+            <figcaption>
+              配图说明：使用本地 Standard Ebooks 仓库中的封面图。罗马建筑、雕像和人群把这本书放回权力与日常交错的现场。
+            </figcaption>
+          </figure>
+        </div>
+
+        <section id="method">
+          <p class="section-label">Reading Path</p>
+          <h2 class="section-title">这次分享的六个入口</h2>
+          <div class="method-grid">
+            <div class="method-line"><p><span>一，先看它的处境。</span><span>First, read the situation.</span></p><p><span>这是掌权者写给自己的防腐剂，不是成功学演讲。</span><span>It is an antidote written by a ruler for himself, not a speech about success.</span></p></div>
+            <div class="method-line"><p><span>二，再看早晨。</span><span>Second, read the morning.</span></p><p><span>马可预先知道会遇到难相处的人，所以先训练自己的反应。</span><span>Marcus expects difficult people and trains his response before meeting them.</span></p></div>
+            <div class="method-line"><p><span>三，看判断。</span><span>Third, read judgment.</span></p><p><span>他不否认痛苦，却拒绝把解释权交给痛苦。</span><span>He does not deny pain, but refuses to surrender interpretation to it.</span></p></div>
+            <div class="method-line"><p><span>四，看死亡。</span><span>Fourth, read death.</span></p><p><span>死亡不是恐吓，而是把事情的轻重重新排序。</span><span>Death is not a threat; it rearranges the weight of things.</span></p></div>
+            <div class="method-line"><p><span>五，看他人。</span><span>Fifth, read other people.</span></p><p><span>斯多葛不是退隐成冷漠，而是从怒气回到合作。</span><span>Stoicism is not cold withdrawal; it returns anger to cooperation.</span></p></div>
+            <div class="method-line"><p><span>六，看今天。</span><span>Sixth, read today.</span></p><p><span>每一句原文都要落回一个当下动作：少抱怨、少表演、多承担。</span><span>Every source line should become an act: less complaint, less performance, more responsibility.</span></p></div>
+          </div>
+        </section>
+
+        <section id="ideas">
+          <p class="section-label">Reading Notes</p>
+          <h2 class="section-title">四段读书笔记 / Four Reading Notes</h2>
+          <div class="idea-grid">
+            <div class="idea-card">
+              <h3>一：早晨不是开始工作，而是开始预演人性。</h3>
+              <p><span>第二卷开头不是鸡血，而是一种很冷静的心理预案：今天一定会遇到忙乱、忘恩、傲慢、嫉妒和不合群的人。</span><span>Book II opens not with motivation, but with a sober rehearsal: today I will meet the meddlesome, ungrateful, arrogant, envious, and unsocial.</span></p>
+              <div class="quote">短原文：Begin the morning by saying to thyself...</div>
+              <p><span>伦理含义是，把一天的主动权提前拿回来。不是幻想别人变好，而是先决定自己不把恶意复制一遍。</span><span>Ethically, it takes back the initiative of the day: do not wait for others to improve before deciding not to reproduce their ugliness.</span></p>
+            </div>
+
+            <div class="idea-card">
+              <h3>二：伤害常常不是事件本身，而是我加上的判断。</h3>
+              <p><span>第四卷和第八卷反复提醒：外物触到身体、名声、计划，却不能直接进入灵魂；真正搅动人的，是我们在里面补上的解释。</span><span>Books IV and VIII keep returning to this: events touch the body, reputation, and plans, but the disturbance grows from the judgment added within.</span></p>
+              <div class="quote">短原文：Take away thy opinion... / If thou art pained...</div>
+              <p><span>伦理含义不是装作没事，而是在反击前先问：我看到的是事实，还是我已经把事实翻译成了羞辱。</span><span>This does not mean pretending nothing happened; it means asking before retaliation whether I saw a fact or translated it into humiliation.</span></p>
+            </div>
+
+            <div class="idea-card">
+              <h3>三：死亡不是消极主题，而是价值排序工具。</h3>
+              <p><span>马可不断说生命短、名声短、愤怒短，不是为了让人厌世，而是为了把虚荣、拖延和表演从重要事项里移出去。</span><span>Marcus repeats that life, fame, and anger are brief not to make us despise life, but to remove vanity, delay, and performance from the center.</span></p>
+              <div class="quote">短原文：While thou livest... be good.</div>
+              <p><span>伦理含义是，不要把有限的一天交给无限的面子工程。能做的善，今天就做。</span><span>Ethically, do not spend a finite day on infinite face-saving; the good that can be done should be done today.</span></p>
+            </div>
+
+            <div class="idea-card">
+              <h3>四：真正的平静不是远离人，而是不背叛共同体。</h3>
+              <p><span>很多人把斯多葛读成“别管别人”，但《沉思录》更常说的是合作、忍耐、教导、承担。马可提醒自己：人是为了彼此而存在。</span><span>Stoicism is often misread as indifference, but Meditations keeps speaking of cooperation, endurance, teaching, and service.</span></p>
+              <div class="quote">短原文：Men exist for the sake of one another.</div>
+              <p><span>伦理含义是，内心堡垒不是躲起来，而是让自己在复杂人群中仍能保持有用。</span><span>Ethically, the inner citadel is not a hiding place; it lets one remain useful among difficult people.</span></p>
+            </div>
+          </div>
+        </section>
+
+        <section id="question" style="margin-top: 28px;">
+          <p class="section-label">Question For Today</p>
+          <h2 class="section-title">今日问题 / Question for Today</h2>
+          <div class="paired-lines">
+            <p><span>今天让我最想抱怨、反击或证明自己的那件事，真的伤害了我的德性吗。</span><span>Did the thing that made me want to complain, strike back, or prove myself really injure my character?</span></p>
+            <p><span>如果没有，我能不能把它变成一次练习：少一点戏剧化解释，多一个正直动作。</span><span>If not, can I turn it into practice: less dramatic interpretation, one more upright act?</span></p>
+          </div>
+        </section>
+      </article>
+
+      <aside class="side-stack">
+        <section class="route-panel" id="route">
+          <div class="panel-head">
+            <h2>24 小时路线</h2>
+            <span class="status-pill">daily loop</span>
+          </div>
+          <div class="hour-list" id="hourList" aria-label="24小时书单路线"></div>
+        </section>
+
+        <section class="prompt-panel" id="prompt">
+          <div class="panel-head">
+            <h2>本地文本源</h2>
+            <span class="status-pill">local source</span>
+          </div>
+          <textarea id="promptText" readonly>本页依据本地仓库生成：
+/Users/gengrf/drama-browser/references/classic-book-repos/00-meditations
+
+版本来源：
+Standard Ebooks
+Marcus Aurelius, Meditations
+Translator: George Long
+
+重点引用位置：
+Book II: Begin the morning by saying to thyself...
+Book IV: Take away thy opinion...
+Book IV: While thou livest... be good.
+Book V: I am rising to the work of a human being.
+Book VI: The best way of avenging thyself...
+Book VI: That which is not good for the swarm...
+Book VIII: the mind... is a citadel.
+Book VIII: Men exist for the sake of one another.
+Book XII: If it is not right, do not do it.</textarea>
+          <div class="action-row">
+            <button class="action-button primary" type="button" id="copyPrompt">复制来源</button>
+            <button class="action-button" type="button" id="jumpTop">回到巨幕</button>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+    <p class="source-note">
+      Prototype note: 视觉参考来自本地 Drama Browser Start surface 截图；《沉思录》封面图和原文依据本地 Standard Ebooks 仓库 references/classic-book-repos/00-meditations；作者画像通过 Wikimedia Commons Special:FilePath 加载。该文件是独立 HTML，不覆盖任何现有组件。
+    </p>
+  </main>
+
+  <script>
+    const books = [
+      ["00:00", "马可·奥勒留", "《沉思录》", "Meditations", "斯多葛伦理", "伦理学", "B580 / Roman philosophy", "你的心灵，不必把外界当作主人。"],
+      ["01:00", "爱比克泰德", "《谈话录》和《手册》", "Discourses and Enchiridion", "实践哲学", "道德实践", "B580 / Stoicism", "自由从分清可控之事开始。"],
+      ["02:00", "塞涅卡", "《斯多葛书信》", "Letters from a Stoic", "罗马道德书信", "伦理书信", "B580 / Roman essays", "时间不是财产，而是生命本身。"],
+      ["03:00", "柏拉图", "《理想国》", "Republic", "政治哲学", "城邦与正义", "B395 / Plato", "灵魂的秩序，决定城邦的秩序。"],
+      ["04:00", "亚里士多德", "《尼各马可伦理学》", "Nicomachean Ethics", "德性伦理学", "德性与习惯", "B430 / Aristotle", "好生活不是情绪，而是训练。"],
+      ["05:00", "卢克莱修", "《物性论》", "On the Nature of Things", "自然哲学与诗", "自然哲学", "B570 / Epicureanism", "恐惧常来自对自然的误读。"],
+      ["06:00", "第欧根尼·拉尔修", "《名哲言行录》", "Lives of Eminent Philosophers", "哲学传记", "犬儒学派", "B104 / Biography", "哲学有时以生活方式保存。"],
+      ["07:00", "塞克斯都·恩披里柯", "《皮浪主义纲要》", "Outlines of Pyrrhonism", "怀疑主义", "认识论", "B837 / Skepticism", "暂停判断，也是一种训练。"],
+      ["08:00", "普罗提诺", "《九章集》", "Enneads", "新柏拉图主义", "形而上学", "B693 / Neoplatonism", "灵魂向内走，也是在向上走。"],
+      ["09:00", "索福克勒斯", "《安提戈涅》", "Antigone", "悲剧与法伦理", "古希腊戏剧", "PA4414 / Tragedy", "法律不能吞掉亲情与良知。"],
+      ["10:00", "黑塞", "《悉达多》", "Siddhartha", "禅宗视角", "精神小说", "PT2617 / German fiction", "一个人必须亲自走过理解。"],
+      ["11:00", "彼得·马修森", "《雪豹》", "The Snow Leopard", "禅宗与旅行", "自然书写", "PS3563 / Travel writing", "寻找动物时，也在看见欲望。"],
+      ["12:00", "奥古斯丁", "《忏悔录》", "Confessions", "基督教忏悔", "神学自传", "BR65 / Patristics", "记忆是一座向神敞开的房间。"],
+      ["13:00", "但丁", "《神曲》", "Divine Comedy", "基督教诗学", "神学史诗", "PQ4315 / Italian poetry", "走出黑林，需要承认迷路。"],
+      ["14:00", "克尔凯郭尔", "《恐惧与战栗》", "Fear and Trembling", "基督教存在主义", "信仰哲学", "B4373 / Kierkegaard", "信仰不是轻松的答案。"],
+      ["15:00", "陀思妥耶夫斯基", "《卡拉马佐夫兄弟》", "The Brothers Karamazov", "俄国基督教伦理", "小说伦理", "PG3326 / Russian fiction", "自由若没有爱，会变成审判。"],
+      ["16:00", "匿名", "《约伯记》", "Book of Job", "犹太智慧", "苦难哲学", "BS1415 / Wisdom literature", "不是所有痛苦都能被解释。"],
+      ["17:00", "威廉·詹姆斯", "《宗教经验之种种》", "Varieties of Religious Experience", "比较宗教学", "心理学与宗教", "BL53 / Psychology of religion", "经验先于体系，颤动先于教义。"],
+      ["18:00", "西塞罗", "《论义务》", "On Duties", "儒家视角读公共伦理", "公共责任", "PA6296 / Roman ethics", "职位不是装饰，是义务的入口。"],
+      ["19:00", "亚里士多德", "《政治学》", "Politics", "儒家视角读城邦秩序", "政治哲学", "JC71 / Political science", "共同体塑造人，也要求人负责。"],
+      ["20:00", "梭罗", "《瓦尔登湖》", "Walden", "道家视角读自然修养", "自然写作", "PS3048 / American prose", "减法不是贫乏，而是恢复尺度。"],
+      ["21:00", "蒙田", "《随笔集》", "Essays", "道家视角读自我观察", "随笔", "PQ1642 / French essays", "观察自己，比证明自己更难。"],
+      ["22:00", "达尔文", "《物种起源》", "On the Origin of Species", "科学理性", "生命秩序", "QH365 / Evolution", "生命没有停止在人的想象里。"],
+      ["23:00", "福柯", "《词与物》", "The Order of Things", "知识秩序", "图书馆学视角", "BD161 / Knowledge", "分类不是中立的柜子。"]
+    ];
+
+    const imageSources = {
+      meditationsCover: "./assets/meditations-standard-ebooks-cover.jpg",
+      meditationsSourceArt: "../references/classic-book-repos/00-meditations/images/cover.source.jpg",
+      marcusBust: "https://commons.wikimedia.org/wiki/Special:FilePath/Marcus%20Aurelius%20Glyptothek%20Munich.jpg?width=900",
+      schoolAthens: "https://commons.wikimedia.org/wiki/Special:FilePath/Raphael%20School%20of%20Athens.jpg?width=900",
+      augustus: "https://commons.wikimedia.org/wiki/Special:FilePath/Statue-Augustus.jpg?width=900"
+    };
+
+    const state = { index: 0, card: 0 };
+    const hourList = document.getElementById("hourList");
+    const cardTrack = document.getElementById("cardTrack");
+    const cardDots = document.getElementById("cardDots");
+    const cardViewport = document.getElementById("cardViewport");
+    const searchText = document.getElementById("searchText");
+
+    function getCards(book) {
+      if (book[2] === "《沉思录》") {
+        return [
+          {
+            label: `${book[0]} / ${book[4]}`,
+            title: `${book[2]}<span>读书笔记式分享 / ${book[3]}</span>`,
+            titleClass: "hero-title",
+            kicker: "这不是知识卡片，而是一位掌权者给自己留下的自我校正记录。",
+            image: imageSources.meditationsCover,
+            imageAlt: "Standard Ebooks Meditations cover artwork",
+            caption: "配图说明：使用本地下载的 Standard Ebooks 封面图。图像中的罗马场景，比商业书封更像《沉思录》的真实精神现场。",
+            tags: [book[1], "George Long", "Standard Ebooks", book[6]],
+            pairs: [
+              ["《沉思录》不是马可·奥勒留向臣民发布的道德训令。", "Meditations is not a moral proclamation issued to subjects."],
+              ["它更像一个人把皇冠摘下来以后，在夜里对自己的反复提醒。", "It is closer to a man taking off the crown and reminding himself at night."],
+              ["本地 Standard Ebooks 说明它是个人日记式札记，写作时间跨越长期军旅和统治压力。", "The local Standard Ebooks edition frames it as personal diary-like entries under campaign and rule."],
+              ["所以读它时，不要先问它提供了多少概念。", "So do not begin by asking how many concepts it provides."],
+              ["要问：一个拥有巨大外部权力的人，为什么还要每天训练内部判断。", "Ask why someone with immense external power still had to train inward judgment every day."],
+              ["这才是这本书真正适合今天分享的原因。", "That is why this book still works as a reading note for today."]
+            ],
+            quote: "原文支点：Every moment think steadily as a Roman and a man. 这句话适合做全书入口：身份不是头衔，而是每一刻的行动质量。"
+          },
+          {
+            label: "Morning Rehearsal",
+            title: "先把早晨读成一场预演",
+            kicker: "马可不是醒来以后才处理世界，他先处理自己对世界的预期。",
+            image: imageSources.marcusBust,
+            imageAlt: "Bust of Marcus Aurelius",
+            caption: "配图说明：作者画像。把皇帝的脸放在晨间段落旁边，是为了提醒这不是抽象修养，而是权力中心里的自我约束。",
+            tags: ["Book II", "Book V", "晨间练习", "人性预案"],
+            pairs: [
+              ["第二卷第一句很有力量：早晨先告诉自己，今天会遇到难相处的人。", "The first movement of Book II is powerful: tell yourself in the morning that difficult people will appear."],
+              ["这不是悲观，而是提前解除幻想。", "This is not pessimism; it is the removal of illusion in advance."],
+              ["如果我以为今天所有人都应该懂事、礼貌、感恩，我就把自己的平静交给了别人的成熟度。", "If I expect everyone to be sensible, polite, and grateful, I place my peace inside their maturity."],
+              ["第五卷又补了一句：不想起床时，要记得自己是去做人该做的工作。", "Book V adds another note: when reluctant to rise, remember the work of a human being."],
+              ["这两段合在一起，就像一个晨间仪式：承认人会粗糙，然后决定自己仍然要清醒。", "Together they form a morning ritual: admit that people will be rough, then decide to remain awake."],
+              ["读到这里，我觉得它不是让人变硬，而是让人不要被一天的第一阵噪音带走。", "Read this way, it does not harden a person; it prevents the first noise of the day from carrying them away."]
+            ],
+            quote: "原文支点：Begin the morning by saying to thyself... / I am rising to the work of a human being. 这两句可以作为分享的开场。"
+          },
+          {
+            label: "Judgment",
+            title: "真正要训练的是解释权",
+            kicker: "《沉思录》反复说的不是“别痛苦”，而是别急着给痛苦加剧情。",
+            image: imageSources.schoolAthens,
+            imageAlt: "Raphael School of Athens",
+            caption: "配图说明：拉斐尔《雅典学院》作为哲学现场。判断不是情绪压制，而是让理由重新坐到中心。",
+            tags: ["Book IV", "Book VIII", "Opinion", "Citadel"],
+            pairs: [
+              ["第四卷说，把“我受伤了”这个判断拿掉，抱怨和伤害也会随之减弱。", "Book IV says that when the judgment I have been harmed is removed, complaint and harm lose force."],
+              ["第八卷说，如果外物使你痛苦，真正扰乱你的不是外物，而是你对它的判断。", "Book VIII says that if an external thing pains you, the disturbance lies in your judgment about it."],
+              ["这听起来很严厉，但它不是否定现实。", "This sounds severe, but it is not a denial of reality."],
+              ["它是在事件和反应之间，重新开出一个很小却很关键的空间。", "It opens a small but crucial space between event and reaction."],
+              ["这个空间就是人的自由：我可以承认事情发生了，却不马上把它翻译成侮辱、失败或命运。", "That space is freedom: I can admit what happened without instantly translating it into insult, failure, or fate."],
+              ["所以马可说，免于激情的心是一座堡垒；不是用来逃走，而是用来不被拖走。", "So Marcus calls the passion-free mind a citadel; not a place to escape, but a place not to be dragged away."]
+            ],
+            quote: "原文支点：Take away thy opinion... / the mind which is free from passions is a citadel. 这不是冷漠，而是解释权的训练。"
+          },
+          {
+            label: "Death & Public Duty",
+            title: "死亡让责任变得清楚",
+            kicker: "马可谈死亡，不是为了消沉，而是为了让人停止把短命的东西供上神坛。",
+            image: imageSources.augustus,
+            imageAlt: "Statue of Augustus",
+            caption: "配图说明：罗马权力图像。这里不是赞美帝国，而是追问：掌权者如何不被名声、恐惧和愤怒支配。",
+            tags: ["Book IV", "Book VI", "Book VIII", "Public duty"],
+            pairs: [
+              ["第四卷那句“不要像还能活一万年那样行动”，不是恐吓，而是删减。", "The line about not living as if for ten thousand years is not a threat; it is an edit."],
+              ["它删掉拖延、炫耀、无用争辩和对名声的幻想。", "It cuts delay, display, useless argument, and fantasies of reputation."],
+              ["第六卷又说，对蜂群无益的，也不会对蜜蜂有益。", "Book VI adds that what is not good for the swarm is not good for the bee."],
+              ["这让《沉思录》从个人疗愈转向公共伦理。", "This turns Meditations from private consolation toward public ethics."],
+              ["平静不是我终于不管任何人，而是我终于能不带怒气地做对共同体有用的事。", "Tranquility is not finally caring about no one; it is doing what helps the common life without anger."],
+              ["今天读它，最适合放在通知、评价、职场冲突和创作焦虑之间。", "Today it belongs among notifications, evaluation, workplace friction, and creative anxiety."]
+            ],
+            quote: "原文支点：While thou livest... be good. / Men exist for the sake of one another. 读到最后，它要求的不是退场，而是更清醒地在场。"
+          }
+        ];
+      }
+
+      if (book[2] === "《理想国》") {
+        return [
+          {
+            label: `${book[0]} / ${book[4]}`,
+            title: `${book[2]}<span>${book[3]}</span>`,
+            titleClass: "hero-title",
+            kicker: "这不是乌托邦蓝图，而是一场关于正义的灵魂实验。",
+            image: imageSources.schoolAthens,
+            imageAlt: "Raphael School of Athens",
+            caption: "配图说明：拉斐尔《雅典学院》。柏拉图与亚里士多德位于中心，适合作为《理想国》的思想入口。",
+            tags: [book[1], book[4], book[5], book[6]],
+            pairs: [
+              ["苏格拉底从一个问题开始：什么是正义。", "Socrates begins with one question: what is justice."],
+              ["城邦被放大，是为了看清灵魂。", "The city is enlarged so the soul can be seen."],
+              ["统治、欲望、教育和谎言都被放上审判台。", "Rule, desire, education, and falsehood all stand trial."],
+              ["它问的不是谁赢，而是谁配得上掌权。", "It asks not who wins, but who deserves to rule."]
+            ],
+            quote: "书籍简介：用城邦结构照见灵魂结构，政治哲学最终回到人的秩序。"
+          },
+          {
+            label: "Stoic Lens",
+            title: "用斯多葛读柏拉图",
+            kicker: "斯多葛会把《理想国》的问题收回到判断与德性。",
+            image: imageSources.marcusBust,
+            imageAlt: "Bust of Marcus Aurelius",
+            caption: "配图说明：马可·奥勒留画像。用后来的斯多葛皇帝回望柏拉图，可以看见政治秩序如何变成自我训练。",
+            tags: ["德性", "判断", "内在城邦", "公共责任"],
+            pairs: [
+              ["柏拉图问：谁应当治理城邦。", "Plato asks who should govern the city."],
+              ["斯多葛会追问：谁能治理自己。", "Stoicism asks who can govern the self."],
+              ["没有内在秩序，公共秩序会变成表演。", "Without inner order, public order becomes performance."],
+              ["所以哲人王不是头衔。", "The philosopher-king is not a title."],
+              ["它是一种不被欲望牵走的判断能力。", "It is a capacity for judgment not dragged by desire."]
+            ],
+            quote: "斯多葛视角：先治理自己的冲动，再谈治理共同体。"
+          },
+          {
+            label: "Fragments",
+            title: "内容片段",
+            kicker: "洞穴寓言是认识论，也是伦理学。",
+            image: imageSources.schoolAthens,
+            imageAlt: "Raphael School of Athens",
+            caption: "配图说明：世界名画作为哲学场景。它帮助把抽象争论还原为师徒、城邦和公共讨论。",
+            tags: ["洞穴", "教育", "正义", "灵魂三分"],
+            pairs: [
+              ["洞穴里的人，把影子当作真实。", "The cave-dwellers take shadows for reality."],
+              ["走出洞穴，不只是获得知识。", "Leaving the cave is not merely gaining knowledge."],
+              ["它意味着承担重新回去说明的责任。", "It means bearing the duty to return and explain."],
+              ["灵魂也有城邦：理性、意气、欲望。", "The soul also has a city: reason, spirit, desire."],
+              ["正义就是各居其位。", "Justice is each part keeping its proper place."]
+            ],
+            quote: "短原文：until philosophers rule... / 影子、洞穴、回返，构成全书最强的伦理场景。"
+          },
+          {
+            label: "Now",
+            title: "对现在的影响",
+            kicker: "它解释平台、教育、治理和自我叙事。",
+            image: imageSources.augustus,
+            imageAlt: "Statue of Augustus",
+            caption: "配图说明：罗马权力图像。它把《理想国》的问题推到今天：权力是否仍受德性约束。",
+            tags: ["平台治理", "教育", "公共理性", "欲望管理"],
+            pairs: [
+              ["今天的洞穴，可能是信息流。", "Today the cave may be the feed."],
+              ["今天的影子，可能是热榜、标签和人设。", "Today the shadows may be rankings, labels, and personas."],
+              ["《理想国》提醒我们，教育不是灌输答案。", "Republic reminds us that education is not answer injection."],
+              ["教育是让灵魂转向更真实的东西。", "Education turns the soul toward what is more real."],
+              ["斯多葛会补一句：看见之后，要负责行动。", "Stoicism adds: after seeing, act responsibly."]
+            ],
+            quote: "今日问题：我现在相信的，是事实、影子，还是让我舒服的秩序。"
+          }
+        ];
+      }
+
+      return [
+        {
+          label: `${book[0]} / ${book[4]}`,
+          title: `${book[2]}<span>${book[3]}</span>`,
+          titleClass: "hero-title",
+          kicker: `${book[1]}把一个古老问题推到你面前：人应如何判断、行动和承担责任。`,
+          image: imageSources.schoolAthens,
+          imageAlt: "Raphael School of Athens",
+          caption: "配图说明：找不到直接书封时，使用世界名画作为思想史入口，强调古典问题仍在公共讨论中延续。",
+          tags: [book[1], book[4], book[5], book[6]],
+          pairs: [
+            ["先把这本书当作一个判断训练场。", "First treat this book as a training ground for judgment."],
+            ["它不只给知识，也暴露欲望。", "It gives knowledge, and exposes desire."],
+            ["读它时，先问它如何改变行动。", "When reading it, ask how it changes action."],
+            ["再问它如何改变责任。", "Then ask how it changes responsibility."]
+          ],
+          quote: "书籍简介：本页会按同一模板，把书、视角、故事、短原文和伦理展开放进卡片。"
+        },
+        {
+          label: "Stoic Lens",
+          title: "用斯多葛读这本书",
+          kicker: "不管主题是什么，先看它怎样训练判断。",
+          image: imageSources.marcusBust,
+          imageAlt: "Bust of Marcus Aurelius",
+          caption: "配图说明：斯多葛代表马可·奥勒留。这里作为统一阅读镜头，提醒读者把外部情节转成内部判断。",
+          tags: ["可控", "不可控", "德性", "行动"],
+          pairs: [
+            ["斯多葛不会先问我喜欢什么。", "Stoicism does not first ask what I like."],
+            ["它先问我能控制什么。", "It first asks what I can control."],
+            ["然后问我是否按德性行动。", "Then it asks whether I act with virtue."],
+            ["用这个镜头读书，摘要会变成修身。", "With this lens, summary becomes self-training."]
+          ],
+          quote: "斯多葛视角：把故事里的冲突，翻译成判断、欲望和责任。"
+        },
+        {
+          label: "Fragments",
+          title: "内容片段",
+          kicker: "每本书都需要一个场景、一个短句、一次展开。",
+          image: imageSources.schoolAthens,
+          imageAlt: "Raphael School of Athens",
+          caption: "配图说明：以哲学场景承托文本片段，避免内容变成没有画面的摘要。",
+          tags: ["故事", "短原文", "伦理展开"],
+          pairs: [
+            ["先选一个场景。", "Choose one scene first."],
+            ["再放一句短原文。", "Then place one short source line."],
+            ["最后说它怎样改变判断。", "Finally say how it changes judgment."],
+            ["这就是卡片的阅读节奏。", "This is the rhythm of the card."]
+          ],
+          quote: "内容片段：故事 + 短原文 + 判断变化。"
+        },
+        {
+          label: "Now",
+          title: "对现在的影响",
+          kicker: "经典不是远处的纪念碑，而是今天的判断工具。",
+          image: imageSources.augustus,
+          imageAlt: "Statue of Augustus",
+          caption: "配图说明：权力、秩序和责任的古典图像，用来连接现代生活里的管理、平台和自我约束。",
+          tags: ["现代问题", "行动", "责任"],
+          pairs: [
+            ["今天的问题常换了外衣。", "Today problems often wear new clothes."],
+            ["焦虑、舆论、权力和欲望仍然相似。", "Anxiety, opinion, power, and desire remain familiar."],
+            ["经典的影响，不是让人显得有文化。", "The influence of classics is not cultural display."],
+            ["它让人更难逃避自己的责任。", "It makes responsibility harder to evade."]
+          ],
+          quote: "今日问题：这本书要求我今天少一点什么，多承担什么。"
+        }
+      ];
+    }
+
+    function renderPairs(pairs) {
+      return pairs.map(([zh, en]) => `<p><span>${zh}</span><span>${en}</span></p>`).join("");
+    }
+
+    function renderCards() {
+      const book = books[state.index];
+      const cards = getCards(book);
+      cardTrack.innerHTML = cards.map((card) => `
+        <article class="story-card">
+          <div class="hero-grid">
+            <div class="slide-copy">
+              <p class="card-label">${card.label}</p>
+              <h1 class="${card.titleClass ?? "slide-title"}">${card.title}</h1>
+              <p class="slide-kicker">${card.kicker}</p>
+              <div class="paired-lines">${renderPairs(card.pairs.slice(0, 3))}</div>
+            </div>
+            <figure class="slide-image-card">
+              <img class="slide-image" src="${card.image}" alt="${card.imageAlt}" />
+              <figcaption>${card.caption}</figcaption>
+            </figure>
+            <div class="slide-copy">
+              <div class="slide-tags">${card.tags.map((tag) => `<span>${tag}</span>`).join("")}</div>
+              <div class="content-fragment">${card.quote}<span>Card ${cards.indexOf(card) + 1} / ${cards.length}</span></div>
+              <div class="paired-lines">${renderPairs(card.pairs.slice(3))}</div>
+            </div>
+          </div>
+        </article>
+      `).join("");
+      cardDots.innerHTML = cards.map((_, index) => `<span class="${index === state.card ? "is-active" : ""}"></span>`).join("");
+      cardTrack.style.transform = `translateX(${-state.card * 100}%)`;
+    }
+
+    function setCard(index) {
+      const max = getCards(books[state.index]).length;
+      state.card = (index + max) % max;
+      renderCards();
+    }
+
+    function renderRoute() {
+      hourList.innerHTML = "";
+      books.forEach((book, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "hour-button" + (index === state.index ? " is-active" : "");
+        button.innerHTML = `
+          <span class="hour">${book[0]}</span>
+          <span class="hour-copy">
+            <span class="hour-title">${book[2]}</span>
+            <span class="hour-meta">${book[1]} / ${book[4]}</span>
+          </span>
+        `;
+        button.addEventListener("click", () => setBook(index));
+        hourList.appendChild(button);
+      });
+    }
+
+    function setBook(index) {
+      state.index = (index + books.length) % books.length;
+      state.card = 0;
+      const book = books[state.index];
+      searchText.textContent = `${book[0]} ${book[2]} - ${book[4]}`;
+      renderCards();
+      renderRoute();
+    }
+
+    document.getElementById("prevCard").addEventListener("click", () => setCard(state.card - 1));
+    document.getElementById("nextCard").addEventListener("click", () => setCard(state.card + 1));
+    document.getElementById("jumpTop").addEventListener("click", () => document.getElementById("book").scrollIntoView({ behavior: "smooth" }));
+    document.getElementById("copyPrompt").addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      const text = document.getElementById("promptText").value;
+      try {
+        await navigator.clipboard.writeText(text);
+        button.textContent = "已复制";
+      } catch {
+        document.getElementById("promptText").select();
+        button.textContent = "已选中";
+      }
+      window.setTimeout(() => { button.textContent = "复制来源"; }, 1600);
+    });
+
+    let startX = null;
+    cardViewport.addEventListener("pointerdown", (event) => {
+      startX = event.clientX;
+    });
+    cardViewport.addEventListener("pointerup", (event) => {
+      if (startX === null) return;
+      const delta = event.clientX - startX;
+      startX = null;
+      if (Math.abs(delta) < 42) return;
+      setCard(state.card + (delta < 0 ? 1 : -1));
+    });
+
+    setBook(0);
+  </script>
+</body>
+</html>
