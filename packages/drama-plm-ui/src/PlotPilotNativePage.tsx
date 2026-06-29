@@ -62,7 +62,7 @@ import { Button, LiquidEther, PanelHeader, StatusBadge, cn, type StatusTone } fr
 import type {
   DramaPlmHostAdapter,
   DramaPlmSurfaceClassification,
-} from '../../drama-host/src/surface.ts'
+} from '@drama/host'
 
 export type PlotPilotRuntimeState = 'offline' | 'starting' | 'ready' | 'error'
 export type PlotPilotWorkspaceSurface =

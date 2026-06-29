@@ -14,6 +14,8 @@ export interface DramaRuntimeStatus {
   }
 }
 
+export type DramaRuntimeCapabilities = Record<string, boolean>
+
 export interface DramaRuntimeRpcRequest<TPayload = unknown> {
   channel: string
   payload?: TPayload
@@ -57,6 +59,7 @@ export class DramaRuntimeError extends Error {
 export interface DramaRuntimeClient {
   readonly baseUrl: string
   getStatus(options?: DramaRuntimeRequestOptions): Promise<DramaRuntimeStatus>
+  getCapabilities(options?: DramaRuntimeRequestOptions): Promise<DramaRuntimeCapabilities>
   request<TResponse = unknown, TPayload = unknown>(
     channel: string,
     payload?: TPayload,
@@ -151,6 +154,9 @@ export function createDramaRuntimeClient(options: DramaRuntimeClientOptions): Dr
     baseUrl,
     getStatus(options) {
       return readJson<DramaRuntimeStatus>('/runtime/status', undefined, options)
+    },
+    getCapabilities(options) {
+      return readJson<DramaRuntimeCapabilities>('/runtime/capabilities', undefined, options)
     },
     async request<TResponse = unknown, TPayload = unknown>(
       channel: string,

@@ -1,5 +1,3 @@
-import type { DramaHostKind } from './index.ts'
-
 export type DramaPlmSurfaceClassification =
   | 'product-drama-browser'
   /** @deprecated Use product-drama-browser with hostAdapter=zen-gecko. */
@@ -28,7 +26,7 @@ export interface DramaPlmReadinessStatus {
 
 export interface DramaPlmSurfaceClassificationInput {
   url?: string | URL | null
-  hostKind?: DramaHostKind | string | null
+  hostKind?: 'electron' | 'browser' | 'gecko' | 'test' | string | null
   userAgent?: string | null
   expectedSurface?: 'start' | 'plm' | 'graph' | 'crew' | 'memory'
 }

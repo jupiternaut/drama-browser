@@ -1,0 +1,655 @@
+{
+  "ok": true,
+  "generatedAt": "2026-06-29T11:45:49.130Z",
+  "runtimeUrl": "http://127.0.0.1:3198",
+  "checks": [
+    {
+      "id": "runtime-status",
+      "ok": true,
+      "detail": "state=ready; workspace=/Users/gengrf/.craft-agent/workspaces/my-workspace"
+    },
+    {
+      "id": "runtime-capabilities",
+      "ok": true,
+      "detail": "files.readTextFile, files.writeTextFile, runtime.status, runtime.capabilities, runtime.request, sessions.command, sessions.cancel, plm.sidecar.status, plm.sidecar.start, plm.sidecar.stop, plm.sidecar.logs, graph.load, graph.history, graph.persist, graph.backup, skillCrew.refresh, skillCrew.import, skillCrew.run, skillCrew.feedback, basicMemory.read, basicMemory.search, basicMemory.write, settings.read, settings.write, diagnostics.snapshot, diagnostics.process"
+    },
+    {
+      "id": "files-write-read-preview-import-export",
+      "ok": true,
+      "detail": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/nested/local-file-smoke.txt"
+    },
+    {
+      "id": "sessions-command-status-cancel",
+      "ok": true,
+      "detail": "{\"command\":{\"accepted\":true,\"session\":{\"id\":\"remove-electron-host-smoke\",\"labels\":[],\"sources\":[],\"skills\":[],\"status\":\"verifying-electron-free-runtime\",\"cancelled\":false,\"updatedAt\":\"2026-06-29T11:45:46.924Z\",\"commands\":[{\"type\":\"setStatus\",\"status\":\"verifying-electron-free-runtime\"}]}},\"status\":{\"id\":\"remove-electron-host-smoke\",\"labels\":[],\"sources\":[],\"skills\":[],\"status\":\"verifying-electron-free-runtime\",\"cancelled\":false,\"updatedAt\":\"2026-06-29T11:45:46.924Z\",\"commands\":[{\"type\":\"setStatus\",\"status\":\"verifying-electron-free-runtime\"}]},\"cancel\":{\"accepted\":true,\"session\":{\"id\":\"remove-electron-host-smoke\",\"labels\":[],\"sources\":[],\"skills\":[],\"status\":\"cancelled-silent\",\"cancelled\":true,\"updatedAt\":\"2026-06-29T11:45:46.924Z\",\"commands\":[{\"type\":\"setStatus\",\"status\":\"verifying-electron-free-runtime\"}]}}}"
+    },
+    {
+      "id": "settings-read-write",
+      "ok": true,
+      "detail": "{\"write\":{\"key\":\"remove-electron-host.path-fixture\",\"updated\":true},\"read\":{\"mac\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/nested/local-file-smoke.txt\",\"win\":\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史.md\",\"cn\":\"诊断文案保持中文可读\"}}"
+    },
+    {
+      "id": "graph-load-persist-history",
+      "ok": true,
+      "detail": "{\"loaded\":{\"graph\":{\"schema\":\"drama.graph.v1\",\"id\":\"remove-electron-host-smoke\",\"title\":\"Drama Graph\",\"createdAt\":1782733272681,\"updatedAt\":1782733272681,\"source\":{\"format\":\"native\",\"graphId\":\"remove-electron-host-smoke\"},\"bible\":{\"id\":\"remove-electron-host-smoke-bible\",\"title\":\"Drama Graph Bible\",\"worldNodeIds\":[],\"characterNodeIds\":[],\"locationNodeIds\":[],\"plotNodeIds\":[]},\"nodes\":[],\"edges\":[],\"scenes\":[],\"chapters\":[],\"drafts\":[],\"taskBindings\":[],\"metadata\":{}},\"path\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/remove-electron-host-smoke.json\",\"imported\":false},\"persisted\":{\"graph\":{\"schema\":\"drama.graph.v1\",\"id\":\"remove-electron-host-smoke\",\"title\":\"Drama Graph\",\"createdAt\":1782733272681,\"updatedAt\":1782733272681,\"source\":{\"format\":\"native\",\"graphId\":\"remove-electron-host-smoke\"},\"bible\":{\"id\":\"remove-electron-host-smoke-bible\",\"title\":\"Drama Graph Bible\",\"worldNodeIds\":[],\"characterNodeIds\":[],\"locationNodeIds\":[],\"plotNodeIds\":[]},\"nodes\":[],\"edges\":[],\"scenes\":[],\"chapters\":[],\"drafts\":[],\"taskBindings\":[],\"metadata\":{}},\"path\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/remove-electron-host-smoke.json\",\"backupPath\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/.backups/remove-electron-host-smoke.1782733546931.json\"},\"history\":{\"graphId\":\"remove-electron-host-smoke\",\"backups\":[{\"path\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/.backups/remove-electron-host-smoke.1782733546931.json\",\"createdAt\":1782733546931,\"graphName\":\"Drama Graph\",\"nodeCount\":0,\"edgeCount\":0,\"valid\":true}],\"events\":[{\"id\":\"remove-electron-host-smoke:1782733546934:2p3mkq\",\"graphId\":\"remove-electron-host-smoke\",\"type\":\"graph.persisted\",\"actor\":\"drama:runtime\",\"createdAt\":1782733546934},{\"id\":\"remove-electron-host-smoke:1782733272684:isj9xj\",\"graphId\":\"remove-electron-host-smoke\",\"type\":\"graph.created\",\"actor\":\"drama:runtime\",\"details\":{\"source\":\"runtime\",\"requestedGraphId\":\"remove-electron-host-smoke\"},\"createdAt\":1782733272684}],\"eventLogPath\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/graph-events.jsonl\"}}"
+    },
+    {
+      "id": "plm-sidecar-status-logs-codex",
+      "ok": true,
+      "detail": "{\"sidecar\":{\"state\":\"running\",\"healthy\":true,\"port\":8005,\"pid\":88060,\"url\":\"http://127.0.0.1:8005\",\"baseUrl\":\"http://127.0.0.1:8005\",\"apiBaseUrl\":\"http://127.0.0.1:8005/api/v1\",\"startedAt\":\"2026-06-29T11:45:47.121Z\",\"owned\":true,\"adopted\":false,\"projectRoot\":\"/Users/gengrf/PlotPilot\",\"dataDir\":\"/Users/gengrf/.plotpilot/data\"},\"logs\":[{\"timestamp\":\"2026-06-29T11:45:48.643Z\",\"stream\":\"stderr\",\"message\":\"06:45:48 [INFO] interfaces.main - ✅ 守护进程已创建并启动（独立进程模式，流式队列 + 共享状态 + 持久化队列已传递）\",\"line\":\"06:45:48 [INFO] interfaces.main - ✅ 守护进程已创建并启动（独立进程模式，流式队列 + 共享状态 + 持久化队列已传递）\"},{\"timestamp\":\"2026-06-29T11:45:48.643Z\",\"stream\":\"stderr\",\"message\":\"06:45:48 [INFO] interfaces.main - ✅ DAG 节点注册表已初始化: ['anti_ai_allowlist', 'anti_ai_audit', 'anti_ai_behavior', 'anti_ai_char_lock', 'anti_ai_finale', 'anti_ai_mid_refresh', 'ctx_blueprint', 'ctx_debt', 'ctx_foreshadow', 'ctx_memory', 'ctx_voice', 'exec_beat', 'exec_planning', 'exec_scene', 'exec_writer', 'ext_narrative_sync', 'ext_state', 'ext_style', 'ext_summary', 'gen_chapter_basic', 'gen_dialogue', 'gen_scene', 'gw_circuit', 'gw_condition', 'gw_retry', 'gw_review', 'planning_act', 'planning_beat_sheet', 'planning_outline_partition', 'planning_quick_macro', 'review_character', 'review_foreshadowing', 'review_improvement', 'review_storyline', 'review_timeline', 'val_anti_ai', 'val_foreshadow', 'val_kg_infer', 'val_narrative', 'val_style', 'val_tension', 'world_bible_all', 'world_characters', 'world_locations', 'world_worldbuilding']\",\"line\":\"06:45:48 [INFO] interfaces.main - ✅ DAG 节点注册表已初始化: ['anti_ai_allowlist', 'anti_ai_audit', 'anti_ai_behavior', 'anti_ai_char_lock', 'anti_ai_finale', 'anti_ai_mid_refresh', 'ctx_blueprint', 'ctx_debt', 'ctx_foreshadow', 'ctx_memory', 'ctx_voice', 'exec_beat', 'exec_planning', 'exec_scene', 'exec_writer', 'ext_narrative_sync', 'ext_state', 'ext_style', 'ext_summary', 'gen_chapter_basic', 'gen_dialogue', 'gen_scene', 'gw_circuit', 'gw_condition', 'gw_retry', 'gw_review', 'planning_act', 'planning_beat_sheet', 'planning_outline_partition', 'planning_quick_macro', 'review_character', 'review_foreshadowing', 'review_improvement', 'review_storyline', 'review_timeline', 'val_anti_ai', 'val_foreshadow', 'val_kg_infer', 'val_narrative', 'val_style', 'val_tension', 'world_bible_all', 'world_characters', 'world_locations', 'world_worldbuilding']\"},{\"timestamp\":\"2026-06-29T11:45:48.644Z\",\"stream\":\"stderr\",\"message\":\"INFO:     Application startup complete.\",\"line\":\"INFO:     Application startup complete.\"},{\"timestamp\":\"2026-06-29T11:45:48.647Z\",\"stream\":\"stderr\",\"message\":\"INFO:     Uvicorn running on http://127.0.0.1:8005 (Press CTRL+C to quit)\",\"line\":\"INFO:     Uvicorn running on http://127.0.0.1:8005 (Press CTRL+C to quit)\"},{\"timestamp\":\"2026-06-29T11:45:48.752Z\",\"stream\":\"stdout\",\"message\":\"INFO:     127.0.0.1:49932 - \\\"GET /health HTTP/1.1\\\" 200 OK\",\"line\":\"INFO:     127.0.0.1:49932 - \\\"GET /health HTTP/1.1\\\" 200 OK\"}],\"codex\":{\"available\":true,\"authenticated\":true,\"requires_openai_auth\":true,\"email\":\"ngonchi200@gmail.com\",\"plan_type\":\"pro\",\"error\":null}}"
+    },
+    {
+      "id": "skill-crew-refresh-run-feedback",
+      "ok": true,
+      "detail": "{\"refresh\":{\"source\":\"drama-runtime\",\"workspaceRoot\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace\",\"skills\":[]},\"run\":{\"graph\":{\"schema\":\"drama.graph.v1\",\"id\":\"remove-electron-host-smoke\",\"title\":\"Drama Graph\",\"createdAt\":1782733272681,\"updatedAt\":1782733272681,\"source\":{\"format\":\"native\",\"graphId\":\"remove-electron-host-smoke\"},\"bible\":{\"id\":\"remove-electron-host-smoke-bible\",\"title\":\"Drama Graph Bible\",\"worldNodeIds\":[],\"characterNodeIds\":[],\"locationNodeIds\":[],\"plotNodeIds\":[]},\"nodes\":[],\"edges\":[],\"scenes\":[],\"chapters\":[],\"drafts\":[],\"taskBindings\":[],\"metadata\":{}},\"path\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/remove-electron-host-smoke.json\"},\"feedback\":{\"graph\":{\"schema\":\"drama.graph.v1\",\"id\":\"remove-electron-host-smoke\",\"title\":\"Drama Graph\",\"createdAt\":1782733272681,\"updatedAt\":1782733272681,\"source\":{\"format\":\"native\",\"graphId\":\"remove-electron-host-smoke\"},\"bible\":{\"id\":\"remove-electron-host-smoke-bible\",\"title\":\"Drama Graph Bible\",\"worldNodeIds\":[],\"characterNodeIds\":[],\"locationNodeIds\":[],\"plotNodeIds\":[]},\"nodes\":[],\"edges\":[],\"scenes\":[],\"chapters\":[],\"drafts\":[],\"taskBindings\":[],\"metadata\":{}},\"path\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/remove-electron-host-smoke.json\"}}"
+    },
+    {
+      "id": "basic-memory-list-search-read-write",
+      "ok": true,
+      "detail": "{\"list\":{\"root\":\"/Users/gengrf/basic-memory-claude-history\",\"exists\":true,\"total\":1,\"returned\":1,\"truncated\":false,\"query\":\"remove-electron-host\",\"notes\":[{\"path\":\"zz-drama-verification/remove-electron-host-smoke.md\",\"title\":\"Drama Runtime Basic Memory Smoke\",\"type\":\"verification\",\"size\":177,\"modifiedAt\":\"2026-06-29T11:45:49.088Z\",\"excerpt\":\"Drama Runtime Basic Memory Smoke remove-electron-host smoke note. 中文状态：知识库读写通过。\"}]},\"search\":{\"root\":\"/Users/gengrf/basic-memory-claude-history\",\"exists\":true,\"total\":1,\"returned\":1,\"truncated\":false,\"query\":\"Basic Memory Smoke\",\"notes\":[{\"path\":\"zz-drama-verification/remove-electron-host-smoke.md\",\"title\":\"Drama Runtime Basic Memory Smoke\",\"type\":\"verification\",\"size\":177,\"modifiedAt\":\"2026-06-29T11:45:49.088Z\",\"excerpt\":\"Drama Runtime Basic Memory Smoke remove-electron-host smoke note. 中文状态：知识库读写通过。\"}]},\"read\":{\"root\":\"/Users/gengrf/basic-memory-claude-history\",\"note\":{\"path\":\"zz-drama-verification/remove-electron-host-smoke.md\",\"title\":\"Drama Runtime Basic Memory Smoke\",\"type\":\"verification\",\"size\":177,\"modifiedAt\":\"2026-06-29T11:45:49.088Z\",\"excerpt\":\"Drama Runtime Basic Memory Smoke remove-electron-host smoke note. 中文状态：知识库读写通过。\"},\"content\":\"---\\ntitle: Drama Runtime Basic Memory Smoke\\ntype: verification\\n---\\n\\n# Drama Runtime Basic Memory Smoke\\n\\nremove-electron-host smoke note. 中文状态：知识库读写通过。\\n\"},\"write\":{\"root\":\"/Users/gengrf/basic-memory-claude-history\",\"note\":{\"path\":\"zz-drama-verification/remove-electron-host-smoke.md\",\"title\":\"Drama Runtime Basic Memory Smoke\",\"type\":\"verification\",\"size\":217,\"modifiedAt\":\"2026-06-29T11:45:49.128Z\",\"excerpt\":\"Drama Runtime Basic Memory Smoke remove-electron-host smoke note. 中文状态：知识库读写通过。 保存回写：通过 Drama Runtime。\"},\"content\":\"---\\ntitle: Drama Runtime Basic Memory Smoke\\ntype: verification\\n---\\n\\n# Drama Runtime Basic Memory Smoke\\n\\nremove-electron-host smoke note. 中文状态：知识库读写通过。\\n\\n保存回写：通过 Drama Runtime。\\n\"}}"
+    },
+    {
+      "id": "diagnostics-snapshot-process",
+      "ok": true,
+      "detail": "{\"snapshot\":{\"status\":{\"state\":\"ready\",\"version\":\"0.1.0\",\"message\":\"Drama standalone runtime ready.\",\"updatedAt\":\"2026-06-29T11:45:49.129Z\",\"workspaceRoot\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace\",\"startedAt\":\"2026-06-29T11:42:09.962Z\",\"runtimePackageRoot\":null,\"browserShellDistDir\":\"/Users/gengrf/drama-browser/apps/drama-browser-shell/dist\",\"basicMemoryRoot\":\"/Users/gengrf/basic-memory-claude-history\",\"plmRuntime\":{\"state\":\"running\",\"healthy\":true,\"port\":8005,\"pid\":88060,\"url\":\"http://127.0.0.1:8005\",\"baseUrl\":\"http://127.0.0.1:8005\",\"apiBaseUrl\":\"http://127.0.0.1:8005/api/v1\",\"startedAt\":\"2026-06-29T11:45:47.121Z\",\"owned\":true,\"adopted\":false,\"projectRoot\":\"/Users/gengrf/PlotPilot\",\"dataDir\":\"/Users/gengrf/.plotpilot/data\",\"health\":{\"status\":\"healthy\",\"version\":\"1.0.2\",\"build_id\":\"build-20260209-1200-c4d2\",\"uptime_seconds\":0.37,\"daemon_process\":{\"running\":true,\"pid\":88063}}},\"endpoints\":{\"graph\":\"http://127.0.0.1:3198/graph\",\"plm\":\"http://127.0.0.1:3198/plm/runtime/status\",\"crew\":\"http://127.0.0.1:3198/crew\",\"app\":\"http://127.0.0.1:3198/app\",\"memory\":\"http://127.0.0.1:3198/app/memory\",\"events\":\"ws://127.0.0.1:3198/events\"}},\"capabilities\":{\"files.readTextFile\":true,\"files.writeTextFile\":true,\"runtime.status\":true,\"runtime.capabilities\":true,\"runtime.request\":true,\"sessions.command\":true,\"sessions.cancel\":true,\"plm.sidecar.status\":true,\"plm.sidecar.start\":true,\"plm.sidecar.stop\":true,\"plm.sidecar.logs\":true,\"graph.load\":true,\"graph.history\":true,\"graph.persist\":true,\"graph.backup\":true,\"skillCrew.refresh\":true,\"skillCrew.import\":true,\"skillCrew.run\":true,\"skillCrew.feedback\":true,\"basicMemory.read\":true,\"basicMemory.search\":true,\"basicMemory.write\":true,\"settings.read\":true,\"settings.write\":true,\"diagnostics.snapshot\":true,\"diagnostics.process\":true},\"paths\":{\"workspaceRoot\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace\",\"basicMemoryRoot\":\"/Users/gengrf/basic-memory-claude-history\",\"browserShellDistDir\":\"/Users/gengrf/drama-browser/apps/drama-browser-shell/dist\",\"runtimeSettingsPath\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-runtime-settings.json\"},\"process\":{\"pid\":86690,\"platform\":\"darwin\",\"arch\":\"arm64\",\"versions\":{\"node\":\"24.3.0\",\"bun\":\"1.3.14\",\"boringssl\":\"0c5fce43b7ed5eb6001487ee48ac65766f5ddcd1\",\"openssl\":\"1.1.0\",\"llhttp\":\"9.3.0\",\"libarchive\":\"ded82291ab41d5e355831b96b0e1ff49e24d8939\",\"mimalloc\":\"f15aecb94fc8096008bf87b90c53ed682026914a\",\"picohttpparser\":\"066d2b1e9ab820703db0837a7255d92d30f0c9f5\",\"uwebsockets\":\"0d9b296af33f2b851fcbf4df3e9ec89751734ba4\",\"webkit\":\"5488984d20e0dbfe4be2c3ba8fb18eb81a5e0e8b\",\"zig\":\"04e7f6ac1e009525bc00934f20199c68f04e0a24\",\"zlib\":\"12731092979c6d07f42da27da673a9f6c7b13586\",\"tinycc\":\"12882eee073cfe5c7621bcfadf679e1372d4537b\",\"lolhtml\":\"77127cd2b8545998756e8d64e36ee2313c4bb312\",\"ares\":\"3ac47ee46edd8ea40370222f91613fc16c434853\",\"libdeflate\":\"c8c56a20f8f621e6a966b716b31f1dedab6a41e3\",\"usockets\":\"0d9b296af33f2b851fcbf4df3e9ec89751734ba4\",\"lshpack\":\"8905c024b6d052f083a3d11d0a169b3c2735c8a1\",\"zstd\":\"f8745da6ff1ad1e7bab384bd1f9d742439278e99\",\"v8\":\"13.6.233.10-node.18\",\"uv\":\"1.48.0\",\"napi\":\"10\",\"icu\":\"74.2\",\"unicode\":\"15.1\",\"modules\":\"137\"},\"uptimeSeconds\":219.22081483399998,\"memoryUsage\":{\"rss\":103448576,\"heapTotal\":4357120,\"heapUsed\":7859465,\"external\":6112329,\"arrayBuffers\":131296}}},\"process\":{\"pid\":86690,\"platform\":\"darwin\",\"arch\":\"arm64\",\"versions\":{\"node\":\"24.3.0\",\"bun\":\"1.3.14\",\"boringssl\":\"0c5fce43b7ed5eb6001487ee48ac65766f5ddcd1\",\"openssl\":\"1.1.0\",\"llhttp\":\"9.3.0\",\"libarchive\":\"ded82291ab41d5e355831b96b0e1ff49e24d8939\",\"mimalloc\":\"f15aecb94fc8096008bf87b90c53ed682026914a\",\"picohttpparser\":\"066d2b1e9ab820703db0837a7255d92d30f0c9f5\",\"uwebsockets\":\"0d9b296af33f2b851fcbf4df3e9ec89751734ba4\",\"webkit\":\"5488984d20e0dbfe4be2c3ba8fb18eb81a5e0e8b\",\"zig\":\"04e7f6ac1e009525bc00934f20199c68f04e0a24\",\"zlib\":\"12731092979c6d07f42da27da673a9f6c7b13586\",\"tinycc\":\"12882eee073cfe5c7621bcfadf679e1372d4537b\",\"lolhtml\":\"77127cd2b8545998756e8d64e36ee2313c4bb312\",\"ares\":\"3ac47ee46edd8ea40370222f91613fc16c434853\",\"libdeflate\":\"c8c56a20f8f621e6a966b716b31f1dedab6a41e3\",\"usockets\":\"0d9b296af33f2b851fcbf4df3e9ec89751734ba4\",\"lshpack\":\"8905c024b6d052f083a3d11d0a169b3c2735c8a1\",\"zstd\":\"f8745da6ff1ad1e7bab384bd1f9d742439278e99\",\"v8\":\"13.6.233.10-node.18\",\"uv\":\"1.48.0\",\"napi\":\"10\",\"icu\":\"74.2\",\"unicode\":\"15.1\",\"modules\":\"137\"},\"uptimeSeconds\":219.221101834,\"memoryUsage\":{\"rss\":103464960,\"heapTotal\":4358144,\"heapUsed\":7859465,\"external\":6112745,\"arrayBuffers\":131296}}}"
+    }
+  ],
+  "data": {
+    "status": {
+      "state": "ready",
+      "version": "0.1.0",
+      "message": "Drama standalone runtime ready.",
+      "updatedAt": "2026-06-29T11:45:46.915Z",
+      "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+      "startedAt": "2026-06-29T11:42:09.962Z",
+      "runtimePackageRoot": null,
+      "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+      "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+      "plmRuntime": {
+        "state": "stopped",
+        "healthy": false,
+        "owned": false,
+        "adopted": false,
+        "projectRoot": "/Users/gengrf/PlotPilot",
+        "dataDir": "/Users/gengrf/.plotpilot/data"
+      },
+      "endpoints": {
+        "graph": "http://127.0.0.1:3198/graph",
+        "plm": "http://127.0.0.1:3198/plm/runtime/status",
+        "crew": "http://127.0.0.1:3198/crew",
+        "app": "http://127.0.0.1:3198/app",
+        "memory": "http://127.0.0.1:3198/app/memory",
+        "events": "ws://127.0.0.1:3198/events"
+      }
+    },
+    "capabilities": {
+      "files.readTextFile": true,
+      "files.writeTextFile": true,
+      "runtime.status": true,
+      "runtime.capabilities": true,
+      "runtime.request": true,
+      "sessions.command": true,
+      "sessions.cancel": true,
+      "plm.sidecar.status": true,
+      "plm.sidecar.start": true,
+      "plm.sidecar.stop": true,
+      "plm.sidecar.logs": true,
+      "graph.load": true,
+      "graph.history": true,
+      "graph.persist": true,
+      "graph.backup": true,
+      "skillCrew.refresh": true,
+      "skillCrew.import": true,
+      "skillCrew.run": true,
+      "skillCrew.feedback": true,
+      "basicMemory.read": true,
+      "basicMemory.search": true,
+      "basicMemory.write": true,
+      "settings.read": true,
+      "settings.write": true,
+      "diagnostics.snapshot": true,
+      "diagnostics.process": true
+    },
+    "files": {
+      "written": {
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/nested/local-file-smoke.txt",
+        "root": "workspace",
+        "size": 152,
+        "modifiedAt": "2026-06-29T11:45:46.920Z",
+        "content": "Drama Runtime smoke 2026-06-29T11:45:46.916Z\n中文状态：文件读写通过\nWindows path fixture: C:\\Users\\jupiter\\Drama Browser\\章节\\第 1 章.md\n"
+      },
+      "read": {
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/nested/local-file-smoke.txt",
+        "root": "workspace",
+        "size": 152,
+        "modifiedAt": "2026-06-29T11:45:46.920Z",
+        "content": "Drama Runtime smoke 2026-06-29T11:45:46.916Z\n中文状态：文件读写通过\nWindows path fixture: C:\\Users\\jupiter\\Drama Browser\\章节\\第 1 章.md\n"
+      },
+      "preview": {
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/nested/local-file-smoke.txt",
+        "root": "workspace",
+        "size": 152,
+        "modifiedAt": "2026-06-29T11:45:46.920Z",
+        "content": "Drama Runtime smoke 2026-06-29T11:45:46.916Z\n中文状态：文件读写通过\nWindows path fixture: C:\\Users\\jupiter\\Drama Browser\\章节\\第 1 章.md\n"
+      },
+      "exported": {
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/nested/local-file-smoke.txt",
+        "root": "workspace",
+        "size": 152,
+        "modifiedAt": "2026-06-29T11:45:46.920Z",
+        "content": "Drama Runtime smoke 2026-06-29T11:45:46.916Z\n中文状态：文件读写通过\nWindows path fixture: C:\\Users\\jupiter\\Drama Browser\\章节\\第 1 章.md\n"
+      },
+      "imported": {
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/nested/local-file-smoke.txt",
+        "root": "workspace",
+        "size": 173,
+        "modifiedAt": "2026-06-29T11:45:46.923Z",
+        "content": "Drama Runtime smoke 2026-06-29T11:45:46.916Z\n中文状态：文件读写通过\nWindows path fixture: C:\\Users\\jupiter\\Drama Browser\\章节\\第 1 章.md\nimportText roundtrip\n"
+      }
+    },
+    "sessions": {
+      "command": {
+        "accepted": true,
+        "session": {
+          "id": "remove-electron-host-smoke",
+          "labels": [],
+          "sources": [],
+          "skills": [],
+          "status": "verifying-electron-free-runtime",
+          "cancelled": false,
+          "updatedAt": "2026-06-29T11:45:46.924Z",
+          "commands": [
+            {
+              "type": "setStatus",
+              "status": "verifying-electron-free-runtime"
+            }
+          ]
+        }
+      },
+      "status": {
+        "id": "remove-electron-host-smoke",
+        "labels": [],
+        "sources": [],
+        "skills": [],
+        "status": "verifying-electron-free-runtime",
+        "cancelled": false,
+        "updatedAt": "2026-06-29T11:45:46.924Z",
+        "commands": [
+          {
+            "type": "setStatus",
+            "status": "verifying-electron-free-runtime"
+          }
+        ]
+      },
+      "cancel": {
+        "accepted": true,
+        "session": {
+          "id": "remove-electron-host-smoke",
+          "labels": [],
+          "sources": [],
+          "skills": [],
+          "status": "cancelled-silent",
+          "cancelled": true,
+          "updatedAt": "2026-06-29T11:45:46.924Z",
+          "commands": [
+            {
+              "type": "setStatus",
+              "status": "verifying-electron-free-runtime"
+            }
+          ]
+        }
+      }
+    },
+    "settings": {
+      "write": {
+        "key": "remove-electron-host.path-fixture",
+        "updated": true
+      },
+      "read": {
+        "mac": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/nested/local-file-smoke.txt",
+        "win": "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史.md",
+        "cn": "诊断文案保持中文可读"
+      }
+    },
+    "graph": {
+      "loaded": {
+        "graph": {
+          "schema": "drama.graph.v1",
+          "id": "remove-electron-host-smoke",
+          "title": "Drama Graph",
+          "createdAt": 1782733272681,
+          "updatedAt": 1782733272681,
+          "source": {
+            "format": "native",
+            "graphId": "remove-electron-host-smoke"
+          },
+          "bible": {
+            "id": "remove-electron-host-smoke-bible",
+            "title": "Drama Graph Bible",
+            "worldNodeIds": [],
+            "characterNodeIds": [],
+            "locationNodeIds": [],
+            "plotNodeIds": []
+          },
+          "nodes": [],
+          "edges": [],
+          "scenes": [],
+          "chapters": [],
+          "drafts": [],
+          "taskBindings": [],
+          "metadata": {}
+        },
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/remove-electron-host-smoke.json",
+        "imported": false
+      },
+      "persisted": {
+        "graph": {
+          "schema": "drama.graph.v1",
+          "id": "remove-electron-host-smoke",
+          "title": "Drama Graph",
+          "createdAt": 1782733272681,
+          "updatedAt": 1782733272681,
+          "source": {
+            "format": "native",
+            "graphId": "remove-electron-host-smoke"
+          },
+          "bible": {
+            "id": "remove-electron-host-smoke-bible",
+            "title": "Drama Graph Bible",
+            "worldNodeIds": [],
+            "characterNodeIds": [],
+            "locationNodeIds": [],
+            "plotNodeIds": []
+          },
+          "nodes": [],
+          "edges": [],
+          "scenes": [],
+          "chapters": [],
+          "drafts": [],
+          "taskBindings": [],
+          "metadata": {}
+        },
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/remove-electron-host-smoke.json",
+        "backupPath": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/.backups/remove-electron-host-smoke.1782733546931.json"
+      },
+      "history": {
+        "graphId": "remove-electron-host-smoke",
+        "backups": [
+          {
+            "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/.backups/remove-electron-host-smoke.1782733546931.json",
+            "createdAt": 1782733546931,
+            "graphName": "Drama Graph",
+            "nodeCount": 0,
+            "edgeCount": 0,
+            "valid": true
+          }
+        ],
+        "events": [
+          {
+            "id": "remove-electron-host-smoke:1782733546934:2p3mkq",
+            "graphId": "remove-electron-host-smoke",
+            "type": "graph.persisted",
+            "actor": "drama:runtime",
+            "createdAt": 1782733546934
+          },
+          {
+            "id": "remove-electron-host-smoke:1782733272684:isj9xj",
+            "graphId": "remove-electron-host-smoke",
+            "type": "graph.created",
+            "actor": "drama:runtime",
+            "details": {
+              "source": "runtime",
+              "requestedGraphId": "remove-electron-host-smoke"
+            },
+            "createdAt": 1782733272684
+          }
+        ],
+        "eventLogPath": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/graph-events.jsonl"
+      }
+    },
+    "plm": {
+      "sidecar": {
+        "state": "running",
+        "healthy": true,
+        "port": 8005,
+        "pid": 88060,
+        "url": "http://127.0.0.1:8005",
+        "baseUrl": "http://127.0.0.1:8005",
+        "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+        "startedAt": "2026-06-29T11:45:47.121Z",
+        "owned": true,
+        "adopted": false,
+        "projectRoot": "/Users/gengrf/PlotPilot",
+        "dataDir": "/Users/gengrf/.plotpilot/data"
+      },
+      "logs": [
+        {
+          "timestamp": "2026-06-29T11:45:48.643Z",
+          "stream": "stderr",
+          "message": "06:45:48 [INFO] interfaces.main - ✅ 守护进程已创建并启动（独立进程模式，流式队列 + 共享状态 + 持久化队列已传递）",
+          "line": "06:45:48 [INFO] interfaces.main - ✅ 守护进程已创建并启动（独立进程模式，流式队列 + 共享状态 + 持久化队列已传递）"
+        },
+        {
+          "timestamp": "2026-06-29T11:45:48.643Z",
+          "stream": "stderr",
+          "message": "06:45:48 [INFO] interfaces.main - ✅ DAG 节点注册表已初始化: ['anti_ai_allowlist', 'anti_ai_audit', 'anti_ai_behavior', 'anti_ai_char_lock', 'anti_ai_finale', 'anti_ai_mid_refresh', 'ctx_blueprint', 'ctx_debt', 'ctx_foreshadow', 'ctx_memory', 'ctx_voice', 'exec_beat', 'exec_planning', 'exec_scene', 'exec_writer', 'ext_narrative_sync', 'ext_state', 'ext_style', 'ext_summary', 'gen_chapter_basic', 'gen_dialogue', 'gen_scene', 'gw_circuit', 'gw_condition', 'gw_retry', 'gw_review', 'planning_act', 'planning_beat_sheet', 'planning_outline_partition', 'planning_quick_macro', 'review_character', 'review_foreshadowing', 'review_improvement', 'review_storyline', 'review_timeline', 'val_anti_ai', 'val_foreshadow', 'val_kg_infer', 'val_narrative', 'val_style', 'val_tension', 'world_bible_all', 'world_characters', 'world_locations', 'world_worldbuilding']",
+          "line": "06:45:48 [INFO] interfaces.main - ✅ DAG 节点注册表已初始化: ['anti_ai_allowlist', 'anti_ai_audit', 'anti_ai_behavior', 'anti_ai_char_lock', 'anti_ai_finale', 'anti_ai_mid_refresh', 'ctx_blueprint', 'ctx_debt', 'ctx_foreshadow', 'ctx_memory', 'ctx_voice', 'exec_beat', 'exec_planning', 'exec_scene', 'exec_writer', 'ext_narrative_sync', 'ext_state', 'ext_style', 'ext_summary', 'gen_chapter_basic', 'gen_dialogue', 'gen_scene', 'gw_circuit', 'gw_condition', 'gw_retry', 'gw_review', 'planning_act', 'planning_beat_sheet', 'planning_outline_partition', 'planning_quick_macro', 'review_character', 'review_foreshadowing', 'review_improvement', 'review_storyline', 'review_timeline', 'val_anti_ai', 'val_foreshadow', 'val_kg_infer', 'val_narrative', 'val_style', 'val_tension', 'world_bible_all', 'world_characters', 'world_locations', 'world_worldbuilding']"
+        },
+        {
+          "timestamp": "2026-06-29T11:45:48.644Z",
+          "stream": "stderr",
+          "message": "INFO:     Application startup complete.",
+          "line": "INFO:     Application startup complete."
+        },
+        {
+          "timestamp": "2026-06-29T11:45:48.647Z",
+          "stream": "stderr",
+          "message": "INFO:     Uvicorn running on http://127.0.0.1:8005 (Press CTRL+C to quit)",
+          "line": "INFO:     Uvicorn running on http://127.0.0.1:8005 (Press CTRL+C to quit)"
+        },
+        {
+          "timestamp": "2026-06-29T11:45:48.752Z",
+          "stream": "stdout",
+          "message": "INFO:     127.0.0.1:49932 - \"GET /health HTTP/1.1\" 200 OK",
+          "line": "INFO:     127.0.0.1:49932 - \"GET /health HTTP/1.1\" 200 OK"
+        }
+      ],
+      "codex": {
+        "available": true,
+        "authenticated": true,
+        "requires_openai_auth": true,
+        "email": "ngonchi200@gmail.com",
+        "plan_type": "pro",
+        "error": null
+      }
+    },
+    "skillCrew": {
+      "refresh": {
+        "source": "drama-runtime",
+        "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+        "skills": []
+      },
+      "run": {
+        "graph": {
+          "schema": "drama.graph.v1",
+          "id": "remove-electron-host-smoke",
+          "title": "Drama Graph",
+          "createdAt": 1782733272681,
+          "updatedAt": 1782733272681,
+          "source": {
+            "format": "native",
+            "graphId": "remove-electron-host-smoke"
+          },
+          "bible": {
+            "id": "remove-electron-host-smoke-bible",
+            "title": "Drama Graph Bible",
+            "worldNodeIds": [],
+            "characterNodeIds": [],
+            "locationNodeIds": [],
+            "plotNodeIds": []
+          },
+          "nodes": [],
+          "edges": [],
+          "scenes": [],
+          "chapters": [],
+          "drafts": [],
+          "taskBindings": [],
+          "metadata": {}
+        },
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/remove-electron-host-smoke.json"
+      },
+      "feedback": {
+        "graph": {
+          "schema": "drama.graph.v1",
+          "id": "remove-electron-host-smoke",
+          "title": "Drama Graph",
+          "createdAt": 1782733272681,
+          "updatedAt": 1782733272681,
+          "source": {
+            "format": "native",
+            "graphId": "remove-electron-host-smoke"
+          },
+          "bible": {
+            "id": "remove-electron-host-smoke-bible",
+            "title": "Drama Graph Bible",
+            "worldNodeIds": [],
+            "characterNodeIds": [],
+            "locationNodeIds": [],
+            "plotNodeIds": []
+          },
+          "nodes": [],
+          "edges": [],
+          "scenes": [],
+          "chapters": [],
+          "drafts": [],
+          "taskBindings": [],
+          "metadata": {}
+        },
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/remove-electron-host-smoke.json"
+      }
+    },
+    "basicMemory": {
+      "list": {
+        "root": "/Users/gengrf/basic-memory-claude-history",
+        "exists": true,
+        "total": 1,
+        "returned": 1,
+        "truncated": false,
+        "query": "remove-electron-host",
+        "notes": [
+          {
+            "path": "zz-drama-verification/remove-electron-host-smoke.md",
+            "title": "Drama Runtime Basic Memory Smoke",
+            "type": "verification",
+            "size": 177,
+            "modifiedAt": "2026-06-29T11:45:49.088Z",
+            "excerpt": "Drama Runtime Basic Memory Smoke remove-electron-host smoke note. 中文状态：知识库读写通过。"
+          }
+        ]
+      },
+      "search": {
+        "root": "/Users/gengrf/basic-memory-claude-history",
+        "exists": true,
+        "total": 1,
+        "returned": 1,
+        "truncated": false,
+        "query": "Basic Memory Smoke",
+        "notes": [
+          {
+            "path": "zz-drama-verification/remove-electron-host-smoke.md",
+            "title": "Drama Runtime Basic Memory Smoke",
+            "type": "verification",
+            "size": 177,
+            "modifiedAt": "2026-06-29T11:45:49.088Z",
+            "excerpt": "Drama Runtime Basic Memory Smoke remove-electron-host smoke note. 中文状态：知识库读写通过。"
+          }
+        ]
+      },
+      "read": {
+        "root": "/Users/gengrf/basic-memory-claude-history",
+        "note": {
+          "path": "zz-drama-verification/remove-electron-host-smoke.md",
+          "title": "Drama Runtime Basic Memory Smoke",
+          "type": "verification",
+          "size": 177,
+          "modifiedAt": "2026-06-29T11:45:49.088Z",
+          "excerpt": "Drama Runtime Basic Memory Smoke remove-electron-host smoke note. 中文状态：知识库读写通过。"
+        },
+        "content": "---\ntitle: Drama Runtime Basic Memory Smoke\ntype: verification\n---\n\n# Drama Runtime Basic Memory Smoke\n\nremove-electron-host smoke note. 中文状态：知识库读写通过。\n"
+      },
+      "write": {
+        "root": "/Users/gengrf/basic-memory-claude-history",
+        "note": {
+          "path": "zz-drama-verification/remove-electron-host-smoke.md",
+          "title": "Drama Runtime Basic Memory Smoke",
+          "type": "verification",
+          "size": 217,
+          "modifiedAt": "2026-06-29T11:45:49.128Z",
+          "excerpt": "Drama Runtime Basic Memory Smoke remove-electron-host smoke note. 中文状态：知识库读写通过。 保存回写：通过 Drama Runtime。"
+        },
+        "content": "---\ntitle: Drama Runtime Basic Memory Smoke\ntype: verification\n---\n\n# Drama Runtime Basic Memory Smoke\n\nremove-electron-host smoke note. 中文状态：知识库读写通过。\n\n保存回写：通过 Drama Runtime。\n"
+      }
+    },
+    "diagnostics": {
+      "snapshot": {
+        "status": {
+          "state": "ready",
+          "version": "0.1.0",
+          "message": "Drama standalone runtime ready.",
+          "updatedAt": "2026-06-29T11:45:49.129Z",
+          "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+          "startedAt": "2026-06-29T11:42:09.962Z",
+          "runtimePackageRoot": null,
+          "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+          "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+          "plmRuntime": {
+            "state": "running",
+            "healthy": true,
+            "port": 8005,
+            "pid": 88060,
+            "url": "http://127.0.0.1:8005",
+            "baseUrl": "http://127.0.0.1:8005",
+            "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+            "startedAt": "2026-06-29T11:45:47.121Z",
+            "owned": true,
+            "adopted": false,
+            "projectRoot": "/Users/gengrf/PlotPilot",
+            "dataDir": "/Users/gengrf/.plotpilot/data",
+            "health": {
+              "status": "healthy",
+              "version": "1.0.2",
+              "build_id": "build-20260209-1200-c4d2",
+              "uptime_seconds": 0.37,
+              "daemon_process": {
+                "running": true,
+                "pid": 88063
+              }
+            }
+          },
+          "endpoints": {
+            "graph": "http://127.0.0.1:3198/graph",
+            "plm": "http://127.0.0.1:3198/plm/runtime/status",
+            "crew": "http://127.0.0.1:3198/crew",
+            "app": "http://127.0.0.1:3198/app",
+            "memory": "http://127.0.0.1:3198/app/memory",
+            "events": "ws://127.0.0.1:3198/events"
+          }
+        },
+        "capabilities": {
+          "files.readTextFile": true,
+          "files.writeTextFile": true,
+          "runtime.status": true,
+          "runtime.capabilities": true,
+          "runtime.request": true,
+          "sessions.command": true,
+          "sessions.cancel": true,
+          "plm.sidecar.status": true,
+          "plm.sidecar.start": true,
+          "plm.sidecar.stop": true,
+          "plm.sidecar.logs": true,
+          "graph.load": true,
+          "graph.history": true,
+          "graph.persist": true,
+          "graph.backup": true,
+          "skillCrew.refresh": true,
+          "skillCrew.import": true,
+          "skillCrew.run": true,
+          "skillCrew.feedback": true,
+          "basicMemory.read": true,
+          "basicMemory.search": true,
+          "basicMemory.write": true,
+          "settings.read": true,
+          "settings.write": true,
+          "diagnostics.snapshot": true,
+          "diagnostics.process": true
+        },
+        "paths": {
+          "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+          "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+          "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+          "runtimeSettingsPath": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-runtime-settings.json"
+        },
+        "process": {
+          "pid": 86690,
+          "platform": "darwin",
+          "arch": "arm64",
+          "versions": {
+            "node": "24.3.0",
+            "bun": "1.3.14",
+            "boringssl": "0c5fce43b7ed5eb6001487ee48ac65766f5ddcd1",
+            "openssl": "1.1.0",
+            "llhttp": "9.3.0",
+            "libarchive": "ded82291ab41d5e355831b96b0e1ff49e24d8939",
+            "mimalloc": "f15aecb94fc8096008bf87b90c53ed682026914a",
+            "picohttpparser": "066d2b1e9ab820703db0837a7255d92d30f0c9f5",
+            "uwebsockets": "0d9b296af33f2b851fcbf4df3e9ec89751734ba4",
+            "webkit": "5488984d20e0dbfe4be2c3ba8fb18eb81a5e0e8b",
+            "zig": "04e7f6ac1e009525bc00934f20199c68f04e0a24",
+            "zlib": "12731092979c6d07f42da27da673a9f6c7b13586",
+            "tinycc": "12882eee073cfe5c7621bcfadf679e1372d4537b",
+            "lolhtml": "77127cd2b8545998756e8d64e36ee2313c4bb312",
+            "ares": "3ac47ee46edd8ea40370222f91613fc16c434853",
+            "libdeflate": "c8c56a20f8f621e6a966b716b31f1dedab6a41e3",
+            "usockets": "0d9b296af33f2b851fcbf4df3e9ec89751734ba4",
+            "lshpack": "8905c024b6d052f083a3d11d0a169b3c2735c8a1",
+            "zstd": "f8745da6ff1ad1e7bab384bd1f9d742439278e99",
+            "v8": "13.6.233.10-node.18",
+            "uv": "1.48.0",
+            "napi": "10",
+            "icu": "74.2",
+            "unicode": "15.1",
+            "modules": "137"
+          },
+          "uptimeSeconds": 219.22081483399998,
+          "memoryUsage": {
+            "rss": 103448576,
+            "heapTotal": 4357120,
+            "heapUsed": 7859465,
+            "external": 6112329,
+            "arrayBuffers": 131296
+          }
+        }
+      },
+      "process": {
+        "pid": 86690,
+        "platform": "darwin",
+        "arch": "arm64",
+        "versions": {
+          "node": "24.3.0",
+          "bun": "1.3.14",
+          "boringssl": "0c5fce43b7ed5eb6001487ee48ac65766f5ddcd1",
+          "openssl": "1.1.0",
+          "llhttp": "9.3.0",
+          "libarchive": "ded82291ab41d5e355831b96b0e1ff49e24d8939",
+          "mimalloc": "f15aecb94fc8096008bf87b90c53ed682026914a",
+          "picohttpparser": "066d2b1e9ab820703db0837a7255d92d30f0c9f5",
+          "uwebsockets": "0d9b296af33f2b851fcbf4df3e9ec89751734ba4",
+          "webkit": "5488984d20e0dbfe4be2c3ba8fb18eb81a5e0e8b",
+          "zig": "04e7f6ac1e009525bc00934f20199c68f04e0a24",
+          "zlib": "12731092979c6d07f42da27da673a9f6c7b13586",
+          "tinycc": "12882eee073cfe5c7621bcfadf679e1372d4537b",
+          "lolhtml": "77127cd2b8545998756e8d64e36ee2313c4bb312",
+          "ares": "3ac47ee46edd8ea40370222f91613fc16c434853",
+          "libdeflate": "c8c56a20f8f621e6a966b716b31f1dedab6a41e3",
+          "usockets": "0d9b296af33f2b851fcbf4df3e9ec89751734ba4",
+          "lshpack": "8905c024b6d052f083a3d11d0a169b3c2735c8a1",
+          "zstd": "f8745da6ff1ad1e7bab384bd1f9d742439278e99",
+          "v8": "13.6.233.10-node.18",
+          "uv": "1.48.0",
+          "napi": "10",
+          "icu": "74.2",
+          "unicode": "15.1",
+          "modules": "137"
+        },
+        "uptimeSeconds": 219.221101834,
+        "memoryUsage": {
+          "rss": 103464960,
+          "heapTotal": 4358144,
+          "heapUsed": 7859465,
+          "external": 6112745,
+          "arrayBuffers": 131296
+        }
+      }
+    }
+  }
+}

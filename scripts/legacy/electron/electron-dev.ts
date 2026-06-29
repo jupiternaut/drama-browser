@@ -8,9 +8,9 @@ import { existsSync, rmSync, cpSync, readFileSync, statSync, mkdirSync } from "f
 import { join, basename } from "path";
 import { homedir } from "os";
 import * as esbuild from "esbuild";
-import { downloadUv, type Platform, type Arch } from "./build/common";
+import { downloadUv, type Platform, type Arch } from "../../build/common";
 
-const ROOT_DIR = join(import.meta.dir, "..");
+const ROOT_DIR = join(import.meta.dir, "../../..");
 const ELECTRON_DIR = join(ROOT_DIR, "apps/electron");
 const DIST_DIR = join(ELECTRON_DIR, "dist");
 const DEFAULT_DRAMA_CONFIG_DIR = join(homedir(), ".drama-agent");
@@ -20,7 +20,7 @@ const DEFAULT_DRAMA_CONFIG_DIR = join(homedir(), ".drama-agent");
 // AbortSignal` to `_AbortSignal` to dodge collision with the global, which
 // breaks node-fetch@2's `constructor.name === 'AbortSignal'` check and fails
 // every Telegram API call with a TypeError. Kept in sync with
-// `apps/electron/package.json` build:main and `scripts/electron-build-main.ts`.
+// `apps/electron/package.json` build:main and `scripts/legacy/electron/electron-build-main.ts`.
 const MAIN_PROCESS_ALIAS: Record<string, string> = {
   "node-fetch": join(ROOT_DIR, "apps/electron/src/main/shims/node-fetch.cjs"),
   "abort-controller": join(ROOT_DIR, "apps/electron/src/main/shims/abort-controller.cjs"),
@@ -306,7 +306,7 @@ function getElectronEnv(): Record<string, string> {
 //   main.cjs throws ERR_INVALID_ARG_VALUE on load. Externalize so Node loads
 //   the SDK natively as ESM. Electron 39 = Node 22.x supports `require()` of
 //   TLA-free ESM, so the runtime `require('@anthropic-ai/claude-agent-sdk')`
-//   resolves correctly. Mirror of the same flag in `scripts/electron-build-main.ts`
+//   resolves correctly. Mirror of the same flag in `scripts/legacy/electron/electron-build-main.ts`
 //   and `apps/electron/package.json` build:main.
 const MAIN_BUNDLE_EXTERNALS = ["electron", "@anthropic-ai/claude-agent-sdk"];
 

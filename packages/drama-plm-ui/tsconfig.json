@@ -27,6 +27,8 @@
       "@drama/core/*": ["../drama-core/src/*"],
       "@drama/graph": ["../drama-graph/src/index.ts"],
       "@drama/graph/*": ["../drama-graph/src/*"],
+      "@drama/host": ["../drama-host/src/index.ts"],
+      "@drama/host/*": ["../drama-host/src/*"],
       "@drama/plm": ["../drama-plm/src/index.ts"],
       "@drama/plm/*": ["../drama-plm/src/*"],
       "@drama/ui": ["../drama-ui/src/index.ts"],

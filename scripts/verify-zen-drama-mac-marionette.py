@@ -1024,6 +1024,7 @@ def main() -> int:
         )
         client = connect_marionette(port, process, args.timeout_ms)
         session = client.call("WebDriver:NewSession", {"capabilities": {"alwaysMatch": {}}})
+        client.call("WebDriver:SetTimeouts", {"script": max(30000, args.timeout_ms)})
         client.call("Marionette:SetContext", {"value": "chrome"})
         time.sleep(max(0, args.wait_ms) / 1000)
         inspected = client.call(

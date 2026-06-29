@@ -10,6 +10,7 @@
     "outDir": "./dist/esm",
     "declarationDir": "./dist/types",
     "paths": {
+      "@drama/host": ["../drama-host/dist/types/index.d.ts"],
       "@drama/ui": ["../drama-ui/dist/types/index.d.ts"]
     }
   },

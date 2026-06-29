@@ -1,0 +1,103 @@
+{
+  "date": "2026-06-29",
+  "scope": {
+    "repo": "/Users/gengrf/drama-browser",
+    "excluded": ["node_modules", "dist", "tmp", ".git"],
+    "legacyBoundary": ["apps/electron/**"]
+  },
+  "outsideAppsElectron": {
+    "directElectronPackageImports": [
+      {
+        "path": "packages/shared/src/utils/open-url.ts",
+        "classification": "runtime",
+        "targetOwner": "Drama Runtime or injected DramaHost opener",
+        "evidence": "dynamic import('electron') before platform fallback"
+      }
+    ],
+    "windowElectronApi": [
+      {
+        "path": "apps/webui/src/App.tsx",
+        "classification": "production-ui-compatibility",
+        "targetOwner": "DramaHost",
+        "evidence": "assigns (window as any).electronAPI = api"
+      },
+      {
+        "path": "apps/webui/src/adapter/web-api.ts",
+        "classification": "production-ui-compatibility",
+        "targetOwner": "DramaHost plus Drama Runtime",
+        "evidence": "constructs browser-compatible ElectronAPI with websocket RPC"
+      },
+      {
+        "path": "packages/ui/src/context/PlatformContext.tsx",
+        "classification": "comment-example",
+        "targetOwner": "none",
+        "evidence": "example text only"
+      },
+      {
+        "path": "packages/server-core/src/sessions/SessionManager.ts",
+        "classification": "comment-only",
+        "targetOwner": "none",
+        "evidence": "comment describing UI OAuth call"
+      }
+    ],
+    "ipcRenderer": [],
+    "contextBridge": [],
+    "browserWindowConstruction": []
+  },
+  "transitiveCouplings": [
+    {
+      "paths": [
+        "packages/shared/src/auth/google-oauth.ts",
+        "packages/shared/src/auth/microsoft-oauth.ts",
+        "packages/shared/src/auth/slack-oauth.ts",
+        "packages/shared/src/auth/oauth.ts",
+        "packages/shared/src/auth/claude-oauth.ts"
+      ],
+      "classification": "runtime",
+      "targetOwner": "Drama Runtime or injected DramaHost opener",
+      "evidence": "OAuth modules call shared open-url helper"
+    },
+    {
+      "paths": [
+        "apps/webui/vite.config.ts",
+        "apps/webui/tsconfig.json",
+        "apps/webui/src/index.css"
+      ],
+      "classification": "production-ui-build-config",
+      "targetOwner": "UI host layer",
+      "evidence": "production web UI imports or aliases Electron renderer sources"
+    }
+  ],
+  "classificationMap": {
+    "runtime": [
+      "sessions",
+      "AI/MCP/server calls",
+      "PLM sidecar",
+      "Graph persistence",
+      "Skill Crew",
+      "Basic Memory",
+      "preferences/settings",
+      "OAuth URL opening when not native-browser-only"
+    ],
+    "gecko-chrome": [
+      "open URL",
+      "new tab/window",
+      "profile-aware launch",
+      "browser diagnostics",
+      "native file reveal/open where Gecko owns OS integration"
+    ],
+    "ui-state": [
+      "capability unavailable display",
+      "route selection",
+      "surface selection",
+      "local visual recovery state"
+    ],
+    "legacy-only": [
+      "Electron updater",
+      "Electron helper process lifecycle",
+      "Electron window focus/menu events",
+      "Electron packaging metadata",
+      "Electron install manifests"
+    ]
+  }
+}

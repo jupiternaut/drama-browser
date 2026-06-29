@@ -1,0 +1,97 @@
+{
+  "ok": true,
+  "sourceWorkspace": "/Users/gengrf/zen-browser-desktop",
+  "appBundle": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app",
+  "generatedAt": "2026-06-29T10:58:16.981Z",
+  "checks": [
+    {
+      "id": "source-workspace",
+      "ok": true,
+      "detail": "/Users/gengrf/zen-browser-desktop"
+    },
+    {
+      "id": "app-bundle",
+      "ok": true,
+      "detail": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app"
+    },
+    {
+      "id": "drama-source-root",
+      "ok": true,
+      "detail": "/Users/gengrf/zen-browser-desktop/engine/browser/base/content/drama"
+    },
+    {
+      "id": "source-files-present",
+      "ok": true,
+      "detail": "all Drama source chrome files exist"
+    },
+    {
+      "id": "jar-include-registered",
+      "ok": true,
+      "detail": "browser/base/jar.mn includes Drama jar manifest"
+    },
+    {
+      "id": "jar-manifest-routes",
+      "ok": true,
+      "detail": "Drama jar manifest maps manager, compatibility alias, CSS, icons, and app shell"
+    },
+    {
+      "id": "browser-xhtml-head-hook",
+      "ok": true,
+      "detail": "browser window loads Drama manager and CSS from source include"
+    },
+    {
+      "id": "browser-xhtml-body-hook",
+      "ok": true,
+      "detail": "browser window declares Drama commands, toolbar, panel, and embedded browser"
+    },
+    {
+      "id": "manager-internal-url",
+      "ok": true,
+      "detail": "manager defaults to source-registered internal app, supports runtime token handoff, and keeps Zen prefs as migration aliases"
+    },
+    {
+      "id": "manager-browser-commands",
+      "ok": true,
+      "detail": "manager exposes browser-level commands for URL, internal route, tabs/windows, file open/reveal, and diagnostics"
+    },
+    {
+      "id": "app-index-relative-assets",
+      "ok": true,
+      "detail": "static app index uses relative assets that resolve inside chrome package"
+    },
+    {
+      "id": "surface-routes-covered",
+      "ok": true,
+      "detail": "chrome://browser/content/drama/app/index.html?host=drama&surface=start\nchrome://browser/content/drama/app/index.html?host=drama&surface=graph\nchrome://browser/content/drama/app/index.html?host=drama&surface=plm\nchrome://browser/content/drama/app/index.html?host=drama&surface=crew\nchrome://browser/content/drama/app/index.html?host=drama&surface=memory"
+    },
+    {
+      "id": "packaged-omni-entries",
+      "ok": true,
+      "detail": "source-built package contains Drama app, manager, CSS, and icons"
+    },
+    {
+      "id": "wrapper-is-transitional",
+      "ok": true,
+      "detail": "wrapper package injection is documented as transitional adapter tooling"
+    }
+  ],
+  "surfaces": [
+    "chrome://browser/content/drama/app/index.html?host=drama&surface=start",
+    "chrome://browser/content/drama/app/index.html?host=drama&surface=graph",
+    "chrome://browser/content/drama/app/index.html?host=drama&surface=plm",
+    "chrome://browser/content/drama/app/index.html?host=drama&surface=crew",
+    "chrome://browser/content/drama/app/index.html?host=drama&surface=memory"
+  ],
+  "omniEntries": [
+    "chrome/browser/content/browser/drama/DramaBrowserChromeManager.mjs",
+    "chrome/browser/content/browser/zen-components/ZenDramaManager.mjs",
+    "chrome/browser/content/browser/zen-styles/zen-drama.css",
+    "chrome/browser/content/browser/zen-icons/drama-start.svg",
+    "chrome/browser/content/browser/zen-icons/drama-graph.svg",
+    "chrome/browser/content/browser/zen-icons/drama-plm.svg",
+    "chrome/browser/content/browser/zen-icons/drama-crew.svg",
+    "chrome/browser/content/browser/zen-icons/drama-memory.svg",
+    "chrome/browser/content/browser/drama/app/index.html"
+  ],
+  "looseEntries": []
+}

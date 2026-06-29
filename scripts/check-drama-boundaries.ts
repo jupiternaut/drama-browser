@@ -43,6 +43,13 @@ const uiPackageRoots = [
   'packages/drama-plm-ui/src',
 ]
 
+const productionUiRoots = [
+  'apps/drama-browser-shell/src',
+  'packages/drama-graph-ui/src',
+  'packages/drama-plm-ui/src',
+  'packages/drama-ui/src',
+]
+
 const electronRoots = [
   'apps/electron/src/main',
   'apps/electron/src/renderer',
@@ -83,6 +90,18 @@ const rules: Rule[] = [
     message: 'Drama React UI packages must remain browser-safe and receive host capabilities through props.',
   },
   {
+    name: 'production-ui-does-not-use-electron',
+    roots: productionUiRoots,
+    forbidden: [
+      /window\.electronAPI/,
+      /\bipcRenderer\b/,
+      /\bcontextBridge\b/,
+      /(?:from|import)\s+['"]electron['"]/,
+      /\brequire\(['"]electron['"]\)/,
+    ],
+    message: 'Production Drama UI must use DramaHost or runtime APIs instead of Electron globals/imports.',
+  },
+  {
     name: 'electron-imports-drama-public-exports-only',
     roots: electronRoots,
     forbidden: [
@@ -98,6 +117,8 @@ const rules: Rule[] = [
       /(?:from|import)\s+['"]electron['"]/,
       /(?:from|import)\s+['"][^'"]*apps\/electron/i,
       /window\.electronAPI/,
+      /\bipcRenderer\b/,
+      /\bcontextBridge\b/,
       /\brequire\(['"]electron['"]\)/,
     ],
     message: 'The Zen/browser main path must stay independent from Electron.',

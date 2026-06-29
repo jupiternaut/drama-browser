@@ -6,7 +6,7 @@ import { spawn } from "bun";
 import { existsSync, rmSync } from "fs";
 import { join } from "path";
 
-const ROOT_DIR = join(import.meta.dir, "..");
+const ROOT_DIR = join(import.meta.dir, "../../..");
 const ELECTRON_DIR = join(ROOT_DIR, "apps/electron");
 
 // Clean renderer dist first

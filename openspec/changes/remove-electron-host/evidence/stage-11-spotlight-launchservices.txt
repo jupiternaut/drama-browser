@@ -1,0 +1,22 @@
+# Spotlight and LaunchServices
+## mdfind app.drama-browser.local
+/Users/gengrf/drama-browser/dist/zen-drama-mac/Drama Browser.app
+/Users/gengrf/drama-browser/dist/drama-browser-mac/Drama Browser.app
+/Applications/Drama Browser.app
+/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser-internal/Drama Browser.app
+/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/Drama Browser.app
+
+## mdls production app
+kMDItemCFBundleIdentifier = "app.drama-browser.local"
+kMDItemDisplayName        = "Drama Browser"
+kMDItemFSName             = "Drama Browser.app"
+kMDItemPath               = "/System/Volumes/Data/Applications/Drama Browser.app"
+
+## mdls legacy app
+kMDItemCFBundleIdentifier = "com.jupiternaut.drama"
+kMDItemDisplayName        = "Drama"
+kMDItemFSName             = "Drama.app"
+kMDItemPath               = "/System/Volumes/Data/Applications/Drama.app"
+
+## bundle lookup
+/Applications/Drama Browser.app

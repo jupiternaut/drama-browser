@@ -18,6 +18,16 @@
       "import": "./dist/esm/gecko.js",
       "default": "./dist/esm/gecko.js"
     },
+    "./drama-browser": {
+      "types": "./dist/types/drama-browser.d.ts",
+      "import": "./dist/esm/drama-browser.js",
+      "default": "./dist/esm/drama-browser.js"
+    },
+    "./legacy-electron": {
+      "types": "./dist/types/legacy-electron.d.ts",
+      "import": "./dist/esm/legacy-electron.js",
+      "default": "./dist/esm/legacy-electron.js"
+    },
     "./runtime-client": {
       "types": "./dist/types/runtime-client.d.ts",
       "import": "./dist/esm/runtime-client.js",

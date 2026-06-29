@@ -5,7 +5,7 @@
 import { existsSync, cpSync } from "fs";
 import { join } from "path";
 
-const ROOT_DIR = join(import.meta.dir, "..");
+const ROOT_DIR = join(import.meta.dir, "../../..");
 const ELECTRON_DIR = join(ROOT_DIR, "apps/electron");
 
 const srcDir = join(ELECTRON_DIR, "resources");

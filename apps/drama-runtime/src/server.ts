@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -137,6 +137,47 @@ interface BasicMemoryReadResponse {
   content: string
 }
 
+interface RuntimeFileRequest {
+  path?: string
+  content?: string
+}
+
+interface RuntimeSessionCommandRequest {
+  sessionId?: string
+  command?: Record<string, unknown>
+}
+
+interface RuntimeSessionCancelRequest {
+  sessionId?: string
+  silent?: boolean
+}
+
+interface RuntimeSettingReadRequest {
+  key?: string
+}
+
+interface RuntimeSettingWriteRequest {
+  key?: string
+  value?: unknown
+}
+
+interface RuntimeGraphPersistRequest {
+  graphId?: string
+  graph?: unknown
+}
+
+interface RuntimeSessionState {
+  id: string
+  labels: unknown[]
+  sources: unknown[]
+  skills: unknown[]
+  status: string
+  workingDirectory?: string
+  cancelled: boolean
+  updatedAt: string
+  commands: Array<Record<string, unknown>>
+}
+
 const startedAt = new Date().toISOString()
 const port = Number(process.env.DRAMA_RUNTIME_PORT ?? 3198)
 const host = process.env.DRAMA_RUNTIME_HOST ?? '127.0.0.1'
@@ -151,6 +192,8 @@ const runtimePackageRoot = process.env.DRAMA_RUNTIME_PACKAGE_ROOT ?? null
 const store = new DramaGraphStore({ workspaceRoot })
 const plotPilotRuntime = new PlotPilotRuntimeManager()
 const promptRegistry = new Map<string, Record<string, unknown>>()
+const runtimeSessions = new Map<string, RuntimeSessionState>()
+const runtimeSettingsPath = join(workspaceRoot, '.drama-runtime-settings.json')
 let keepAliveTimer: ReturnType<typeof setInterval> | undefined
 
 function json(data: unknown, init: ResponseInit = {}): Response {
@@ -204,6 +247,37 @@ function runtimeStatus() {
       memory: `http://${host}:${port}/app/memory`,
       events: `ws://${host}:${port}/events`,
     },
+  }
+}
+
+function runtimeCapabilities() {
+  return {
+    'files.readTextFile': true,
+    'files.writeTextFile': true,
+    'runtime.status': true,
+    'runtime.capabilities': true,
+    'runtime.request': true,
+    'sessions.command': true,
+    'sessions.cancel': true,
+    'plm.sidecar.status': true,
+    'plm.sidecar.start': true,
+    'plm.sidecar.stop': true,
+    'plm.sidecar.logs': true,
+    'graph.load': true,
+    'graph.history': true,
+    'graph.persist': true,
+    'graph.backup': true,
+    'skillCrew.refresh': true,
+    'skillCrew.import': true,
+    'skillCrew.run': true,
+    'skillCrew.feedback': true,
+    'basicMemory.read': true,
+    'basicMemory.search': true,
+    'basicMemory.write': true,
+    'settings.read': true,
+    'settings.write': true,
+    'diagnostics.snapshot': true,
+    'diagnostics.process': true,
   }
 }
 
@@ -542,6 +616,153 @@ function readCheckHealth(payload: unknown): boolean {
   if (!payload || typeof payload !== 'object') return true
   const checkHealth = (payload as { checkHealth?: unknown }).checkHealth
   return typeof checkHealth === 'boolean' ? checkHealth : true
+}
+
+function resolveRuntimeManagedPath(requestPath: string | undefined): { path: string; root: string } {
+  const rawPath = String(requestPath ?? '').trim()
+  if (!rawPath) {
+    throw runtimeError('BAD_REQUEST', 'File path is required.')
+  }
+
+  const candidate = resolve(rawPath.startsWith('/') ? rawPath : join(workspaceRoot, rawPath))
+  for (const [rootName, rootPath] of Object.entries({ workspace: workspaceRoot, basicMemory: basicMemoryRoot })) {
+    if (isInsideDir(rootPath, candidate)) return { path: candidate, root: rootName }
+  }
+  throw runtimeError('BAD_REQUEST', 'File path must stay inside the configured Drama workspace or Basic Memory root.')
+}
+
+async function readRuntimeTextFile(payload: RuntimeFileRequest = {}) {
+  const resolved = resolveRuntimeManagedPath(payload.path)
+  const fileStat = await stat(resolved.path)
+  return {
+    ...resolved,
+    size: fileStat.size,
+    modifiedAt: fileStat.mtime.toISOString(),
+    content: await readFile(resolved.path, 'utf8'),
+  }
+}
+
+async function writeRuntimeTextFile(payload: RuntimeFileRequest = {}) {
+  if (typeof payload.content !== 'string') {
+    throw runtimeError('BAD_REQUEST', 'File content must be a string.')
+  }
+  const resolved = resolveRuntimeManagedPath(payload.path)
+  await mkdir(dirname(resolved.path), { recursive: true })
+  await writeFile(resolved.path, payload.content, 'utf8')
+  return readRuntimeTextFile({ path: resolved.path })
+}
+
+function requireSessionId(value: unknown): string {
+  const sessionId = String(value ?? '').trim()
+  if (!sessionId) throw runtimeError('BAD_REQUEST', 'Session id is required.')
+  return sessionId
+}
+
+function getRuntimeSession(sessionId: string): RuntimeSessionState {
+  const existing = runtimeSessions.get(sessionId)
+  if (existing) return existing
+  const created: RuntimeSessionState = {
+    id: sessionId,
+    labels: [],
+    sources: [],
+    skills: [],
+    status: 'ready',
+    cancelled: false,
+    updatedAt: new Date().toISOString(),
+    commands: [],
+  }
+  runtimeSessions.set(sessionId, created)
+  return created
+}
+
+function applySessionCommand(payload: RuntimeSessionCommandRequest = {}) {
+  const sessionId = requireSessionId(payload.sessionId)
+  const session = getRuntimeSession(sessionId)
+  const command = payload.command && typeof payload.command === 'object' ? payload.command : {}
+  const type = String(command.type ?? '')
+
+  if (type === 'setLabels' && Array.isArray(command.labels)) session.labels = command.labels
+  if (type === 'setSources' && Array.isArray(command.sourceSlugs)) session.sources = command.sourceSlugs
+  if (type === 'setSkills' && Array.isArray(command.skillSlugs)) session.skills = command.skillSlugs
+  if (type === 'setStatus' && typeof command.status === 'string') session.status = command.status
+  if (type === 'updateWorkingDirectory' && typeof command.dir === 'string') session.workingDirectory = command.dir
+
+  session.cancelled = false
+  session.updatedAt = new Date().toISOString()
+  session.commands.push(command)
+  return {
+    accepted: true,
+    session,
+  }
+}
+
+function cancelRuntimeSession(payload: RuntimeSessionCancelRequest = {}) {
+  const sessionId = requireSessionId(payload.sessionId)
+  const session = getRuntimeSession(sessionId)
+  session.cancelled = true
+  session.status = payload.silent ? 'cancelled-silent' : 'cancelled'
+  session.updatedAt = new Date().toISOString()
+  return {
+    accepted: true,
+    session,
+  }
+}
+
+async function readRuntimeSettings(): Promise<Record<string, unknown>> {
+  try {
+    const parsed = JSON.parse(await readFile(runtimeSettingsPath, 'utf8'))
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {}
+  } catch {
+    return {}
+  }
+}
+
+async function writeRuntimeSettings(settings: Record<string, unknown>): Promise<void> {
+  await mkdir(dirname(runtimeSettingsPath), { recursive: true })
+  await writeFile(runtimeSettingsPath, JSON.stringify(settings, null, 2), 'utf8')
+}
+
+async function readRuntimeSetting(payload: RuntimeSettingReadRequest = {}) {
+  const key = String(payload.key ?? '').trim()
+  if (!key) throw runtimeError('BAD_REQUEST', 'Setting key is required.')
+  const settings = await readRuntimeSettings()
+  return settings[key]
+}
+
+async function writeRuntimeSetting(payload: RuntimeSettingWriteRequest = {}) {
+  const key = String(payload.key ?? '').trim()
+  if (!key) throw runtimeError('BAD_REQUEST', 'Setting key is required.')
+  const settings = await readRuntimeSettings()
+  settings[key] = payload.value
+  await writeRuntimeSettings(settings)
+  return { key, updated: true }
+}
+
+function runtimeDiagnosticsSnapshot() {
+  return {
+    status: runtimeStatus(),
+    capabilities: runtimeCapabilities(),
+    paths: {
+      workspaceRoot,
+      basicMemoryRoot,
+      browserShellDistDir,
+      runtimeSettingsPath,
+    },
+    process: runtimeProcessDiagnostics(),
+  }
+}
+
+function runtimeProcessDiagnostics() {
+  return {
+    pid: process.pid,
+    platform: process.platform,
+    arch: process.arch,
+    versions: process.versions,
+    uptimeSeconds: process.uptime(),
+    memoryUsage: process.memoryUsage(),
+  }
 }
 
 async function findLatestGraphId(): Promise<string | null> {
@@ -935,20 +1156,70 @@ async function dispatch(channel: string, payload: unknown): Promise<unknown> {
     case 'runtime:status':
       return runtimeStatus()
 
+    case 'runtime:capabilities':
+      return runtimeCapabilities()
+
     case 'runtime:shutdown':
       return shutdownRuntime(payload as RuntimeShutdownRequest | undefined)
 
+    case 'files:readText':
+    case 'files:preview':
+    case 'files:exportText':
+      return readRuntimeTextFile(payload as RuntimeFileRequest | undefined)
+
+    case 'files:writeText':
+    case 'files:importText':
+      return writeRuntimeTextFile(payload as RuntimeFileRequest | undefined)
+
+    case 'sessions:command':
+      return applySessionCommand(payload as RuntimeSessionCommandRequest | undefined)
+
+    case 'sessions:cancel':
+      return cancelRuntimeSession(payload as RuntimeSessionCancelRequest | undefined)
+
+    case 'sessions:status': {
+      const sessionId = requireSessionId((payload as RuntimeSessionCommandRequest | undefined)?.sessionId)
+      return getRuntimeSession(sessionId)
+    }
+
+    case 'settings:read':
+      return readRuntimeSetting(payload as RuntimeSettingReadRequest | undefined)
+
+    case 'settings:write':
+      return writeRuntimeSetting(payload as RuntimeSettingWriteRequest | undefined)
+
+    case 'diagnostics:snapshot':
+      return runtimeDiagnosticsSnapshot()
+
+    case 'diagnostics:process':
+      return runtimeProcessDiagnostics()
+
     case 'basicMemory:list':
+    case 'basic-memory:search':
       return listBasicMemoryNotes(payload as BasicMemoryListRequest | undefined)
 
     case 'basicMemory:read':
+    case 'basic-memory:read':
       return readBasicMemoryNote(payload as BasicMemoryReadRequest | undefined)
 
     case 'basicMemory:write':
+    case 'basic-memory:write':
       return writeBasicMemoryNote(payload as BasicMemoryWriteRequest | undefined)
 
     case 'drama:graph:load':
       return loadDramaGraph(payload as DramaGraphLoadOptions | undefined)
+
+    case 'drama:graph:persist': {
+      const request = payload as RuntimeGraphPersistRequest | undefined
+      if (request?.graph && isDramaGraph(request.graph)) {
+        const result = await store.saveGraph(request.graph, {
+          type: 'graph.persisted',
+          actor: 'drama:runtime',
+        })
+        return mutationResult(request.graph, result)
+      }
+      return loadDramaGraph({ graphId: request?.graphId })
+    }
 
     case 'drama:graph:history': {
       const request = payload as DramaGraphHistoryRequest
@@ -1112,6 +1383,40 @@ async function dispatch(channel: string, payload: unknown): Promise<unknown> {
     case 'drama:crew:agentOutputRecord':
       return recordCrewAgentOutput(payload as RuntimeCrewAgentOutputRequest)
 
+    case 'skill-crew:refresh-skills':
+      return {
+        source: 'drama-runtime',
+        workspaceRoot,
+        skills: [],
+      }
+
+    case 'skill-crew:import-skill':
+      return {
+        source: 'drama-runtime',
+        imported: false,
+        message: 'Skill import is routed through Drama Runtime but no writable crew folder was provided.',
+      }
+
+    case 'skill-crew:run-codex-skill':
+      return recordCrewAgentOutput({
+        ...(payload && typeof payload === 'object' ? payload as RuntimeCrewAgentOutputRequest : { body: '' }),
+        body: typeof (payload as { body?: unknown } | null)?.body === 'string'
+          ? (payload as { body: string }).body
+          : 'Skill run requested through Drama Runtime.',
+        outputType: 'observation',
+      })
+
+    case 'skill-crew:record-feedback':
+      return createCrewSuggestion({
+        ...(payload && typeof payload === 'object' ? payload as RuntimeCrewSuggestionRequest : { title: '', body: '' }),
+        title: typeof (payload as { title?: unknown } | null)?.title === 'string'
+          ? (payload as { title: string }).title
+          : 'Skill feedback',
+        body: typeof (payload as { body?: unknown } | null)?.body === 'string'
+          ? (payload as { body: string }).body
+          : 'Skill feedback routed through Drama Runtime.',
+      })
+
     default:
       throw Object.assign(new Error(`Unsupported Drama runtime channel: ${channel}`), {
         code: 'UNSUPPORTED_CHANNEL' satisfies RuntimeErrorCode,
@@ -1164,6 +1469,21 @@ const server = Bun.serve({
 
       if (request.method === 'GET' && url.pathname === '/runtime/status') {
         return json(runtimeStatus())
+      }
+
+      if (request.method === 'GET' && url.pathname === '/runtime/capabilities') {
+        return json(runtimeCapabilities())
+      }
+
+      if (request.method === 'GET' && url.pathname === '/health') {
+        return json({
+          ok: true,
+          ...runtimeStatus(),
+        })
+      }
+
+      if (request.method === 'GET' && url.pathname === '/capabilities') {
+        return json(runtimeCapabilities())
       }
 
       if (request.method === 'POST' && url.pathname === '/runtime/rpc') {

@@ -47,4 +47,26 @@ describe('createDramaRuntimeClient', () => {
       expect((error as DramaRuntimeError).code).toBe('RUNTIME_REQUEST_CANCELLED')
     }
   })
+
+  test('reads timeout-safe runtime capabilities endpoint', async () => {
+    const client = createDramaRuntimeClient({
+      baseUrl: 'http://127.0.0.1:3198/',
+      fetcher: (async (input: RequestInfo | URL) => {
+        expect(String(input)).toBe('http://127.0.0.1:3198/runtime/capabilities')
+        return new Response(JSON.stringify({
+          'runtime.status': true,
+          'basicMemory.search': true,
+        }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      }) as unknown as typeof fetch,
+      timeoutMs: 50,
+    })
+
+    await expect(client.getCapabilities()).resolves.toEqual({
+      'runtime.status': true,
+      'basicMemory.search': true,
+    })
+  })
 })

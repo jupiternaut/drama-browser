@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-DRAMA_APP="${DRAMA_BROWSER_APP:-$REPO_ROOT/dist/zen-drama-mac/Drama Browser.app}"
+DRAMA_APP="${DRAMA_BROWSER_APP:-$REPO_ROOT/dist/drama-browser-mac/Drama Browser.app}"
 PROFILE_DIR="${DRAMA_BROWSER_PROFILE:-$HOME/Library/Application Support/DramaBrowser/profile-main}"
 SURFACE="${DRAMA_BROWSER_SURFACE:-start}"
 RUNTIME_URL="${DRAMA_RUNTIME_URL:-http://127.0.0.1:3198}"

@@ -174,8 +174,22 @@ const checks: Check[] = [
     "manager-internal-url",
     manager.includes('chrome://browser/content/drama/app/index.html') &&
       manager.includes("drama.browser.internal-app.enabled") &&
+      manager.includes("drama.browser.runtime-token") &&
       manager.includes("zen.drama.internal-app.enabled"),
-    "manager defaults to source-registered internal app and keeps Zen prefs as migration aliases",
+    "manager defaults to source-registered internal app, supports runtime token handoff, and keeps Zen prefs as migration aliases",
+  ),
+  check(
+    "manager-browser-commands",
+    includesAll(manager, [
+      "openUrl(url)",
+      "openInternalRoute(surface",
+      "newTab(url",
+      "newWindow(url",
+      "openFile(path)",
+      "showInFolder(path)",
+      "getDiagnostics()",
+    ]),
+    "manager exposes browser-level commands for URL, internal route, tabs/windows, file open/reveal, and diagnostics",
   ),
   check(
     "app-index-relative-assets",

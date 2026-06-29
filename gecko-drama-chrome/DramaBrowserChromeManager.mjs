@@ -13,6 +13,7 @@ const DRAMA_DEFAULT_RUNTIME_URL = "http://127.0.0.1:3198";
 const DRAMA_DEFAULT_INTERNAL_APP_URL = "chrome://browser/content/drama/app/index.html";
 const DRAMA_BASE_URL_PREF = ["drama.browser.base-url", "zen.drama.base-url"];
 const DRAMA_RUNTIME_URL_PREF = ["drama.browser.runtime-url", "zen.drama.runtime-url"];
+const DRAMA_RUNTIME_TOKEN_PREF = ["drama.browser.runtime-token", "zen.drama.runtime-token"];
 const DRAMA_INTERNAL_APP_ENABLED_PREF = ["drama.browser.internal-app.enabled", "zen.drama.internal-app.enabled"];
 const DRAMA_INTERNAL_APP_URL_PREF = ["drama.browser.internal-app-url", "zen.drama.internal-app-url"];
 const DRAMA_RUNTIME_LAUNCH_ENABLED_PREF = ["drama.browser.runtime-launch.enabled", "zen.drama.runtime-launch.enabled"];
@@ -551,6 +552,10 @@ class DramaBrowserChromeManager extends nsZenDOMOperatedFeature {
     return this.#getStringPref(DRAMA_RUNTIME_URL_PREF, DRAMA_DEFAULT_RUNTIME_URL);
   }
 
+  get runtimeToken() {
+    return this.#getStringPref(DRAMA_RUNTIME_TOKEN_PREF, "").trim();
+  }
+
   get baseOrigin() {
     if (this.internalAppEnabled) {
       return "*";
@@ -577,6 +582,9 @@ class DramaBrowserChromeManager extends nsZenDOMOperatedFeature {
       runtime: this.runtimeUrl,
       surface: this.#surface,
     });
+    if (this.runtimeToken) {
+      params.set("runtimeToken", this.runtimeToken);
+    }
     if (this.productionFixtureEnabled && this.#surface === "plm") {
       params.set("productionFixture", "1");
     }
@@ -714,6 +722,81 @@ class DramaBrowserChromeManager extends nsZenDOMOperatedFeature {
     gBrowser.selectedTab = tab;
   }
 
+  openUrl(url) {
+    return this.newTab(url);
+  }
+
+  openInternalRoute(surface = this.#surface, params = {}) {
+    const requestedSurface = String(surface || this.#surface);
+    const nextSurface = ["start", "graph", "plm", "crew", "memory"].includes(requestedSurface)
+      ? requestedSurface
+      : "start";
+    if (params && typeof params === "object" && params.productionFixture === "1") {
+      try {
+        Services.prefs.setBoolPref("drama.browser.production-fixture.enabled", true);
+      } catch {
+        // Continue without persisting optional fixture state.
+      }
+    }
+    this.open(nextSurface);
+    return {
+      ok: true,
+      surface: nextSurface,
+      url: this.currentUrl,
+    };
+  }
+
+  newTab(url = this.currentUrl) {
+    try {
+      const tab = gBrowser.addTrustedTab(String(url), {
+        triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+      });
+      gBrowser.selectedTab = tab;
+      return { ok: true, url: String(url) };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  newWindow(url = this.currentUrl) {
+    try {
+      const targetUrl = String(url);
+      if (typeof window.openTrustedLinkIn === "function") {
+        window.openTrustedLinkIn(targetUrl, "window", {
+          triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+        });
+      } else {
+        window.open(targetUrl);
+      }
+      return { ok: true, url: targetUrl };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  openFile(path) {
+    return this.#withLocalFile(path, file => file.launch(), "open file");
+  }
+
+  showInFolder(path) {
+    return this.#withLocalFile(path, file => file.reveal(), "show file in folder");
+  }
+
+  getDiagnostics() {
+    return {
+      initialized: this.#initialized,
+      surface: this.#surface,
+      panelVisible: Boolean(this.panel && !this.panel.hidden),
+      locked: this.#isLocked,
+      hasLoadedBrowser: this.#hasLoadedBrowser,
+      currentUrl: this.currentUrl,
+      runtimeUrl: this.runtimeUrl,
+      runtimeTokenPresent: Boolean(this.runtimeToken),
+      internalAppEnabled: this.internalAppEnabled,
+      runtimeLaunchEnabled: this.runtimeLaunchEnabled,
+    };
+  }
+
   async #loadSurface() {
     const url = this.currentUrl;
     this.#setStatus(`Drama ${this.#surface.toUpperCase()}`);
@@ -742,6 +825,21 @@ class DramaBrowserChromeManager extends nsZenDOMOperatedFeature {
     this.#sendTheme();
     if (this.#surface !== "start") {
       void this.#checkRuntimeStatus();
+    }
+  }
+
+  #withLocalFile(path, operation, label) {
+    try {
+      const filePath = String(path || "").trim();
+      if (!filePath) {
+        return { ok: false, error: `Cannot ${label}: path is empty.` };
+      }
+      const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+      file.initWithPath(filePath);
+      operation(file);
+      return { ok: true, path: filePath };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
