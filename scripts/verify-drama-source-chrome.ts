@@ -179,6 +179,12 @@ const checks: Check[] = [
     "manager defaults to source-registered internal app, supports runtime token handoff, and keeps Zen prefs as migration aliases",
   ),
   check(
+    "manager-drama-product-startup-default",
+    manager.includes("this.#getBoolPref(DRAMA_OPEN_ON_STARTUP_PREF, this.#isDramaBrowserProduct())") &&
+      manager.includes("#isDramaBrowserProduct()"),
+    "Drama Browser product defaults to opening the browser shell even when a fresh profile has no launch-script prefs",
+  ),
+  check(
     "manager-browser-commands",
     includesAll(manager, [
       "openUrl(url)",

@@ -622,7 +622,7 @@ class DramaBrowserChromeManager extends nsZenDOMOperatedFeature {
   }
 
   get openOnStartup() {
-    return this.#getBoolPref(DRAMA_OPEN_ON_STARTUP_PREF, false);
+    return this.#getBoolPref(DRAMA_OPEN_ON_STARTUP_PREF, this.#isDramaBrowserProduct());
   }
 
   get startSurface() {
@@ -680,6 +680,16 @@ class DramaBrowserChromeManager extends nsZenDOMOperatedFeature {
     }
 
     return [];
+  }
+
+  #isDramaBrowserProduct() {
+    try {
+      const name = String(Services.appinfo?.name || "").toLowerCase();
+      const vendor = String(Services.appinfo?.vendor || "").toLowerCase();
+      return name.includes("drama") || vendor.includes("drama");
+    } catch {
+      return false;
+    }
   }
 
   toggle() {
