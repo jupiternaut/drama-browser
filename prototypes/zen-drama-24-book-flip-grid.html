@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zen Drama Canvas Grid Mouse Effect</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+      background: #000;
+      font-family: Georgia, "Times New Roman", serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    #fixed-bg {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 100vw;
+      height: 100vh;
+      transform: translate(-50%, -50%);
+      background: #000;
+    }
+
+    canvas {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: auto;
+      height: 100%;
+      aspect-ratio: 1;
+      transform: translate(-50%, -50%);
+    }
+
+    @media (min-aspect-ratio: 1) {
+      canvas {
+        width: 100%;
+        height: auto;
+      }
+    }
+
+    .book-note {
+      position: fixed;
+      left: 22px;
+      bottom: 22px;
+      z-index: 2;
+      width: min(340px, calc(100vw - 44px));
+      padding: 18px 18px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 18px;
+      color: rgba(255, 255, 255, 0.9);
+      background: rgba(0, 0, 0, 0.62);
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.38);
+      backdrop-filter: blur(20px);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .book-note.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .book-note small {
+      display: block;
+      color: rgba(255, 255, 255, 0.58);
+      font: 700 11px/1.2 ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .book-note strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 24px;
+      line-height: 1.05;
+    }
+
+    .book-note span {
+      display: block;
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.62);
+      font: 700 12px/1.3 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .book-note p {
+      margin: 14px 0 0;
+      color: rgba(255, 255, 255, 0.74);
+      font: 600 13px/1.55 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .options-pane {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 3;
+      width: 252px;
+      color: rgba(255, 255, 255, 0.76);
+      font: 12px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .options-pane summary {
+      height: 24px;
+      padding: 4px 11px;
+      border-radius: 5px;
+      color: rgba(255, 255, 255, 0.7);
+      background: rgba(48, 48, 54, 0.92);
+      cursor: pointer;
+      list-style: none;
+      text-align: center;
+      letter-spacing: 0.02em;
+    }
+
+    .options-pane summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .options-pane[open] summary {
+      border-radius: 5px 5px 0 0;
+    }
+
+    .options-body {
+      display: grid;
+      gap: 11px;
+      padding: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 0 0 5px 5px;
+      background: rgba(35, 35, 40, 0.96);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+    }
+
+    .options-row {
+      display: grid;
+      grid-template-columns: 76px 1fr;
+      gap: 9px;
+      align-items: center;
+    }
+
+    .options-row input[type="range"] {
+      width: 100%;
+    }
+
+    .options-row input[type="checkbox"] {
+      justify-self: start;
+    }
+
+    .options-row input[type="color"] {
+      width: 100%;
+      height: 26px;
+      border: 0;
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div id="fixed-bg">
+    <canvas id="c" aria-label="24 本经典书封组成的 canvas 网格鼠标效果"></canvas>
+  </div>
+  <details class="options-pane">
+    <summary>Options</summary>
+    <div class="options-body">
+      <label class="options-row">
+        <span>boxSize</span>
+        <input id="boxSizeControl" type="range" min="25" max="250" step="1" value="123" />
+      </label>
+      <label class="options-row">
+        <span>fade</span>
+        <input id="fadeControl" type="checkbox" />
+      </label>
+      <label class="options-row">
+        <span>dots</span>
+        <input id="dotsControl" type="checkbox" checked />
+      </label>
+      <label class="options-row">
+        <span>dotColor</span>
+        <input id="dotColorControl" type="color" value="#ffffff" />
+      </label>
+    </div>
+  </details>
+  <aside class="book-note" id="bookNote" aria-live="polite"></aside>
+
+  <script>
+    const c = document.querySelector("#c");
+    const ctx = c.getContext("2d");
+    const cw = 2000;
+    const ch = cw;
+    c.width = c.height = cw;
+
+    const source = document.createElement("canvas");
+    source.width = source.height = cw;
+    const sourceCtx = source.getContext("2d");
+
+    let cRect = c.getBoundingClientRect();
+    let sx = cw / cRect.width;
+    let sy = ch / cRect.height;
+    const T = Math.PI * 2;
+    const mouse = { x: cw / 2, y: ch / 2, s: 1.5, x2: cw / 2, y2: ch / 2 };
+    const props = {
+      boxSize: 123,
+      fade: false,
+      dots: true,
+      dotColor: "#fff"
+    };
+    let boxes = [];
+    let rafId = 0;
+    let currentBook = null;
+
+    const covers = [
+      "../references/classic-book-repos/00-meditations/images/cover.jpg",
+      "../references/classic-book-repos/01-discourses/images/cover.jpg",
+      "../references/classic-book-repos/02-seneca-letters/images/cover.jpg",
+      "../references/classic-book-repos/03-republic/cover.png",
+      "../references/classic-book-repos/04-nicomachean-ethics/images/cover.jpg",
+      "../references/classic-book-repos/05-on-the-nature-of-things/cover.png",
+      "../references/classic-book-repos/06-lives-of-eminent-philosophers/images/cover.jpg",
+      "./assets/raphael-school-of-athens.jpg",
+      "./assets/statue-augustus.jpg",
+      "../references/classic-book-repos/09-antigone/images/cover.jpg",
+      "../references/classic-book-repos/10-siddhartha/images/cover.jpg",
+      "./assets/marcus-aurelius-bust.jpg",
+      "../references/classic-book-repos/12-confessions/cover.png",
+      "../references/classic-book-repos/13-divine-comedy/images/cover.jpg",
+      "./assets/raphael-school-of-athens.jpg",
+      "../references/classic-book-repos/15-brothers-karamazov/images/cover.jpg",
+      "../references/classic-book-repos/16-book-of-job/75778-h/images/cover.jpg",
+      "../references/classic-book-repos/17-varieties-of-religious-experience/images/cover.jpg",
+      "../references/classic-book-repos/18-de-officiis/47001-h/images/cover.jpg",
+      "../references/classic-book-repos/19-politics/cover.png",
+      "../references/classic-book-repos/20-walden/images/cover.jpg",
+      "../references/classic-book-repos/21-montaigne-essays/3600-h/images/cover.jpg",
+      "../references/classic-book-repos/22-origin-of-species/images/cover.jpg",
+      "./assets/raphael-school-of-athens.jpg"
+    ];
+
+    const books = [
+      ["00:00", "《沉思录》", "Meditations", "马可·奥勒留", "斯多葛伦理", "权力越大，越需要训练自己的判断。"],
+      ["01:00", "《谈话录》", "Discourses", "爱比克泰德", "实践哲学", "自由从分清可控之事开始。"],
+      ["02:00", "《斯多葛书信》", "Letters", "塞涅卡", "罗马道德书信", "时间不是财产，而是生命本身。"],
+      ["03:00", "《理想国》", "Republic", "柏拉图", "政治哲学", "灵魂的秩序，决定城邦的秩序。"],
+      ["04:00", "《尼各马可伦理学》", "Nicomachean Ethics", "亚里士多德", "德性伦理", "好生活不是感觉，而是习惯。"],
+      ["05:00", "《物性论》", "On the Nature of Things", "卢克莱修", "自然哲学与诗", "恐惧常来自对自然的误读。"],
+      ["06:00", "《名哲言行录》", "Lives", "第欧根尼·拉尔修", "哲学传记", "哲学有时以生活方式保存。"],
+      ["07:00", "《皮浪主义纲要》", "Outlines", "塞克斯都·恩披里柯", "怀疑主义", "暂停判断，也是一种训练。"],
+      ["08:00", "《九章集》", "Enneads", "普罗提诺", "新柏拉图主义", "灵魂向内走，也是在向上走。"],
+      ["09:00", "《安提戈涅》", "Antigone", "索福克勒斯", "悲剧与法伦理", "法律不能吞掉亲情与良知。"],
+      ["10:00", "《悉达多》", "Siddhartha", "黑塞", "禅宗视角", "一个人必须亲自走过理解。"],
+      ["11:00", "《雪豹》", "The Snow Leopard", "彼得·马修森", "禅宗与旅行", "寻找动物时，也在看见欲望。"],
+      ["12:00", "《忏悔录》", "Confessions", "奥古斯丁", "基督教忏悔", "记忆是一座向神敞开的房间。"],
+      ["13:00", "《神曲》", "Divine Comedy", "但丁", "基督教诗学", "走出黑林，需要承认迷路。"],
+      ["14:00", "《恐惧与战栗》", "Fear and Trembling", "克尔凯郭尔", "存在主义神学", "信仰不是轻松的答案。"],
+      ["15:00", "《卡拉马佐夫兄弟》", "Brothers Karamazov", "陀思妥耶夫斯基", "俄国基督教伦理", "自由若没有爱，会变成审判。"],
+      ["16:00", "《约伯记》", "Book of Job", "匿名", "犹太智慧", "不是所有痛苦都能被解释。"],
+      ["17:00", "《宗教经验之种种》", "Varieties", "威廉·詹姆斯", "比较宗教学", "经验先于体系，颤动先于教义。"],
+      ["18:00", "《论义务》", "On Duties", "西塞罗", "公共伦理", "职位不是装饰，是义务的入口。"],
+      ["19:00", "《政治学》", "Politics", "亚里士多德", "城邦秩序", "共同体塑造人，也要求人负责。"],
+      ["20:00", "《瓦尔登湖》", "Walden", "梭罗", "道家视角读自然", "减法不是贫乏，而是恢复尺度。"],
+      ["21:00", "《随笔集》", "Essays", "蒙田", "自我观察", "观察自己，比证明自己更难。"],
+      ["22:00", "《物种起源》", "Origin of Species", "达尔文", "科学理性", "生命没有停止在人的想象里。"],
+      ["23:00", "《词与物》", "The Order of Things", "福柯", "知识秩序", "分类不是中立的柜子。"]
+    ];
+
+    const cells = [];
+    const note = document.getElementById("bookNote");
+
+    function clamp(min, max, value) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function loadImage(src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      });
+    }
+
+    function drawImageCover(context, img, x, y, width, height) {
+      if (!img) {
+        const gradient = context.createLinearGradient(x, y, x + width, y + height);
+        gradient.addColorStop(0, "#24333a");
+        gradient.addColorStop(1, "#8b513f");
+        context.fillStyle = gradient;
+        context.fillRect(x, y, width, height);
+        return;
+      }
+      const sourceRatio = img.width / img.height;
+      const targetRatio = width / height;
+      let sx0 = 0;
+      let sy0 = 0;
+      let sw = img.width;
+      let sh = img.height;
+      if (sourceRatio > targetRatio) {
+        sw = img.height * targetRatio;
+        sx0 = (img.width - sw) / 2;
+      } else {
+        sh = img.width / targetRatio;
+        sy0 = (img.height - sh) / 2;
+      }
+      context.drawImage(img, sx0, sy0, sw, sh, x, y, width, height);
+    }
+
+    function drawSource(images) {
+      sourceCtx.fillStyle = "#000";
+      sourceCtx.fillRect(0, 0, cw, ch);
+
+      const cols = 6;
+      const rows = 4;
+      const gap = 38;
+      const margin = 72;
+      const cellW = (cw - margin * 2 - gap * (cols - 1)) / cols;
+      const cellH = (ch - margin * 2 - gap * (rows - 1)) / rows;
+      cells.length = 0;
+
+      books.forEach((book, index) => {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+        const x = margin + col * (cellW + gap);
+        const y = margin + row * (cellH + gap);
+        const img = images[index];
+        cells.push({ x, y, width: cellW, height: cellH, book, index });
+
+        sourceCtx.save();
+        sourceCtx.beginPath();
+        sourceCtx.roundRect(x, y, cellW, cellH, 28);
+        sourceCtx.clip();
+        drawImageCover(sourceCtx, img, x, y, cellW, cellH);
+
+        const shade = sourceCtx.createLinearGradient(x, y, x, y + cellH);
+        shade.addColorStop(0, "rgba(255,255,255,0.1)");
+        shade.addColorStop(0.52, "rgba(0,0,0,0.05)");
+        shade.addColorStop(1, "rgba(0,0,0,0.82)");
+        sourceCtx.fillStyle = shade;
+        sourceCtx.fillRect(x, y, cellW, cellH);
+
+        sourceCtx.fillStyle = "rgba(255,255,255,0.94)";
+        sourceCtx.beginPath();
+        sourceCtx.roundRect(x + 20, y + 20, 92, 42, 12);
+        sourceCtx.fill();
+        sourceCtx.fillStyle = "#0b0b0b";
+        sourceCtx.font = "900 22px ui-sans-serif, system-ui, sans-serif";
+        sourceCtx.fillText(book[0], x + 31, y + 48);
+
+        sourceCtx.textAlign = "center";
+        sourceCtx.fillStyle = "#fff";
+        sourceCtx.shadowColor = "rgba(0,0,0,0.8)";
+        sourceCtx.shadowBlur = 18;
+        sourceCtx.font = "700 44px Georgia, serif";
+        sourceCtx.fillText(book[1], x + cellW / 2, y + cellH - 92, cellW - 42);
+        sourceCtx.font = "800 19px ui-sans-serif, system-ui, sans-serif";
+        sourceCtx.fillText(book[2], x + cellW / 2, y + cellH - 58, cellW - 42);
+        sourceCtx.font = "700 17px ui-sans-serif, system-ui, sans-serif";
+        sourceCtx.fillText(book[3], x + cellW / 2, y + cellH - 30, cellW - 42);
+        sourceCtx.restore();
+      });
+    }
+
+    function initBoxes() {
+      boxes = [];
+      for (let x = 0; x <= cw; x += props.boxSize) {
+        for (let y = 0; y <= ch; y += props.boxSize) {
+          boxes.push({ x, y, d: 0, s: 0 });
+        }
+      }
+    }
+
+    function drawBlock(box) {
+      box.d = Math.hypot(box.x - mouse.x, box.y - mouse.y);
+      box.s = 1 - clamp(0, 1, box.d / cw / mouse.s);
+      if (box.s < 0.001) return;
+      const boxScaled = props.boxSize * box.s;
+      if (props.fade) ctx.globalAlpha = box.s;
+      ctx.drawImage(
+        source,
+        box.x + boxScaled / 2,
+        box.y + boxScaled / 2,
+        props.boxSize - boxScaled,
+        props.boxSize - boxScaled,
+        box.x,
+        box.y,
+        props.boxSize,
+        props.boxSize
+      );
+      if (props.fade) ctx.globalAlpha = 1;
+    }
+
+    function drawDot(box) {
+      if (box.s < 0.001) return;
+      ctx.beginPath();
+      ctx.arc(box.x, box.y, props.boxSize * 0.15 * box.s, 0, T);
+      ctx.fill();
+    }
+
+    function update() {
+      mouse.x += (mouse.x2 - mouse.x) * 0.075;
+      mouse.y += (mouse.y2 - mouse.y) * 0.075;
+      const d = Math.hypot(mouse.x - mouse.x2, mouse.y - mouse.y2);
+      mouse.s += (d / cw * 2 - mouse.s) * 0.035;
+
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.drawImage(source, 0, 0, cw, ch, 0, 0, cw, ch);
+      boxes.forEach(drawBlock);
+      if (props.dots) {
+        ctx.fillStyle = props.dotColor;
+        boxes.forEach(drawDot);
+      }
+      rafId = requestAnimationFrame(update);
+    }
+
+    function setCanvasScale() {
+      cRect = c.getBoundingClientRect();
+      sx = cw / cRect.width;
+      sy = ch / cRect.height;
+    }
+
+    function canvasPoint(event) {
+      return {
+        x: (event.clientX - cRect.left) * sx,
+        y: (event.clientY - cRect.top) * sy
+      };
+    }
+
+    function findBookAt(point) {
+      const directHit = cells.find((cell) => (
+        point.x >= cell.x &&
+        point.x <= cell.x + cell.width &&
+        point.y >= cell.y &&
+        point.y <= cell.y + cell.height
+      ));
+      if (directHit) return directHit;
+
+      let nearest = null;
+      let nearestDistance = Infinity;
+      cells.forEach((cell) => {
+        const cx = cell.x + cell.width / 2;
+        const cy = cell.y + cell.height / 2;
+        const distance = Math.hypot(point.x - cx, point.y - cy);
+        if (distance < nearestDistance) {
+          nearest = cell;
+          nearestDistance = distance;
+        }
+      });
+      return nearestDistance < 360 ? nearest : null;
+    }
+
+    function showBook(cell) {
+      if (!cell || currentBook === cell.index) {
+        currentBook = null;
+        note.classList.remove("is-visible");
+        return;
+      }
+      currentBook = cell.index;
+      const book = cell.book;
+      note.innerHTML = `
+        <small>${book[0]} / ${book[4]}</small>
+        <strong>${book[1]}</strong>
+        <span>${book[2]} · ${book[3]}</span>
+        <p>${book[5]}</p>
+      `;
+      note.classList.add("is-visible");
+    }
+
+    c.addEventListener("pointermove", (event) => {
+      const point = canvasPoint(event);
+      mouse.x2 = point.x;
+      mouse.y2 = point.y;
+    });
+
+    c.addEventListener("click", (event) => {
+      showBook(findBookAt(canvasPoint(event)));
+    });
+
+    document.getElementById("boxSizeControl").addEventListener("input", (event) => {
+      props.boxSize = Number(event.target.value);
+      initBoxes();
+    });
+
+    document.getElementById("fadeControl").addEventListener("change", (event) => {
+      props.fade = event.target.checked;
+    });
+
+    document.getElementById("dotsControl").addEventListener("change", (event) => {
+      props.dots = event.target.checked;
+    });
+
+    document.getElementById("dotColorControl").addEventListener("input", (event) => {
+      props.dotColor = event.target.value;
+    });
+
+    window.addEventListener("resize", setCanvasScale);
+
+    Promise.all(covers.map(loadImage)).then((images) => {
+      drawSource(images);
+      initBoxes();
+      setCanvasScale();
+      cancelAnimationFrame(rafId);
+      update();
+    });
+  </script>
+</body>
+</html>
