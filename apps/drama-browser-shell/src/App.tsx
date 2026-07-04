@@ -2,38 +2,89 @@ import * as React from 'react'
 import {
   Activity,
   Bot,
+  BookOpenText,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Clock3,
+  Compass,
   Database,
   FolderOpen,
   GitBranch,
   ListChecks,
+  LockKeyhole,
+  MessageCircle,
   MessageSquareText,
+  MoreHorizontal,
   Network,
+  Palette,
+  PanelLeft,
+  Plus,
+  Puzzle,
   Radio,
   RefreshCw,
   RotateCcw,
   ScrollText,
+  Search,
   ShieldCheck,
+  Sparkles,
   TriangleAlert,
   UsersRound,
 } from 'lucide-react'
 
 import { createSkillCrewAgentOutputEvent, createSkillCrewSuggestionEvent, inferSkillCrewRoomId } from '@drama/crew'
 import { StoryletNativeGraphContainer } from '@drama/graph-ui'
-import { createBrowserHostApi, createDramaRuntimeClient, type DramaRuntimeStatus } from '@drama/host'
-import { createGeckoHostApi } from '@drama/host/gecko'
+import {
+  classifyDramaPlmSurface,
+  createDramaRuntimeClient,
+  type DramaPlmReadinessStatus,
+  type DramaPlmSurfaceClassificationResult,
+  type DramaRuntimeStatus,
+} from '@drama/host'
 import {
   PlotPilotNativeContainer,
+  type PlotPilotIntegrationStatus,
   type PlotPilotNativeApi,
 } from '@drama/plm-ui'
 import { Button, StatusBadge, WorkbenchToolButton, type StatusTone } from '@drama/ui'
 
 import { fallbackGraphApi } from './fallback-graph-api'
+import { markProductPath, setDramaReadySignal } from './performance'
 import { createRuntimeBackedGraphApi } from './runtime-graph-api'
+import {
+  applyDramaSkin,
+  DRAMA_SKINS,
+  getInitialDramaSkinId,
+  persistDramaSkinId,
+  resolveDramaSkinId,
+  type DramaSkin,
+  type DramaSkinId,
+} from './skins'
+import { BasicMemorySurface } from './BasicMemorySurface'
+import { resolveDramaBrowserHostAdapter } from './host-adapter'
+import { DramaStartSurface } from './DramaStartSurface'
 
-type Surface = 'graph' | 'plm' | 'crew'
+type Surface = 'start' | 'graph' | 'plm' | 'crew' | 'memory'
 type StyleReadiness = 'checking' | 'ready' | 'missing'
+type ShellStateId =
+  | 'booting-shell'
+  | 'runtime-connecting'
+  | 'runtime-ready'
+  | 'runtime-unavailable'
+  | 'sidecar-starting'
+  | 'sidecar-ready'
+  | 'sidecar-unavailable'
+  | 'ai-unavailable'
+  | 'workspace-missing'
+  | 'parity-blocked'
+
+interface ShellState {
+  id: ShellStateId
+  label: string
+  message: string
+  tone: StatusTone
+}
 
 interface SurfaceDescriptor {
   id: Surface
@@ -45,23 +96,57 @@ interface SurfaceDescriptor {
 }
 
 const surfaces: SurfaceDescriptor[] = [
+  { id: 'start', title: 'Drama Start', shortLabel: 'Start', subtitle: '启动看板', source: '搜索 / 快捷入口 / 看板', Icon: Compass },
   { id: 'graph', title: 'Drama Graph', shortLabel: 'Graph', subtitle: '状态机画布', source: '画布 / 状态机 / 剧情结构', Icon: Network },
   { id: 'plm', title: 'Drama PLM', shortLabel: 'PLM', subtitle: '长上下文生成', source: '章节 / Bible / 草稿回写', Icon: ScrollText },
   { id: 'crew', title: 'Skill Crew', shortLabel: 'Crew', subtitle: '导演控场', source: 'Agent / Task / Graph Events', Icon: UsersRound },
+  { id: 'memory', title: 'Basic Memory', shortLabel: 'Memory', subtitle: '本地知识库', source: 'Markdown / 搜索 / 编辑', Icon: BookOpenText },
 ]
+
+const PRODUCT_NAME = 'Drama Browser'
+
+function addressForSurface(surface: Surface, activeSurface: SurfaceDescriptor): string {
+  const route = surface === 'start' ? 'start' : `workspace/${surface}`
+  return `drama://${route} / ${activeSurface.title}`
+}
+
+function normalizeBrowserAddress(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed
+  if (/^[\w.-]+\.[a-z]{2,}(?:[/:?#].*)?$/i.test(trimmed)) return `https://${trimmed}`
+  return `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`
+}
+
+function documentHasStyleRule(fragment: string): boolean {
+  for (const sheet of Array.from(document.styleSheets)) {
+    try {
+      for (const rule of Array.from(sheet.cssRules)) {
+        if (rule.cssText.includes(fragment)) return true
+      }
+    } catch {
+      // Cross-origin stylesheets are not expected for the chrome resource shell.
+    }
+  }
+  return false
+}
+
+function isSurfaceId(value: string | null | undefined): value is Surface {
+  return value === 'start' || value === 'plm' || value === 'crew' || value === 'graph' || value === 'memory'
+}
 
 function getInitialSurface(): Surface {
   const params = new URLSearchParams(globalThis.location?.search ?? '')
   const surfaceParam = params.get('surface')
-  if (surfaceParam === 'plm' || surfaceParam === 'crew' || surfaceParam === 'graph') return surfaceParam
+  if (isSurfaceId(surfaceParam)) return surfaceParam
 
   const hashSurface = globalThis.location?.hash?.replace(/^#\/?/, '').split(/[/?&]/)[0]
-  if (hashSurface === 'plm' || hashSurface === 'crew' || hashSurface === 'graph') return hashSurface
+  if (isSurfaceId(hashSurface)) return hashSurface
 
   const segments = globalThis.location?.pathname?.replace(/^\/+/, '').split('/').filter(Boolean) ?? []
   const path = segments[0] === 'app' ? segments[1] : segments[0]
-  if (path === 'plm' || path === 'crew' || path === 'graph') return path
-  return 'graph'
+  if (isSurfaceId(path)) return path
+  return 'start'
 }
 
 function isInternalChromeShell(): boolean {
@@ -82,21 +167,27 @@ function normalizeShellLocation(surface: Surface): void {
   const pathname = globalThis.location?.pathname ?? '/'
   const segments = pathname.replace(/^\/+/, '').split('/').filter(Boolean)
   const alreadyAppRoute = segments[0] === 'app'
-  const nakedSurfaceRoute = segments.length === 1 && (segments[0] === 'graph' || segments[0] === 'plm' || segments[0] === 'crew')
+  const nakedSurfaceRoute = segments.length === 1 && isSurfaceId(segments[0])
   if (alreadyAppRoute || !nakedSurfaceRoute) return
 
   const nextPath = `${getShellBasePath()}/${surface}${globalThis.location?.search ?? ''}${globalThis.location?.hash ?? ''}`
   globalThis.history?.replaceState?.({}, '', nextPath)
 }
 
-function isZenHost(): boolean {
-  return new URLSearchParams(globalThis.location?.search ?? '').get('host') === 'zen'
+function currentDocumentUrl(): string {
+  return globalThis.location?.href ?? ''
 }
 
 function getRuntimeBaseUrl(): string {
   return new URLSearchParams(globalThis.location?.search ?? '').get('runtime')
     ?? import.meta.env.VITE_DRAMA_RUNTIME_BASE_URL
     ?? 'http://127.0.0.1:3198'
+}
+
+function shouldBootstrapPlmProductionFixture(): boolean {
+  const params = new URLSearchParams(globalThis.location?.search ?? '')
+  const value = params.get('productionFixture') ?? params.get('plmProductionFixture')
+  return value === '1' || value === 'true' || value === 'yes'
 }
 
 function offlineRuntimeStatus(message = 'Drama standalone runtime is not reachable.'): DramaRuntimeStatus {
@@ -123,6 +214,22 @@ function withRuntimeProxyBaseUrl(
   }
 }
 
+function markPlotPilotSidecarStatus(status: PlotPilotNativeRuntimeStatus): void {
+  setDramaReadySignal('dramaSidecarReady', status.healthy === true ? 'ready' : status.state ?? 'blocked')
+  if (status.healthy !== true) return
+  markProductPath('sidecar-ready', {
+    surface: 'plm',
+    state: status.state ?? 'ready',
+    detail: {
+      port: status.port,
+      pid: status.pid,
+      adopted: status.adopted,
+      owned: status.owned,
+      baseUrl: status.baseUrl,
+    },
+  })
+}
+
 function useStyleReadiness() {
   const cssProbeRef = React.useRef<HTMLDivElement>(null)
   const tailwindProbeRef = React.useRef<HTMLDivElement>(null)
@@ -142,7 +249,9 @@ function useStyleReadiness() {
       }
 
       const cssReady = window.getComputedStyle(cssProbe).getPropertyValue('--drama-css-ready').trim() === 'ready'
+        || documentHasStyleRule('drama-css-probe')
       const tailwindReady = window.getComputedStyle(tailwindProbe).display === 'flex'
+        || documentHasStyleRule('.flex')
       const ready = cssReady && tailwindReady
       document.documentElement.dataset.dramaStyles = ready ? 'ready' : 'missing'
       setStyleReadiness(ready ? 'ready' : 'missing')
@@ -192,7 +301,7 @@ function StyleFailurePanel({ state }: { state: StyleReadiness }) {
       <section className="drama-critical-card" role="status" aria-live="polite">
         <div className="drama-critical-mark">D</div>
         <div className="drama-critical-copy">
-          <p className="drama-critical-kicker">Drama Workbench</p>
+          <p className="drama-critical-kicker">{PRODUCT_NAME}</p>
           <h1>{isChecking ? '正在校验工作台样式' : '工作台样式未完整加载'}</h1>
           <p>
             {isChecking
@@ -237,6 +346,220 @@ function RuntimeChip({
   )
 }
 
+function surfaceClassificationLabel(result: DramaPlmSurfaceClassificationResult): string {
+  if (result.canonicalClassification === 'product-drama-browser') {
+    return result.hostAdapter === 'zen-gecko' ? 'Drama Browser · Zen/Gecko' : 'Drama Browser'
+  }
+  if (result.canonicalClassification === 'dev-localhost') return 'dev-localhost'
+  if (result.canonicalClassification === 'legacy-electron') return 'legacy'
+  return 'fallback'
+}
+
+function surfaceClassificationTone(result: DramaPlmSurfaceClassificationResult): StatusTone {
+  if (result.canonicalClassification === 'product-drama-browser') return 'success'
+  if (result.canonicalClassification === 'dev-localhost') return 'warning'
+  if (result.canonicalClassification === 'legacy-electron') return 'neutral'
+  return 'warning'
+}
+
+function surfaceClassificationTitle(result: DramaPlmSurfaceClassificationResult): string {
+  if (result.hostAdapter === 'zen-gecko') return `${result.reason} Adapter: Zen/Gecko.`
+  if (result.hostAdapter === 'electron') return `${result.reason} Adapter: Electron legacy.`
+  if (result.hostAdapter === 'browser') return `${result.reason} Adapter: browser fallback.`
+  return result.reason
+}
+
+function createShellReadinessTiers(
+  surfaceClassification: DramaPlmSurfaceClassificationResult,
+  runtimeStatus: DramaRuntimeStatus,
+): DramaPlmReadinessStatus[] {
+  return [
+    {
+      tier: 'shell-ready',
+      state: surfaceClassification.productPath ? 'ready' : 'blocked',
+      message: surfaceClassification.productPath
+        ? surfaceClassification.hostAdapter === 'zen-gecko'
+          ? 'Loaded from the Drama Browser product path through the Zen/Gecko adapter.'
+          : 'Loaded from the Drama Browser product path.'
+        : surfaceClassification.reason,
+    },
+    {
+      tier: 'runtime-ready',
+      state: runtimeStatus.state === 'ready' ? 'ready' : runtimeStatus.state === 'starting' ? 'pending' : 'blocked',
+      message: runtimeStatus.message ?? `Drama runtime is ${runtimeStatus.state}.`,
+    },
+  ]
+}
+
+function toPlmIntegrationStatus(
+  surfaceClassification: DramaPlmSurfaceClassificationResult,
+  runtimeStatus: DramaRuntimeStatus,
+): PlotPilotIntegrationStatus {
+  const runtimeReady = runtimeStatus.state === 'ready'
+  return {
+    surface: surfaceClassification.classification,
+    canonicalSurface: surfaceClassification.canonicalClassification,
+    hostAdapter: surfaceClassification.hostAdapter,
+    productPath: surfaceClassification.productPath,
+    currentUrl: surfaceClassification.currentUrl,
+    reason: surfaceClassification.reason,
+    tiers: createShellReadinessTiers(surfaceClassification, runtimeStatus),
+    parityChecks: [
+      {
+        id: 'prompt-registry-writes',
+        label: 'Prompt registry writes',
+        state: runtimeReady ? 'partial' : 'blocked',
+        detail: runtimeReady
+          ? 'PlotPilot Prompt Plaza write API is available through the PLM bridge; save a prompt card to produce write evidence.'
+          : 'Waiting for Drama runtime and PlotPilot sidecar.',
+        evidence: 'PUT/POST /llm-control/prompts',
+      },
+      {
+        id: 'post-chapter-memory-sync',
+        label: 'Post-chapter memory sync',
+        state: 'blocked',
+        detail: 'Chapter save/writeback must refresh Knowledge Graph evidence before this parity check is ready.',
+      },
+      {
+        id: 'agentos-crew-parity',
+        label: 'AgentOS / Crew parity',
+        state: 'partial',
+        detail: 'Crew surface and Graph event writes are visible; full PlotPilot AgentOS parity remains open.',
+        evidence: 'Crew runtime preview',
+      },
+      {
+        id: 'advanced-graph-canvas-parity',
+        label: 'Advanced Graph canvas',
+        state: 'partial',
+        detail: 'Drama Graph restores canvas, minimap, and inspector; advanced PlotPilot canvas affordances remain open.',
+        evidence: 'React Flow canvas + minimap + inspector',
+      },
+    ],
+    parityGaps: [
+      'Prompt registry writes',
+      'Post-chapter memory sync',
+      'AgentOS / Crew parity',
+      'Advanced Graph canvas',
+    ],
+  }
+}
+
+function findReadinessTier(status: PlotPilotIntegrationStatus, tier: string) {
+  return status.tiers.find((item) => item.tier === tier)
+}
+
+function deriveShellState({
+  styleReadiness,
+  runtimeStatus,
+  surface,
+  plmIntegrationStatus,
+}: {
+  styleReadiness: StyleReadiness
+  runtimeStatus: DramaRuntimeStatus
+  surface: Surface
+  plmIntegrationStatus: PlotPilotIntegrationStatus
+}): ShellState {
+  if (styleReadiness !== 'ready') {
+    return {
+      id: 'booting-shell',
+      label: '工作台启动中',
+      message: styleReadiness === 'checking' ? '正在校验 shell 和样式。' : '样式或 token bridge 未完整加载。',
+      tone: styleReadiness === 'checking' ? 'info' : 'danger',
+    }
+  }
+
+  if (surface === 'start') {
+    return {
+      id: 'runtime-ready',
+      label: 'Start ready',
+      message: 'Drama Browser 启动看板已加载。',
+      tone: 'success',
+    }
+  }
+
+  if (runtimeStatus.state === 'starting') {
+    return {
+      id: 'runtime-connecting',
+      label: '连接 runtime',
+      message: runtimeStatus.message ?? '正在连接 Drama standalone runtime。',
+      tone: 'info',
+    }
+  }
+
+  if (runtimeStatus.state === 'offline' || runtimeStatus.state === 'error') {
+    return {
+      id: 'runtime-unavailable',
+      label: 'runtime 不可用',
+      message: runtimeStatus.message ?? 'Drama runtime 暂不可用。',
+      tone: 'danger',
+    }
+  }
+
+  if (surface !== 'plm') {
+    return {
+      id: 'runtime-ready',
+      label: 'runtime ready',
+      message: 'Drama runtime 已就绪。',
+      tone: 'success',
+    }
+  }
+
+  const sidecar = findReadinessTier(plmIntegrationStatus, 'plm-sidecar-ready')
+  if (sidecar?.state === 'pending') {
+    return {
+      id: 'sidecar-starting',
+      label: 'PLM 启动中',
+      message: sidecar.message,
+      tone: 'info',
+    }
+  }
+  if (sidecar?.state === 'blocked') {
+    return {
+      id: 'sidecar-unavailable',
+      label: 'PLM 不可用',
+      message: sidecar.message,
+      tone: 'danger',
+    }
+  }
+
+  const ai = findReadinessTier(plmIntegrationStatus, 'ai-ready')
+  if (ai?.state === 'blocked') {
+    return {
+      id: 'ai-unavailable',
+      label: 'AI 不可用',
+      message: ai.message,
+      tone: 'warning',
+    }
+  }
+
+  const workflow = findReadinessTier(plmIntegrationStatus, 'workflow-preview-ready')
+  if (workflow?.state === 'blocked') {
+    return {
+      id: 'workspace-missing',
+      label: '工作区缺失',
+      message: workflow.message,
+      tone: 'warning',
+    }
+  }
+
+  const parity = findReadinessTier(plmIntegrationStatus, 'plotpilot-parity-ready')
+  if (parity?.state === 'blocked') {
+    return {
+      id: 'parity-blocked',
+      label: 'Parity blocked',
+      message: parity.message,
+      tone: 'warning',
+    }
+  }
+
+  return {
+    id: 'sidecar-ready',
+    label: 'PLM ready',
+    message: sidecar?.message ?? 'PlotPilot sidecar 已就绪。',
+    tone: 'success',
+  }
+}
+
 function DramaRuntimeRecoveryPanel({
   status,
 }: {
@@ -251,7 +574,7 @@ function DramaRuntimeRecoveryPanel({
           <p className="drama-runtime-recovery-kicker">Drama Runtime</p>
           <h1>后台运行时未就绪</h1>
           <p>
-            Drama 工作台已经作为 Zen 内部资源加载，但本地 runtime 暂时不可用。请重新加载面板，或重新双击桌面 Drama 启动完整应用。
+            Drama 工作台已经从 Drama Browser 产品路径加载；当前宿主适配器为 Zen/Gecko，但本地 runtime 暂时不可用。请重新加载面板，或重新双击桌面 Drama 启动完整应用。
           </p>
           <div className="drama-runtime-recovery-state">
             <span>{stateLabel}</span>
@@ -281,32 +604,194 @@ function SurfaceButton({
     <WorkbenchToolButton
       onClick={onClick}
       active={active}
+      data-drama-surface-button={item.id}
       title={`${item.title} - ${item.subtitle}`}
-      label={item.shortLabel}
+      label={item.title}
       icon={<Icon className="drama-workbench-tool-button-svg" />}
     />
+  )
+}
+
+function SkinSwitcher({
+  skins,
+  activeSkinId,
+  onSkinChange,
+}: {
+  skins: DramaSkin[]
+  activeSkinId: DramaSkinId
+  onSkinChange: (skinId: DramaSkinId) => void
+}) {
+  const activeSkin = skins.find((skin) => skin.id === activeSkinId) ?? skins[0]
+
+  return (
+    <label className="drama-skin-control" title={activeSkin?.description ?? 'Drama skin'}>
+      <Palette className="drama-skin-control-icon" aria-hidden="true" />
+      <span className="drama-skin-control-label">Skin</span>
+      <select
+        className="drama-skin-select"
+        aria-label="Drama skin"
+        value={activeSkinId}
+        onChange={(event) => onSkinChange(resolveDramaSkinId(event.currentTarget.value))}
+      >
+        {skins.map((skin) => (
+          <option key={skin.id} value={skin.id}>
+            {skin.shortLabel}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function BrowserChromeBar({
+  surface,
+  activeSurface,
+  runtimeStatus,
+  shellState,
+  onAddressSubmit,
+  onGoBack,
+  onGoForward,
+  onRefresh,
+  onNewTab,
+  onOpenMemory,
+  onOpenChat,
+}: {
+  surface: Surface
+  activeSurface: SurfaceDescriptor
+  runtimeStatus: DramaRuntimeStatus
+  shellState: ShellState
+  onAddressSubmit: (value: string) => void
+  onGoBack: () => void
+  onGoForward: () => void
+  onRefresh: () => void
+  onNewTab: () => void
+  onOpenMemory: () => void
+  onOpenChat: () => void
+}) {
+  const resolvedAddress = React.useMemo(() => addressForSurface(surface, activeSurface), [activeSurface, surface])
+  const [addressDraft, setAddressDraft] = React.useState(resolvedAddress)
+
+  React.useEffect(() => {
+    setAddressDraft(resolvedAddress)
+  }, [resolvedAddress])
+
+  return (
+    <div className="drama-browser-chrome" role="toolbar" aria-label="Drama Browser navigation">
+      <div className="drama-browser-chrome-workspace">
+        <button type="button" className="drama-browser-icon-button" title="Toggle sidebar" aria-label="Toggle sidebar">
+          <PanelLeft />
+        </button>
+        <button type="button" className="drama-workspace-menu" title="Drama workspace">
+          <span className="drama-workspace-avatar" aria-hidden="true">D</span>
+          <span className="drama-workspace-name">Drama</span>
+          <ChevronDown className="drama-workspace-chevron" aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="drama-browser-nav-cluster">
+        <button type="button" className="drama-browser-icon-button" onClick={onGoBack} title="Back" aria-label="Back">
+          <ChevronLeft />
+        </button>
+        <button type="button" className="drama-browser-icon-button" onClick={onGoForward} title="Forward" aria-label="Forward">
+          <ChevronRight />
+        </button>
+        <button type="button" className="drama-browser-icon-button" onClick={onRefresh} title="Reload" aria-label="Reload">
+          <RefreshCw />
+        </button>
+      </div>
+
+      <form
+        className="drama-address-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          onAddressSubmit(addressDraft)
+        }}
+      >
+        <LockKeyhole className="drama-address-lock" aria-hidden="true" />
+        <input
+          className="drama-address-input"
+          value={addressDraft}
+          aria-label="Search or enter address"
+          spellCheck={false}
+          onChange={(event) => setAddressDraft(event.currentTarget.value)}
+          onFocus={(event) => event.currentTarget.select()}
+        />
+        <Search className="drama-address-search" aria-hidden="true" />
+      </form>
+
+      <div className="drama-browser-extension-strip" aria-label="Drama Browser tools">
+        <button type="button" className="drama-extension-button" title={shellState.message} aria-label={shellState.label}>
+          <Sparkles />
+        </button>
+        <button type="button" className="drama-extension-button" onClick={onOpenMemory} title="Basic Memory" aria-label="Basic Memory">
+          <BookOpenText />
+        </button>
+        <button type="button" className="drama-extension-button" title="Extensions" aria-label="Extensions">
+          <Puzzle />
+        </button>
+        <button type="button" className="drama-extension-button" title={runtimeStatus.message} aria-label={`Runtime ${runtimeStatus.state}`}>
+          <span className={['runtime-status-dot', `runtime-status-dot-${runtimeStatus.state}`].join(' ')} />
+        </button>
+        <button type="button" className="drama-chat-button" onClick={onOpenChat}>
+          <MessageCircle />
+          <span>Chat</span>
+        </button>
+        <button type="button" className="drama-browser-icon-button" onClick={onNewTab} title="New tab" aria-label="New tab">
+          <Plus />
+        </button>
+        <button type="button" className="drama-browser-icon-button" title="More" aria-label="More">
+          <MoreHorizontal />
+        </button>
+      </div>
+    </div>
   )
 }
 
 function DramaWorkbenchShell({
   surface,
   surfaces,
+  skins,
   activeSurface,
-  zenHost,
+  activeSkinId,
+  hostedChrome,
+  hostShellClassName,
+  dataHost,
   hostKind,
+  hostBadgeLabel,
+  surfaceClassification,
   runtimeStatus,
   runtimeStateLabel,
+  shellState,
   onSwitchSurface,
+  onAddressSubmit,
+  onGoBack,
+  onGoForward,
+  onRefresh,
+  onNewTab,
+  onSkinChange,
   children,
 }: {
   surface: Surface
   surfaces: SurfaceDescriptor[]
+  skins: DramaSkin[]
   activeSurface: SurfaceDescriptor
-  zenHost: boolean
+  activeSkinId: DramaSkinId
+  hostedChrome: boolean
+  hostShellClassName?: string
+  dataHost: string
   hostKind: string
+  hostBadgeLabel: string
+  surfaceClassification: DramaPlmSurfaceClassificationResult
   runtimeStatus: DramaRuntimeStatus
   runtimeStateLabel: string
+  shellState: ShellState
   onSwitchSurface: (surface: Surface) => void
+  onAddressSubmit: (value: string) => void
+  onGoBack: () => void
+  onGoForward: () => void
+  onRefresh: () => void
+  onNewTab: () => void
+  onSkinChange: (skinId: DramaSkinId) => void
   children: React.ReactNode
 }) {
   const surfaceIcon = activeSurface.Icon
@@ -314,11 +799,13 @@ function DramaWorkbenchShell({
 
   return (
     <div
-      className={['drama-shell', zenHost ? 'zen-host' : ''].filter(Boolean).join(' ')}
+      className={['drama-shell', hostShellClassName].filter(Boolean).join(' ')}
       data-drama-shell="workbench"
-      data-host={zenHost ? 'zen' : 'browser'}
+      data-drama-shell-state={shellState.id}
+      data-drama-active-skin={activeSkinId}
+      data-host={dataHost}
     >
-      {!zenHost ? (
+      {!hostedChrome ? (
         <aside className="drama-sidebar">
           <div className="drama-sidebar-brand">
             <div className="drama-mark" aria-hidden="true">D</div>
@@ -347,9 +834,22 @@ function DramaWorkbenchShell({
       ) : null}
 
       <main className="drama-main" data-drama-surface={surface}>
+        <BrowserChromeBar
+          surface={surface}
+          activeSurface={activeSurface}
+          runtimeStatus={runtimeStatus}
+          shellState={shellState}
+          onAddressSubmit={onAddressSubmit}
+          onGoBack={onGoBack}
+          onGoForward={onGoForward}
+          onRefresh={onRefresh}
+          onNewTab={onNewTab}
+          onOpenMemory={() => onSwitchSurface('memory')}
+          onOpenChat={() => onSwitchSurface('crew')}
+        />
         <header className="drama-workbench-bar">
           <div className="drama-workbench-left">
-            {zenHost ? <div className="drama-mark drama-mark-inline" aria-hidden="true">D</div> : null}
+            {hostedChrome ? <div className="drama-mark drama-mark-inline" aria-hidden="true">D</div> : null}
             <nav className="drama-tool-switcher" aria-label="Drama workspace surfaces">
               {surfaces.map((item) => (
                 <SurfaceButton
@@ -367,20 +867,40 @@ function DramaWorkbenchShell({
               <ShellSurfaceIcon />
             </span>
             <span className="drama-surface-title-copy">
-              <span className="drama-surface-title-primary">Drama Workspace</span>
+              <span className="drama-surface-title-primary">{PRODUCT_NAME}</span>
               <span className="drama-surface-title-secondary">{activeSurface.title}</span>
             </span>
             <span className="drama-mode-pill" title={activeSurface.source}>{activeSurface.subtitle}</span>
           </div>
 
           <div className="drama-workbench-meta">
-            <span className="drama-host-badge">{zenHost ? 'Zen' : hostKind}</span>
+            <SkinSwitcher
+              skins={skins}
+              activeSkinId={activeSkinId}
+              onSkinChange={onSkinChange}
+            />
+            <StatusBadge
+              className="drama-surface-classification-badge"
+              tone={surfaceClassificationTone(surfaceClassification)}
+              title={surfaceClassificationTitle(surfaceClassification)}
+            >
+              {surfaceClassificationLabel(surfaceClassification)}
+            </StatusBadge>
+            <span className="drama-host-badge">{hostBadgeLabel}</span>
             <RuntimeChip status={runtimeStatus} stateLabel={runtimeStateLabel} />
+            <StatusBadge
+              className="drama-shell-state-badge"
+              tone={shellState.tone}
+              dot
+              title={shellState.message}
+            >
+              {shellState.label}
+            </StatusBadge>
           </div>
         </header>
 
         <section className="drama-surface-frame" data-surface={surface}>
-          {runtimeStatus.state === 'offline' || runtimeStatus.state === 'error' ? (
+          {surface !== 'start' && (runtimeStatus.state === 'offline' || runtimeStatus.state === 'error') ? (
             <DramaRuntimeRecoveryPanel status={runtimeStatus} />
           ) : children}
         </section>
@@ -391,7 +911,15 @@ function DramaWorkbenchShell({
 
 export function App() {
   const [surface, setSurface] = React.useState<Surface>(getInitialSurface)
-  const [zenHost, setZenHost] = React.useState(isZenHost)
+  const [hostAdapter, setHostAdapter] = React.useState(resolveDramaBrowserHostAdapter)
+  const [activeSkinId, setActiveSkinId] = React.useState<DramaSkinId>(() => (
+    getInitialDramaSkinId(resolveDramaBrowserHostAdapter().defaultSkinId)
+  ))
+  React.useLayoutEffect(() => {
+    applyDramaSkin(activeSkinId)
+    persistDramaSkinId(activeSkinId)
+    setDramaReadySignal('dramaActiveSkin', activeSkinId)
+  }, [activeSkinId])
   const { cssProbeRef, tailwindProbeRef, styleReadiness } = useStyleReadiness()
   const runtimeBaseUrl = React.useMemo(getRuntimeBaseUrl, [])
   const runtimeClient = React.useMemo(() => createDramaRuntimeClient({ baseUrl: runtimeBaseUrl }), [runtimeBaseUrl])
@@ -400,19 +928,9 @@ export function App() {
     message: 'Connecting to Drama standalone runtime.',
     updatedAt: new Date().toISOString(),
   })
+  const [resolvedPlmIntegrationStatus, setResolvedPlmIntegrationStatus] = React.useState<PlotPilotIntegrationStatus | undefined>()
   const [crewWriteStatus, setCrewWriteStatus] = React.useState<string>('尚未写入 runtime')
-  const browserHost = React.useMemo(() => (
-    zenHost
-      ? createGeckoHostApi({
-        name: 'Drama Zen Browser Host',
-        version: '0.1.0',
-        runtimeBaseUrl,
-      })
-      : createBrowserHostApi({
-        name: 'Drama Browser Shell',
-        version: '0.1.0',
-      })
-  ), [runtimeBaseUrl, zenHost])
+  const browserHost = React.useMemo(() => hostAdapter.createHostApi({ runtimeBaseUrl }), [hostAdapter, runtimeBaseUrl])
   const graphApi = React.useMemo(() => createRuntimeBackedGraphApi({
     runtime: runtimeClient,
     fallback: fallbackGraphApi,
@@ -423,22 +941,28 @@ export function App() {
       return runtimeClient.request('plotpilot:runtime:logs', { limit: 80 })
     },
     async getPlotPilotRuntimeStatus() {
-      return withRuntimeProxyBaseUrl(
+      const status = withRuntimeProxyBaseUrl(
         await runtimeClient.request('plotpilot:runtime:status', { checkHealth: true }),
         runtimeBaseUrl,
       )
+      markPlotPilotSidecarStatus(status)
+      return status
     },
     async startPlotPilotRuntime() {
-      return withRuntimeProxyBaseUrl(
+      const status = withRuntimeProxyBaseUrl(
         await runtimeClient.request('plotpilot:runtime:start', { preferExisting: true }),
         runtimeBaseUrl,
       )
+      markPlotPilotSidecarStatus(status)
+      return status
     },
     async restartPlotPilotRuntime() {
-      return withRuntimeProxyBaseUrl(
+      const status = withRuntimeProxyBaseUrl(
         await runtimeClient.request('plotpilot:runtime:restart', { preferExisting: false }),
         runtimeBaseUrl,
       )
+      markPlotPilotSidecarStatus(status)
+      return status
     },
     async openUrl(url: string) {
       await browserHost.shell.openUrl(url)
@@ -459,10 +983,10 @@ export function App() {
       return runtimeClient.request('drama:graph:recordEvent', request)
     },
     async loadStoryletBridgeSnapshot() {
-      throw new Error('Storylet JSON compatibility import is not available in the Zen/browser host. Use Drama Graph as the primary source.')
+      throw new Error('Storylet JSON compatibility import is not available in the current Drama Browser host adapter. Use Drama Graph as the primary source.')
     },
     async writeStoryletChapterFromPlotPilot() {
-      throw new Error('Storylet JSON compatibility writeback is disabled in the Zen/browser host. Drama Graph writeback remains enabled.')
+      throw new Error('Storylet JSON compatibility writeback is disabled in the current Drama Browser host adapter. Drama Graph writeback remains enabled.')
     },
   }), [browserHost, runtimeBaseUrl, runtimeClient])
   const crewRoom = inferSkillCrewRoomId({
@@ -541,15 +1065,26 @@ export function App() {
     { state: '待审', label: '把建议写回 graph event', Icon: Clock3 },
     { state: '观察', label: '等待 PLM 章节生成状态', Icon: Activity },
   ]
+  const activeSurface = surfaces.find((item) => item.id === surface) ?? surfaces[0]!
 
   React.useEffect(() => {
     normalizeShellLocation(surface)
   }, [surface])
 
   React.useEffect(() => {
+    document.title = surface === 'start' ? PRODUCT_NAME : `${activeSurface.title} - ${PRODUCT_NAME}`
+    setDramaReadySignal('dramaShellMounted', 'true')
+    setDramaReadySignal('dramaSurface', surface)
+    setDramaReadySignal('dramaHost', hostAdapter.id)
+    setDramaReadySignal('dramaHostAdapter', hostAdapter.adapterKind)
+  }, [activeSurface.title, hostAdapter.adapterKind, hostAdapter.id, surface])
+
+  React.useEffect(() => {
     const handlePopState = () => {
+      const nextHostAdapter = resolveDramaBrowserHostAdapter()
       setSurface(getInitialSurface())
-      setZenHost(isZenHost())
+      setHostAdapter(nextHostAdapter)
+      setActiveSkinId(getInitialDramaSkinId(nextHostAdapter.defaultSkinId))
     }
     globalThis.addEventListener?.('popstate', handlePopState)
     return () => globalThis.removeEventListener?.('popstate', handlePopState)
@@ -558,14 +1093,37 @@ export function App() {
   React.useEffect(() => {
     let disposed = false
     let interval: ReturnType<typeof globalThis.setInterval> | undefined
+    let activeController: AbortController | undefined
+    const pollerState = globalThis as typeof globalThis & { __DRAMA_RUNTIME_STATUS_POLLER_COUNT__?: number }
+    pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__ = (pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__ ?? 0) + 1
+    setDramaReadySignal('dramaRuntimePollers', String(pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__))
 
     const refresh = async () => {
+      activeController?.abort()
+      const controller = new AbortController()
+      activeController = controller
       try {
-        const status = await runtimeClient.getStatus()
-        if (!disposed) setRuntimeStatus(status)
-      } catch (error) {
+        const status = await runtimeClient.getStatus({ signal: controller.signal, timeoutMs: 2_000 })
         if (!disposed) {
+          setRuntimeStatus(status)
+          setDramaReadySignal('dramaRuntimeReady', status.state)
+          if (status.state === 'ready') {
+            markProductPath('runtime-ready', {
+              surface,
+              state: status.state,
+              detail: {
+                runtimeBaseUrl,
+                workspaceRoot: (status as DramaRuntimeStatus & { workspaceRoot?: string }).workspaceRoot,
+              },
+            })
+          }
+        }
+      } catch (error) {
+        const cancelled = error instanceof Error && error.message.includes('cancelled')
+        if (!disposed) {
+          if (cancelled) return
           setRuntimeStatus(offlineRuntimeStatus(error instanceof Error ? error.message : String(error)))
+          setDramaReadySignal('dramaRuntimeReady', 'offline')
         }
       }
     }
@@ -574,38 +1132,66 @@ export function App() {
     interval = globalThis.setInterval(refresh, 5000)
     return () => {
       disposed = true
+      activeController?.abort()
+      pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__ = Math.max(0, (pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__ ?? 1) - 1)
+      setDramaReadySignal('dramaRuntimePollers', String(pollerState.__DRAMA_RUNTIME_STATUS_POLLER_COUNT__))
       if (interval !== undefined) globalThis.clearInterval(interval)
     }
-  }, [crewRoom, runtimeClient])
+  }, [crewRoom, runtimeBaseUrl, runtimeClient, surface])
 
   React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type !== 'drama:host-theme') return
-      const variables = event.data.theme?.variables
-      if (!variables || typeof variables !== 'object') return
-      document.documentElement.dataset.host = 'zen'
-      for (const [key, value] of Object.entries(variables)) {
-        if (typeof key === 'string' && key.startsWith('--zen-') && typeof value === 'string') {
-          document.documentElement.style.setProperty(key, value.trim())
-        }
-      }
+      hostAdapter.applyThemeMessage(event.data)
     }
     globalThis.addEventListener?.('message', handleMessage)
     return () => globalThis.removeEventListener?.('message', handleMessage)
-  }, [])
+  }, [hostAdapter])
 
   const switchSurface = React.useCallback((next: Surface) => {
     setSurface(next)
     const params = new URLSearchParams()
-    if (zenHost) params.set('host', 'zen')
-    if (runtimeBaseUrl !== 'http://127.0.0.1:3198') params.set('runtime', runtimeBaseUrl)
+    hostAdapter.appendRouteParams(params, { runtimeBaseUrl, defaultRuntimeBaseUrl: 'http://127.0.0.1:3198' })
     if (isInternalChromeShell()) params.set('surface', next)
     const search = params.toString() ? `?${params.toString()}` : ''
     const nextUrl = isInternalChromeShell()
       ? `${getShellBasePath()}${search}`
       : `${getShellBasePath()}/${next}${search}`
     globalThis.history?.pushState?.({}, '', nextUrl)
-  }, [runtimeBaseUrl, zenHost])
+  }, [hostAdapter, runtimeBaseUrl])
+
+  const openAddress = React.useCallback((rawValue: string) => {
+    const rawAddress = rawValue.trim()
+    if (!rawAddress) return
+
+    const routeAddress = rawAddress.split(/\s+\/\s+/)[0] ?? rawAddress
+    if (routeAddress.startsWith('drama://')) {
+      const route = routeAddress.replace(/^drama:\/\//, '').replace(/^workspace\//, '').split(/[/?#]/)[0]
+      if (isSurfaceId(route)) {
+        switchSurface(route)
+        return
+      }
+    }
+
+    const targetUrl = normalizeBrowserAddress(rawAddress)
+    if (!targetUrl) return
+    void (browserHost.navigation?.openUrl(targetUrl) ?? browserHost.shell.openUrl(targetUrl))
+  }, [browserHost, switchSurface])
+
+  const openNewTab = React.useCallback(() => {
+    void (browserHost.navigation?.newTab?.('about:newtab') ?? browserHost.shell.openUrl('about:newtab'))
+  }, [browserHost])
+
+  const goBack = React.useCallback(() => {
+    globalThis.history?.back()
+  }, [])
+
+  const goForward = React.useCallback(() => {
+    globalThis.history?.forward()
+  }, [])
+
+  const refreshShell = React.useCallback(() => {
+    globalThis.location?.reload()
+  }, [])
 
   const writeCrewSuggestion = React.useCallback(() => {
     void (async () => {
@@ -642,9 +1228,33 @@ export function App() {
     })()
   }, [runtimeClient])
 
-  const activeSurface = surfaces.find((item) => item.id === surface) ?? surfaces[0]!
   const runtimeStateLabel = runtimeStatus.state === 'ready' ? 'ready' : runtimeStatus.state
   const hostKind = browserHost.getInfo().kind
+  const hostBadgeLabel = hostAdapter.displayBadge(hostKind)
+  const surfaceClassification = React.useMemo(() => classifyDramaPlmSurface({
+    url: currentDocumentUrl(),
+    hostKind,
+    userAgent: browserHost.getInfo().userAgent,
+    expectedSurface: surface,
+  }), [hostKind, surface])
+  const plmIntegrationStatus = React.useMemo(
+    () => toPlmIntegrationStatus(surfaceClassification, runtimeStatus),
+    [runtimeStatus, surfaceClassification],
+  )
+  const effectivePlmIntegrationStatus = resolvedPlmIntegrationStatus ?? plmIntegrationStatus
+  const productionFixture = React.useMemo(() => shouldBootstrapPlmProductionFixture(), [])
+  const shellState = React.useMemo(
+    () => deriveShellState({
+      styleReadiness,
+      runtimeStatus,
+      surface,
+      plmIntegrationStatus: effectivePlmIntegrationStatus,
+    }),
+    [effectivePlmIntegrationStatus, runtimeStatus, styleReadiness, surface],
+  )
+  const handlePlmIntegrationStatusChange = React.useCallback((status: PlotPilotIntegrationStatus | undefined) => {
+    setResolvedPlmIntegrationStatus(status)
+  }, [])
 
   const probes = (
     <StyleReadinessProbes
@@ -652,6 +1262,42 @@ export function App() {
       tailwindProbeRef={tailwindProbeRef}
     />
   )
+
+  React.useEffect(() => {
+    setDramaReadySignal('dramaShellState', shellState.id)
+  }, [shellState.id])
+
+  React.useEffect(() => {
+    if (styleReadiness !== 'ready') return
+    setDramaReadySignal('dramaFirstStyledViewport', 'ready')
+    markProductPath('first-styled-viewport', {
+      surface,
+      state: 'ready',
+      detail: {
+        activeSkinId,
+      },
+    })
+    markProductPath('route-ready', {
+      surface,
+      state: 'ready',
+      detail: {
+        hostKind,
+        hostAdapter: surfaceClassification.hostAdapter,
+        canonicalClassification: surfaceClassification.canonicalClassification,
+        productPath: surfaceClassification.productPath,
+        activeSkinId,
+      },
+    }, { once: false })
+  }, [
+    activeSkinId,
+    hostKind,
+    shellState.id,
+    styleReadiness,
+    surface,
+    surfaceClassification.canonicalClassification,
+    surfaceClassification.hostAdapter,
+    surfaceClassification.productPath,
+  ])
 
   if (styleReadiness !== 'ready') {
     return (
@@ -668,13 +1314,30 @@ export function App() {
       <DramaWorkbenchShell
         surface={surface}
         surfaces={surfaces}
+        skins={DRAMA_SKINS}
         activeSurface={activeSurface}
-        zenHost={zenHost}
+        activeSkinId={activeSkinId}
+        hostedChrome={hostAdapter.hostedChrome}
+        hostShellClassName={hostAdapter.shellClassName}
+        dataHost={hostAdapter.dataHost}
         hostKind={hostKind}
+        hostBadgeLabel={hostBadgeLabel}
+        surfaceClassification={surfaceClassification}
         runtimeStatus={runtimeStatus}
         runtimeStateLabel={runtimeStateLabel}
+        shellState={shellState}
         onSwitchSurface={switchSurface}
+        onAddressSubmit={openAddress}
+        onGoBack={goBack}
+        onGoForward={goForward}
+        onRefresh={refreshShell}
+        onNewTab={openNewTab}
+        onSkinChange={setActiveSkinId}
       >
+        {surface === 'start' ? (
+          <DramaStartSurface />
+        ) : null}
+
         {surface === 'graph' ? (
           <StoryletNativeGraphContainer
             tool={{
@@ -689,7 +1352,16 @@ export function App() {
         ) : null}
 
         {surface === 'plm' ? (
-          <PlotPilotNativeContainer api={plmApi} />
+          <PlotPilotNativeContainer
+            api={plmApi}
+            integrationStatus={plmIntegrationStatus}
+            onIntegrationStatusChange={handlePlmIntegrationStatusChange}
+            productionFixture={productionFixture}
+          />
+        ) : null}
+
+        {surface === 'memory' ? (
+          <BasicMemorySurface runtime={runtimeClient} />
         ) : null}
 
         {surface === 'crew' ? (

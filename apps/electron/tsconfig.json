@@ -38,7 +38,9 @@
       "@drama/plm": ["../../packages/drama-plm/src/index.ts"],
       "@drama/plm/*": ["../../packages/drama-plm/src/*"],
       "@drama/plm-ui": ["../../packages/drama-plm-ui/src/index.ts"],
-      "@drama/plm-ui/*": ["../../packages/drama-plm-ui/src/*"]
+      "@drama/plm-ui/*": ["../../packages/drama-plm-ui/src/*"],
+      "@drama/ui": ["../../packages/drama-ui/src/index.ts"],
+      "@drama/ui/*": ["../../packages/drama-ui/src/*"]
     }
   },
   "include": ["src/**/*", "../../packages/shared/src/**/*.d.ts"],

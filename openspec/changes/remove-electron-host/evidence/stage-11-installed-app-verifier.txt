@@ -1,0 +1,104 @@
+legacy_status=1
+{
+  "ok": false,
+  "generatedAt": "2026-06-29T12:08:42.286Z",
+  "repoRoot": "/Users/gengrf/drama-browser",
+  "appBundle": "/Applications/Drama.app",
+  "checks": [
+    {
+      "id": "root-dependencies",
+      "ok": true,
+      "detail": "root production dependency sections contain no Electron packages"
+    },
+    {
+      "id": "root-trusted-dependencies",
+      "ok": true,
+      "detail": "root trustedDependencies contains no Electron packages"
+    },
+    {
+      "id": "production-scripts",
+      "ok": true,
+      "detail": "drama:browser and production validation scripts do not traverse apps/electron"
+    },
+    {
+      "id": "legacy-entrypoint-notices",
+      "ok": true,
+      "detail": "launch/package Electron scripts print the legacy warning before running"
+    },
+    {
+      "id": "production-source-allowlist",
+      "ok": true,
+      "detail": "production source roots contain no Electron IPC, preload, app, updater, or packager references"
+    },
+    {
+      "id": "legacy-app-rejected",
+      "ok": true,
+      "detail": "legacy Electron app present and rejected: /Applications/Drama.app"
+    },
+    {
+      "id": "app-bundle-exists",
+      "ok": true,
+      "detail": "/Applications/Drama.app"
+    },
+    {
+      "id": "app-bundle-no-electron",
+      "ok": false,
+      "detail": "../../../Applications/Drama.app/Contents/Frameworks/Electron Framework.framework"
+    }
+  ]
+}
+
+production_status=0
+{
+  "ok": true,
+  "generatedAt": "2026-06-29T12:08:42.343Z",
+  "repoRoot": "/Users/gengrf/drama-browser",
+  "appBundle": "/Applications/Drama Browser.app",
+  "checks": [
+    {
+      "id": "root-dependencies",
+      "ok": true,
+      "detail": "root production dependency sections contain no Electron packages"
+    },
+    {
+      "id": "root-trusted-dependencies",
+      "ok": true,
+      "detail": "root trustedDependencies contains no Electron packages"
+    },
+    {
+      "id": "production-scripts",
+      "ok": true,
+      "detail": "drama:browser and production validation scripts do not traverse apps/electron"
+    },
+    {
+      "id": "legacy-entrypoint-notices",
+      "ok": true,
+      "detail": "launch/package Electron scripts print the legacy warning before running"
+    },
+    {
+      "id": "production-source-allowlist",
+      "ok": true,
+      "detail": "production source roots contain no Electron IPC, preload, app, updater, or packager references"
+    },
+    {
+      "id": "legacy-app-rejected",
+      "ok": true,
+      "detail": "legacy Electron app present and rejected: /Applications/Drama.app"
+    },
+    {
+      "id": "app-bundle-exists",
+      "ok": true,
+      "detail": "/Applications/Drama Browser.app"
+    },
+    {
+      "id": "app-bundle-no-electron",
+      "ok": true,
+      "detail": "no Electron Framework or Electron Helper apps in production bundle"
+    },
+    {
+      "id": "process-tree-no-electron",
+      "ok": true,
+      "detail": "no Electron Helper or legacy Drama Electron processes"
+    }
+  ]
+}

@@ -1,0 +1,382 @@
+{
+  "ok": true,
+  "schema": "drama-source-ui-runtime-parity.v1",
+  "sourceBuiltClassification": "product-drama-browser-source-built",
+  "generatedAt": "2026-06-29T11:31:09.581Z",
+  "sourceWorkspace": "/Users/gengrf/zen-browser-desktop",
+  "appBundle": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app",
+  "runtimeUrl": "http://127.0.0.1:3198",
+  "appIdentity": {
+    "bundleId": "app.drama-browser.local",
+    "displayName": "Drama Browser",
+    "executable": "drama-browser"
+  },
+  "identityGate": {
+    "path": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-09-source-product.json",
+    "ok": true
+  },
+  "checks": [
+    {
+      "id": "identity-gate",
+      "ok": true,
+      "detail": "stage-09-source-product.json"
+    },
+    {
+      "id": "source-built-app-identity",
+      "ok": true,
+      "detail": "{\"bundleId\":\"app.drama-browser.local\",\"displayName\":\"Drama Browser\",\"executable\":\"drama-browser\"}"
+    },
+    {
+      "id": "all-surfaces-captured",
+      "ok": true,
+      "detail": "start:ok\ngraph:ok\nplm:ok\ncrew:ok\nmemory:ok"
+    },
+    {
+      "id": "plm-runtime-sidecar-visible",
+      "ok": true,
+      "detail": "{\"state\":\"ready\",\"version\":\"0.1.0\",\"message\":\"Drama standalone runtime ready.\",\"updatedAt\":\"2026-06-29T11:30:37.326Z\",\"workspaceRoot\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace\",\"startedAt\":\"2026-06-28T17:41:37.238Z\",\"runtimePackageRoot\":null,\"browserShellDistDir\":\"/Users/gengrf/drama-browser/apps/drama-browser-shell/dist\",\"basicMemoryRoot\":\"/Users/gengrf/basic-memory-claude-history\",\"plmRuntime\":{\"state\":\"running\",\"healthy\":true,\"port\":8005,\"url\":\"http://127.0.0.1:8005\",\"baseUrl\":\"http://127.0.0.1:8005\",\"apiBaseUrl\":\"http://127.0.0.1:8005/api/v1\",\"owned\":false,\"adopted\":true,\"projectRoot\":\"/Users/gengrf/PlotPilot\",\"dataDir\":\"/Users/gengrf/.plotpilot/data\",\"health\":{\"status\":\"healthy\",\"version\":\"1.0.2\",\"build_id\":\"build-20260209-1200-c4d2\",\"uptime_seconds\":870469.36,\"daemon_process\":{\"running\":true,\"pid\":13306}}},\"endpoints\":{\"graph\":\"http://127.0.0.1:3198/graph\",\"plm\":\"http://127.0.0.1:3198/plm/runtime/status\",\"crew\":\"http://127.0.0.1:3198/crew\",\"app\":\"http://127.0.0.1:3198/app\",\"memory\":\"http://127.0.0.1:3198/app/memory\",\"events\":\"ws://127.0.0.1:3198/events\"}}"
+    },
+    {
+      "id": "host-chrome-drama-identity",
+      "ok": true,
+      "detail": "start:drama-browser:Drama Browser\ngraph:drama-browser:Drama Browser\nplm:drama-browser:Drama Browser\ncrew:drama-browser:Drama Browser\nmemory:drama-browser:Drama Browser"
+    }
+  ],
+  "surfaces": [
+    {
+      "surface": "start",
+      "ok": true,
+      "profile": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start",
+      "screenshot": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-start-current.png",
+        "captured": true,
+        "width": 3420,
+        "height": 2214,
+        "averageLuma": 38.197,
+        "darkRatio": 0.103638,
+        "brightRatio": 0.004134,
+        "uniqueColorBuckets": 1491
+      },
+      "processLines": [
+        "75787 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start -no-remote about:blank",
+        "75824 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-gpu-helper.app/Contents/MacOS/Drama Browser GPU Helper -parentBuildID 20260628205739 -prefsHandle 0:27018 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {ace2548d-829a-4c27-af40-cc83add59f00} -parentPid 75787 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.1373537904 1 gpu",
+        "75843 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -prefsHandle 0:27054 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {b61b99cb-2bf9-42c6-b0ee-e7b9da65202e} -parentPid 75787 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.1633367294 2 socket",
+        "75862 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27649 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {b358d8b9-c109-4ab2-9618-62bb0685832a} -parentPid 75787 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.30590856 3 tab",
+        "75863 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -prefsHandle 0:27694 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {5618ae6d-090a-4908-99c4-d47d257d7b2b} -parentPid 75787 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.446973006 4 rdd",
+        "75867 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27433 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {309814b1-22ab-4f3d-8d1a-674a65cc96d2} -parentPid 75787 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.497030691 7 tab",
+        "75902 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27995 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {fe90eec6-ccf5-4ccc-a2c6-7c54036986a6} -parentPid 75787 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.524976995 8 tab",
+        "75904 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:29934 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {09b145ff-d71a-43cb-aa14-f3728c77835c} -parentPid 75787 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.269212941 9 tab",
+        "75910 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -sandboxingKind 0 -prefsHandle 0:43514 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {4221b028-b8aa-483b-b59f-dbf6aa614f82} -parentPid 75787 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.2015786791 11 utility",
+        "75911 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41651 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {9c37f975-50ba-467a-b67e-ca84fe4f6f43} -parentPid 75787 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.2115070856 12 tab",
+        "75912 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41651 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {b92cbdb0-2894-4929-a934-050ba6af0b43} -parentPid 75787 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.192079183 13 tab",
+        "75913 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41651 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {bf56033d-1066-47c3-93df-83905c578b32} -parentPid 75787 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/start org.mozilla.machname.197907220 14 tab"
+      ],
+      "processName": "drama-browser",
+      "windowTitles": [
+        "Drama Browser"
+      ],
+      "failureReasons": []
+    },
+    {
+      "surface": "graph",
+      "ok": true,
+      "profile": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph",
+      "screenshot": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-graph-current.png",
+        "captured": true,
+        "width": 3420,
+        "height": 2214,
+        "averageLuma": 33.892,
+        "darkRatio": 0.175661,
+        "brightRatio": 0.00043,
+        "uniqueColorBuckets": 1193
+      },
+      "processLines": [
+        "76048 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph -no-remote about:blank",
+        "76049 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-gpu-helper.app/Contents/MacOS/Drama Browser GPU Helper -parentBuildID 20260628205739 -prefsHandle 0:27018 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {92e79e0a-3eff-4b29-9b97-3e432aa7d721} -parentPid 76048 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.2057877303 1 gpu",
+        "76051 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -prefsHandle 0:27054 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {4f946803-207a-4056-8b36-0234196e056a} -parentPid 76048 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.1554462704 2 socket",
+        "76053 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27648 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {df225bcf-fe9d-4efc-9e94-cc7630541254} -parentPid 76048 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.891698767 3 tab",
+        "76054 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -prefsHandle 0:27693 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {643fe7fc-2239-4366-86d0-ede72b98eaa6} -parentPid 76048 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.139969734 4 rdd",
+        "76058 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27292 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {a17c76dc-06d3-4e44-8a5a-50548d37df6e} -parentPid 76048 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.987295107 7 tab",
+        "76059 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27854 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {98a407a6-2bb7-412c-b88f-5340f7ea985a} -parentPid 76048 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.414476088 8 tab",
+        "76061 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:29792 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {6799308c-6e26-49d8-9bf9-279f7d04f7ec} -parentPid 76048 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.1711821978 9 tab",
+        "76066 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -sandboxingKind 0 -prefsHandle 0:43133 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {3ac793fc-2d12-4576-ba2b-3a4e21b88d81} -parentPid 76048 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.565627492 11 utility",
+        "76136 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41734 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {8dde0f31-bcde-4507-adf8-a3b0358f3cf1} -parentPid 76048 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.577084913 12 tab",
+        "76137 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41734 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {cca40fb6-485f-4244-9e5f-3e3046d35226} -parentPid 76048 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.2145786380 13 tab",
+        "76138 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41734 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {ae47f3e9-bcf7-4303-ac1b-0ee5f91ba665} -parentPid 76048 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/graph org.mozilla.machname.2070678718 14 tab"
+      ],
+      "processName": "drama-browser",
+      "windowTitles": [
+        "Drama Browser"
+      ],
+      "runtimeStatus": {
+        "state": "ready",
+        "version": "0.1.0",
+        "message": "Drama standalone runtime ready.",
+        "updatedAt": "2026-06-29T11:30:16.769Z",
+        "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+        "startedAt": "2026-06-28T17:41:37.238Z",
+        "runtimePackageRoot": null,
+        "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+        "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+        "plmRuntime": {
+          "state": "running",
+          "healthy": true,
+          "port": 8005,
+          "url": "http://127.0.0.1:8005",
+          "baseUrl": "http://127.0.0.1:8005",
+          "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+          "owned": false,
+          "adopted": true,
+          "projectRoot": "/Users/gengrf/PlotPilot",
+          "dataDir": "/Users/gengrf/.plotpilot/data",
+          "health": {
+            "status": "healthy",
+            "version": "1.0.2",
+            "build_id": "build-20260209-1200-c4d2",
+            "uptime_seconds": 864143,
+            "daemon_process": {
+              "running": true,
+              "pid": 13306
+            }
+          }
+        },
+        "endpoints": {
+          "graph": "http://127.0.0.1:3198/graph",
+          "plm": "http://127.0.0.1:3198/plm/runtime/status",
+          "crew": "http://127.0.0.1:3198/crew",
+          "app": "http://127.0.0.1:3198/app",
+          "memory": "http://127.0.0.1:3198/app/memory",
+          "events": "ws://127.0.0.1:3198/events"
+        }
+      },
+      "failureReasons": []
+    },
+    {
+      "surface": "plm",
+      "ok": true,
+      "profile": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm",
+      "screenshot": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-plm-current.png",
+        "captured": true,
+        "width": 3420,
+        "height": 2214,
+        "averageLuma": 79.487,
+        "darkRatio": 0.022586,
+        "brightRatio": 0.075794,
+        "uniqueColorBuckets": 1324
+      },
+      "processLines": [
+        "76646 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm -no-remote about:blank",
+        "76647 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-gpu-helper.app/Contents/MacOS/Drama Browser GPU Helper -parentBuildID 20260628205739 -prefsHandle 0:27016 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {74f96966-7bfd-43d4-984e-8afddbd43756} -parentPid 76646 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.1123855357 1 gpu",
+        "76648 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -prefsHandle 0:27052 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {ed3fbc3f-8099-4af2-806c-94502e76e988} -parentPid 76646 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.73834931 2 socket",
+        "76655 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27647 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {c0e508ce-9a2d-42fd-bd84-d61bee649db8} -parentPid 76646 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.1936678259 3 tab",
+        "76656 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -prefsHandle 0:27692 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {6d25dadc-997b-4609-b9ed-0bb416d5d6ed} -parentPid 76646 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.421484936 4 rdd",
+        "76665 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27292 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {43260cf4-41c0-4d71-86ae-a1b23c5cdb11} -parentPid 76646 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.565722232 7 tab",
+        "76666 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27940 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {d3a33478-5105-4527-8d7e-bba0091ca111} -parentPid 76646 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.16161318 8 tab",
+        "76668 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:29802 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {3de6f8fa-bb99-4515-877e-1bcca017f4e3} -parentPid 76646 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.1302166093 9 tab",
+        "76672 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -sandboxingKind 0 -prefsHandle 0:43131 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {fba9ebd3-91b5-47a9-8568-9ddd7feeddc2} -parentPid 76646 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.744639402 11 utility",
+        "76673 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41616 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {e60352df-1890-43f2-922d-76b72052503d} -parentPid 76646 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.1746763776 12 tab",
+        "76675 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41651 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {8fdbfd9c-f699-4ffa-8e01-d0fc5e1f64b9} -parentPid 76646 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.145775483 13 tab",
+        "76676 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41651 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {389e432f-e1c2-4b16-8654-c793083c4258} -parentPid 76646 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/plm org.mozilla.machname.2086940355 14 tab"
+      ],
+      "processName": "drama-browser",
+      "windowTitles": [
+        "Drama Browser"
+      ],
+      "runtimeStatus": {
+        "state": "ready",
+        "version": "0.1.0",
+        "message": "Drama standalone runtime ready.",
+        "updatedAt": "2026-06-29T11:30:37.326Z",
+        "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+        "startedAt": "2026-06-28T17:41:37.238Z",
+        "runtimePackageRoot": null,
+        "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+        "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+        "plmRuntime": {
+          "state": "running",
+          "healthy": true,
+          "port": 8005,
+          "url": "http://127.0.0.1:8005",
+          "baseUrl": "http://127.0.0.1:8005",
+          "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+          "owned": false,
+          "adopted": true,
+          "projectRoot": "/Users/gengrf/PlotPilot",
+          "dataDir": "/Users/gengrf/.plotpilot/data",
+          "health": {
+            "status": "healthy",
+            "version": "1.0.2",
+            "build_id": "build-20260209-1200-c4d2",
+            "uptime_seconds": 870469.36,
+            "daemon_process": {
+              "running": true,
+              "pid": 13306
+            }
+          }
+        },
+        "endpoints": {
+          "graph": "http://127.0.0.1:3198/graph",
+          "plm": "http://127.0.0.1:3198/plm/runtime/status",
+          "crew": "http://127.0.0.1:3198/crew",
+          "app": "http://127.0.0.1:3198/app",
+          "memory": "http://127.0.0.1:3198/app/memory",
+          "events": "ws://127.0.0.1:3198/events"
+        }
+      },
+      "failureReasons": []
+    },
+    {
+      "surface": "crew",
+      "ok": true,
+      "profile": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew",
+      "screenshot": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-crew-current.png",
+        "captured": true,
+        "width": 3420,
+        "height": 2214,
+        "averageLuma": 36.924,
+        "darkRatio": 0.023247,
+        "brightRatio": 0.00043,
+        "uniqueColorBuckets": 1214
+      },
+      "processLines": [
+        "76856 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew -no-remote about:blank",
+        "76858 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-gpu-helper.app/Contents/MacOS/Drama Browser GPU Helper -parentBuildID 20260628205739 -prefsHandle 0:27017 -prefMapHandle 1:292386 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {daa9a521-b8f7-48ae-8044-abbf21f3bf02} -parentPid 76856 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.740972352 1 gpu",
+        "76859 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -prefsHandle 0:27053 -prefMapHandle 1:292386 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {1c946c20-00f5-45ed-b6ce-d048508e843a} -parentPid 76856 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.740447731 2 socket",
+        "76860 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27648 -prefMapHandle 1:292386 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {603b3901-c6ec-4a3b-a18a-3816253f4e89} -parentPid 76856 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.510208419 3 tab",
+        "76861 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -prefsHandle 0:27693 -prefMapHandle 1:292386 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {caa00fbe-08d1-4fb7-a1e9-a283f9a7e55c} -parentPid 76856 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.1649360779 4 rdd",
+        "76865 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27292 -prefMapHandle 1:292386 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {f6dd469a-7bb9-4a54-a31b-7b6ae0de2c15} -parentPid 76856 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.1814315226 7 tab",
+        "76867 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:28096 -prefMapHandle 1:292386 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {633672e9-20f9-461c-b4f6-7c015343d5a0} -parentPid 76856 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.641507438 8 tab",
+        "76869 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:29960 -prefMapHandle 1:292386 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {744890ee-5901-41bc-9ac9-2bfe3c625619} -parentPid 76856 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.1683138255 9 tab",
+        "76871 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -sandboxingKind 0 -prefsHandle 0:43179 -prefMapHandle 1:292386 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {9187a936-4960-4806-8a8b-bc532be274cb} -parentPid 76856 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.936416651 11 utility",
+        "76872 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41781 -prefMapHandle 1:292386 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {5b5fbe5a-2d1f-4f74-a5b2-34f5df46bbd0} -parentPid 76856 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.158064795 12 tab",
+        "76873 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41781 -prefMapHandle 1:292386 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {125f4a33-1fea-4eea-b348-f1409891f173} -parentPid 76856 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.650015560 13 tab",
+        "76874 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41781 -prefMapHandle 1:292386 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {f67b8868-6f59-4588-a329-77a82a603e53} -parentPid 76856 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/crew org.mozilla.machname.799868121 14 tab"
+      ],
+      "processName": "drama-browser",
+      "windowTitles": [
+        "Drama Browser"
+      ],
+      "runtimeStatus": {
+        "state": "ready",
+        "version": "0.1.0",
+        "message": "Drama standalone runtime ready.",
+        "updatedAt": "2026-06-29T11:30:52.790Z",
+        "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+        "startedAt": "2026-06-28T17:41:37.238Z",
+        "runtimePackageRoot": null,
+        "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+        "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+        "plmRuntime": {
+          "state": "running",
+          "healthy": true,
+          "port": 8005,
+          "url": "http://127.0.0.1:8005",
+          "baseUrl": "http://127.0.0.1:8005",
+          "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+          "owned": false,
+          "adopted": true,
+          "projectRoot": "/Users/gengrf/PlotPilot",
+          "dataDir": "/Users/gengrf/.plotpilot/data",
+          "health": {
+            "status": "healthy",
+            "version": "1.0.2",
+            "build_id": "build-20260209-1200-c4d2",
+            "uptime_seconds": 870469.36,
+            "daemon_process": {
+              "running": true,
+              "pid": 13306
+            }
+          }
+        },
+        "endpoints": {
+          "graph": "http://127.0.0.1:3198/graph",
+          "plm": "http://127.0.0.1:3198/plm/runtime/status",
+          "crew": "http://127.0.0.1:3198/crew",
+          "app": "http://127.0.0.1:3198/app",
+          "memory": "http://127.0.0.1:3198/app/memory",
+          "events": "ws://127.0.0.1:3198/events"
+        }
+      },
+      "failureReasons": []
+    },
+    {
+      "surface": "memory",
+      "ok": true,
+      "profile": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory",
+      "screenshot": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-memory-current.png",
+        "captured": true,
+        "width": 3420,
+        "height": 2214,
+        "averageLuma": 88.76,
+        "darkRatio": 0.01961,
+        "brightRatio": 0.16412,
+        "uniqueColorBuckets": 1234
+      },
+      "processLines": [
+        "76959 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory -no-remote about:blank",
+        "76960 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-gpu-helper.app/Contents/MacOS/Drama Browser GPU Helper -parentBuildID 20260628205739 -prefsHandle 0:27019 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {9f7f0513-a048-40f8-9956-87f287929dd4} -parentPid 76959 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.1145964430 1 gpu",
+        "76961 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -prefsHandle 0:27055 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {afdc1988-0ca9-4336-a8c8-8a83e2ad0337} -parentPid 76959 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.1386604563 2 socket",
+        "76962 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27649 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {30de6286-8014-455f-bdc4-7fa2d62eb8ba} -parentPid 76959 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.124518810 3 tab",
+        "76963 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -prefsHandle 0:27694 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {81db7032-728f-4194-a807-9ef90e7b1d19} -parentPid 76959 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.1290632471 4 rdd",
+        "76967 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27433 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {efbf7f8d-a422-435d-a383-8614c02947d3} -parentPid 76959 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.921965836 7 tab",
+        "76968 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:27995 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {03ceb149-f392-45a0-af1f-d2401975ffab} -parentPid 76959 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.276353624 8 tab",
+        "76970 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:29935 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {daf06f62-5110-4689-a79e-f65e54d63b48} -parentPid 76959 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.13399519 9 tab",
+        "76972 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -parentBuildID 20260628205739 -sandboxingKind 0 -prefsHandle 0:43134 -prefMapHandle 1:292394 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -ipcHandle 0 -initialChannelId {94b65ebc-eed7-497d-931e-4dc6d61e6c0c} -parentPid 76959 -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.1286902393 11 utility",
+        "76973 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41407 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {744902e3-9eba-4dfc-bfb3-ed649457994e} -parentPid 76959 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.444442219 12 tab",
+        "76974 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41407 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {7848c368-4404-4dcf-8133-9d823938928a} -parentPid 76959 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.1503348790 13 tab",
+        "76975 /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser-plugin-container.app/Contents/MacOS/drama-browser-plugin-container -isForBrowser -prefsHandle 0:41407 -prefMapHandle 1:292394 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app -sbLevel 3 -parentBuildID 20260628205739 -ipcHandle 0 -initialChannelId {d5d75cec-ba6e-4019-aa74-74dde3de4ab5} -parentPid 76959 -greomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/omni.ja -appomni /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser/omni.ja -appDir /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser -profile /Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-profiles/memory org.mozilla.machname.1939491914 14 tab"
+      ],
+      "processName": "drama-browser",
+      "windowTitles": [
+        "Drama Browser"
+      ],
+      "runtimeStatus": {
+        "state": "ready",
+        "version": "0.1.0",
+        "message": "Drama standalone runtime ready.",
+        "updatedAt": "2026-06-29T11:31:08.249Z",
+        "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+        "startedAt": "2026-06-28T17:41:37.238Z",
+        "runtimePackageRoot": null,
+        "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+        "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+        "plmRuntime": {
+          "state": "running",
+          "healthy": true,
+          "port": 8005,
+          "url": "http://127.0.0.1:8005",
+          "baseUrl": "http://127.0.0.1:8005",
+          "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+          "owned": false,
+          "adopted": true,
+          "projectRoot": "/Users/gengrf/PlotPilot",
+          "dataDir": "/Users/gengrf/.plotpilot/data",
+          "health": {
+            "status": "healthy",
+            "version": "1.0.2",
+            "build_id": "build-20260209-1200-c4d2",
+            "uptime_seconds": 870469.36,
+            "daemon_process": {
+              "running": true,
+              "pid": 13306
+            }
+          }
+        },
+        "endpoints": {
+          "graph": "http://127.0.0.1:3198/graph",
+          "plm": "http://127.0.0.1:3198/plm/runtime/status",
+          "crew": "http://127.0.0.1:3198/crew",
+          "app": "http://127.0.0.1:3198/app",
+          "memory": "http://127.0.0.1:3198/app/memory",
+          "events": "ws://127.0.0.1:3198/events"
+        }
+      },
+      "failureReasons": []
+    }
+  ],
+  "failureReasons": []
+}

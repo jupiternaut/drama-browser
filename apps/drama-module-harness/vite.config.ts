@@ -15,7 +15,9 @@ export default defineConfig({
       '@drama/graph': fromRoot('packages/drama-graph/src/index.ts'),
       '@drama/graph-ui': fromRoot('packages/drama-graph-ui/src/index.ts'),
       '@drama/host': fromRoot('packages/drama-host/src/index.ts'),
+      '@drama/plm': fromRoot('packages/drama-plm/src/index.ts'),
       '@drama/plm-ui': fromRoot('packages/drama-plm-ui/src/index.ts'),
+      '@drama/ui': fromRoot('packages/drama-ui/src/index.ts'),
     },
   },
 })

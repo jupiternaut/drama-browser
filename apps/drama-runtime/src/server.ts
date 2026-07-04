@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
-import { readdir, readFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, extname, join, resolve, sep } from 'node:path'
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { createEmptyDramaGraph, type DramaChapter, type DramaGraph } from '@drama/core'
@@ -94,6 +94,90 @@ interface RuntimeShutdownRequest {
   stopPlotPilot?: boolean
 }
 
+interface BasicMemoryListRequest {
+  query?: string
+  limit?: number
+}
+
+interface BasicMemoryReadRequest {
+  path?: string
+}
+
+interface BasicMemoryWriteRequest {
+  path?: string
+  content?: string
+}
+
+interface BasicMemoryNoteSummary {
+  path: string
+  title: string
+  type?: string
+  uuid?: string
+  createdAt?: string
+  updatedAt?: string
+  messageCount?: number
+  size: number
+  modifiedAt: string
+  excerpt: string
+}
+
+interface BasicMemoryListResponse {
+  root: string
+  exists: boolean
+  total: number
+  returned: number
+  truncated: boolean
+  query: string
+  notes: BasicMemoryNoteSummary[]
+}
+
+interface BasicMemoryReadResponse {
+  root: string
+  note: BasicMemoryNoteSummary
+  content: string
+}
+
+interface RuntimeFileRequest {
+  path?: string
+  content?: string
+}
+
+interface RuntimeSessionCommandRequest {
+  sessionId?: string
+  command?: Record<string, unknown>
+}
+
+interface RuntimeSessionCancelRequest {
+  sessionId?: string
+  silent?: boolean
+}
+
+interface RuntimeSettingReadRequest {
+  key?: string
+}
+
+interface RuntimeSettingWriteRequest {
+  key?: string
+  value?: unknown
+}
+
+interface RuntimeGraphPersistRequest {
+  graphId?: string
+  graph?: unknown
+}
+
+interface RuntimeSessionState {
+  id: string
+  labels: unknown[]
+  sources: unknown[]
+  skills: unknown[]
+  status: string
+  workingDirectory?: string
+  cancelled: boolean
+  updatedAt: string
+  commands: Array<Record<string, unknown>>
+}
+
 const startedAt = new Date().toISOString()
 const port = Number(process.env.DRAMA_RUNTIME_PORT ?? 3198)
 const host = process.env.DRAMA_RUNTIME_HOST ?? '127.0.0.1'
@@ -101,11 +185,16 @@ const moduleDir = dirname(fileURLToPath(import.meta.url))
 const workspaceRoot = process.env.DRAMA_WORKSPACE_ROOT
   ?? process.env.CRAFT_WORKSPACE_ROOT
   ?? join(homedir(), '.craft-agent', 'workspaces', 'my-workspace')
+const basicMemoryRoot = resolve(process.env.BASIC_MEMORY_ROOT ?? join(homedir(), 'basic-memory-claude-history'))
 const browserShellDistDir = resolveBrowserShellDistDir()
 const runtimePackageRoot = process.env.DRAMA_RUNTIME_PACKAGE_ROOT ?? null
 
 const store = new DramaGraphStore({ workspaceRoot })
 const plotPilotRuntime = new PlotPilotRuntimeManager()
+const promptRegistry = new Map<string, Record<string, unknown>>()
+const runtimeSessions = new Map<string, RuntimeSessionState>()
+const runtimeSettingsPath = join(workspaceRoot, '.drama-runtime-settings.json')
+let keepAliveTimer: ReturnType<typeof setInterval> | undefined
 
 function json(data: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(data, null, 2), {
@@ -148,14 +237,47 @@ function runtimeStatus() {
     startedAt,
     runtimePackageRoot,
     browserShellDistDir,
+    basicMemoryRoot,
     plmRuntime: plotPilotRuntime.getStatus(),
     endpoints: {
       graph: `http://${host}:${port}/graph`,
       plm: `http://${host}:${port}/plm/runtime/status`,
       crew: `http://${host}:${port}/crew`,
       app: `http://${host}:${port}/app`,
+      memory: `http://${host}:${port}/app/memory`,
       events: `ws://${host}:${port}/events`,
     },
+  }
+}
+
+function runtimeCapabilities() {
+  return {
+    'files.readTextFile': true,
+    'files.writeTextFile': true,
+    'runtime.status': true,
+    'runtime.capabilities': true,
+    'runtime.request': true,
+    'sessions.command': true,
+    'sessions.cancel': true,
+    'plm.sidecar.status': true,
+    'plm.sidecar.start': true,
+    'plm.sidecar.stop': true,
+    'plm.sidecar.logs': true,
+    'graph.load': true,
+    'graph.history': true,
+    'graph.persist': true,
+    'graph.backup': true,
+    'skillCrew.refresh': true,
+    'skillCrew.import': true,
+    'skillCrew.run': true,
+    'skillCrew.feedback': true,
+    'basicMemory.read': true,
+    'basicMemory.search': true,
+    'basicMemory.write': true,
+    'settings.read': true,
+    'settings.write': true,
+    'diagnostics.snapshot': true,
+    'diagnostics.process': true,
   }
 }
 
@@ -204,6 +326,204 @@ function isInsideDir(parent: string, candidate: string): boolean {
   return normalizedCandidate === normalizedParent || normalizedCandidate.startsWith(`${normalizedParent}${sep}`)
 }
 
+function runtimeError(code: RuntimeErrorCode, message: string, details?: unknown): Error & { code: RuntimeErrorCode; details?: unknown } {
+  return Object.assign(new Error(message), { code, details })
+}
+
+function isMarkdownPath(pathname: string): boolean {
+  const ext = extname(pathname).toLowerCase()
+  return ext === '.md' || ext === '.markdown'
+}
+
+function resolveBasicMemoryNotePath(requestPath: string | undefined): string {
+  const relativePath = String(requestPath ?? '').trim()
+  if (!relativePath) {
+    throw runtimeError('BAD_REQUEST', 'Basic Memory note path is required.')
+  }
+
+  const filePath = resolve(basicMemoryRoot, relativePath)
+  if (!isInsideDir(basicMemoryRoot, filePath)) {
+    throw runtimeError('BAD_REQUEST', 'Basic Memory note path must stay inside the configured root.')
+  }
+  if (!isMarkdownPath(filePath)) {
+    throw runtimeError('BAD_REQUEST', 'Basic Memory only supports Markdown notes.')
+  }
+  return filePath
+}
+
+function normalizeFrontmatterValue(value: string): string {
+  return value.trim().replace(/^['"]|['"]$/g, '')
+}
+
+function parseBasicMemoryMarkdown(content: string, fallbackPath: string) {
+  const metadata: Record<string, string | number> = {}
+  let body = content
+
+  if (content.startsWith('---\n')) {
+    const end = content.indexOf('\n---', 4)
+    if (end > 0) {
+      const frontmatter = content.slice(4, end).split(/\r?\n/)
+      body = content.slice(end + 4).replace(/^\r?\n/, '')
+
+      for (const line of frontmatter) {
+        const match = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line)
+        if (!match) continue
+        const key = match[1]
+        const raw = normalizeFrontmatterValue(match[2] ?? '')
+        const numeric = Number(raw)
+        metadata[key] = raw && Number.isFinite(numeric) && String(numeric) === raw ? numeric : raw
+      }
+    }
+  }
+
+  const heading = /^#\s+(.+)$/m.exec(body)?.[1]?.trim()
+  const title = String(metadata.title ?? heading ?? basename(fallbackPath, extname(fallbackPath))).trim()
+  return { metadata, body, title }
+}
+
+function compactWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function createBasicMemoryExcerpt(body: string, query: string): string {
+  const text = compactWhitespace(
+    body
+      .replace(/^```[\s\S]*?```/gm, ' ')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/`([^`]+)`/g, '$1'),
+  )
+  if (!text) return ''
+
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) return text.slice(0, 260)
+
+  const index = text.toLowerCase().indexOf(normalizedQuery)
+  if (index < 0) return text.slice(0, 260)
+  const start = Math.max(0, index - 90)
+  const end = Math.min(text.length, index + normalizedQuery.length + 170)
+  return `${start > 0 ? '...' : ''}${text.slice(start, end)}${end < text.length ? '...' : ''}`
+}
+
+async function listBasicMemoryMarkdownFiles(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true })
+  const files: string[] = []
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      files.push(...await listBasicMemoryMarkdownFiles(path))
+    } else if (entry.isFile() && isMarkdownPath(entry.name)) {
+      files.push(path)
+    }
+  }
+
+  return files
+}
+
+async function summarizeBasicMemoryNote(filePath: string, query = ''): Promise<BasicMemoryNoteSummary | null> {
+  const fileStat = await stat(filePath)
+  const content = await readFile(filePath, 'utf8')
+  const { metadata, body, title } = parseBasicMemoryMarkdown(content, filePath)
+  const normalizedQuery = query.trim().toLowerCase()
+  const searchable = `${relative(basicMemoryRoot, filePath)}\n${title}\n${body}`.toLowerCase()
+  if (normalizedQuery && !searchable.includes(normalizedQuery)) return null
+
+  const metadataString = (key: string) => {
+    const value = metadata[key]
+    return typeof value === 'string' ? value : undefined
+  }
+  const metadataNumber = (key: string) => {
+    const value = metadata[key]
+    return typeof value === 'number' ? value : undefined
+  }
+
+  return {
+    path: relative(basicMemoryRoot, filePath),
+    title,
+    type: metadataString('type'),
+    uuid: metadataString('uuid'),
+    createdAt: metadataString('created_at'),
+    updatedAt: metadataString('updated_at'),
+    messageCount: metadataNumber('message_count'),
+    size: fileStat.size,
+    modifiedAt: fileStat.mtime.toISOString(),
+    excerpt: createBasicMemoryExcerpt(body, query),
+  }
+}
+
+async function listBasicMemoryNotes(payload: BasicMemoryListRequest = {}): Promise<BasicMemoryListResponse> {
+  const query = String(payload.query ?? '').trim()
+  const limit = Math.min(400, Math.max(1, readLimit(payload) ?? 80))
+  if (!existsSync(basicMemoryRoot)) {
+    return {
+      root: basicMemoryRoot,
+      exists: false,
+      total: 0,
+      returned: 0,
+      truncated: false,
+      query,
+      notes: [],
+    }
+  }
+
+  const files = await listBasicMemoryMarkdownFiles(basicMemoryRoot)
+  const notes = (await Promise.all(files.map((file) => summarizeBasicMemoryNote(file, query))))
+    .filter((note): note is BasicMemoryNoteSummary => Boolean(note))
+    .sort((left, right) => {
+      const leftTime = Date.parse(left.updatedAt ?? left.modifiedAt)
+      const rightTime = Date.parse(right.updatedAt ?? right.modifiedAt)
+      return rightTime - leftTime || left.title.localeCompare(right.title)
+    })
+
+  return {
+    root: basicMemoryRoot,
+    exists: true,
+    total: notes.length,
+    returned: Math.min(notes.length, limit),
+    truncated: notes.length > limit,
+    query,
+    notes: notes.slice(0, limit),
+  }
+}
+
+async function readBasicMemoryNote(payload: BasicMemoryReadRequest = {}): Promise<BasicMemoryReadResponse> {
+  const filePath = resolveBasicMemoryNotePath(payload.path)
+  if (!existsSync(filePath)) {
+    throw runtimeError('NOT_FOUND', 'Basic Memory note was not found.')
+  }
+
+  const content = await readFile(filePath, 'utf8')
+  const note = await summarizeBasicMemoryNote(filePath) ?? await (async () => {
+    const fileStat = await stat(filePath)
+    const { title } = parseBasicMemoryMarkdown(content, filePath)
+    return {
+      path: relative(basicMemoryRoot, filePath),
+      title,
+      size: fileStat.size,
+      modifiedAt: fileStat.mtime.toISOString(),
+      excerpt: '',
+    }
+  })()
+  return {
+    root: basicMemoryRoot,
+    note,
+    content,
+  }
+}
+
+async function writeBasicMemoryNote(payload: BasicMemoryWriteRequest = {}): Promise<BasicMemoryReadResponse> {
+  const filePath = resolveBasicMemoryNotePath(payload.path)
+  if (!existsSync(filePath)) {
+    throw runtimeError('NOT_FOUND', 'Basic Memory note was not found.')
+  }
+  if (typeof payload.content !== 'string') {
+    throw runtimeError('BAD_REQUEST', 'Basic Memory note content must be a string.')
+  }
+  await writeFile(filePath, payload.content, 'utf8')
+  return readBasicMemoryNote({ path: relative(basicMemoryRoot, filePath) })
+}
+
 async function serveBrowserShell(url: URL): Promise<Response | null> {
   const pathname = decodeURIComponent(url.pathname)
   const distDir = browserShellDistDir
@@ -211,9 +531,13 @@ async function serveBrowserShell(url: URL): Promise<Response | null> {
 
   if (pathname === '/') {
     const requestedSurface = url.searchParams.get('surface')
-    const surface = requestedSurface === 'graph' || requestedSurface === 'crew' || requestedSurface === 'plm'
+    const surface = requestedSurface === 'start'
+      || requestedSurface === 'graph'
+      || requestedSurface === 'crew'
+      || requestedSurface === 'plm'
+      || requestedSurface === 'memory'
       ? requestedSurface
-      : 'plm'
+      : 'start'
     const runtimeUrl = `${url.protocol}//${url.host}`
     return new Response(null, {
       status: 302,
@@ -245,7 +569,15 @@ async function serveBrowserShell(url: URL): Promise<Response | null> {
     return null
   }
 
-  if (pathname === '/app' || pathname === '/app/' || pathname === '/app/graph' || pathname === '/app/plm' || pathname === '/app/crew') {
+  if (
+    pathname === '/app'
+    || pathname === '/app/'
+    || pathname === '/app/start'
+    || pathname === '/app/graph'
+    || pathname === '/app/plm'
+    || pathname === '/app/crew'
+    || pathname === '/app/memory'
+  ) {
     return new Response(await readFile(indexPath), {
       headers: {
         'content-type': 'text/html; charset=utf-8',
@@ -254,12 +586,12 @@ async function serveBrowserShell(url: URL): Promise<Response | null> {
     })
   }
 
-  const assetPrefixes = ['/app/assets/', '/assets/']
+  const assetPrefixes = ['/app/assets/', '/assets/', '/app/reader-assets/', '/reader-assets/']
   const matchedPrefix = assetPrefixes.find((prefix) => pathname.startsWith(prefix))
   if (!matchedPrefix) return null
 
-  const relativePath = matchedPrefix === '/app/assets/'
-    ? join('assets', pathname.slice(matchedPrefix.length))
+  const relativePath = matchedPrefix === '/app/assets/' || matchedPrefix === '/app/reader-assets/'
+    ? join(matchedPrefix.includes('reader-assets') ? 'reader-assets' : 'assets', pathname.slice(matchedPrefix.length))
     : pathname.slice(1)
   const filePath = join(distDir, relativePath)
   if (!isInsideDir(distDir, filePath) || !existsSync(filePath)) {
@@ -284,6 +616,153 @@ function readCheckHealth(payload: unknown): boolean {
   if (!payload || typeof payload !== 'object') return true
   const checkHealth = (payload as { checkHealth?: unknown }).checkHealth
   return typeof checkHealth === 'boolean' ? checkHealth : true
+}
+
+function resolveRuntimeManagedPath(requestPath: string | undefined): { path: string; root: string } {
+  const rawPath = String(requestPath ?? '').trim()
+  if (!rawPath) {
+    throw runtimeError('BAD_REQUEST', 'File path is required.')
+  }
+
+  const candidate = resolve(rawPath.startsWith('/') ? rawPath : join(workspaceRoot, rawPath))
+  for (const [rootName, rootPath] of Object.entries({ workspace: workspaceRoot, basicMemory: basicMemoryRoot })) {
+    if (isInsideDir(rootPath, candidate)) return { path: candidate, root: rootName }
+  }
+  throw runtimeError('BAD_REQUEST', 'File path must stay inside the configured Drama workspace or Basic Memory root.')
+}
+
+async function readRuntimeTextFile(payload: RuntimeFileRequest = {}) {
+  const resolved = resolveRuntimeManagedPath(payload.path)
+  const fileStat = await stat(resolved.path)
+  return {
+    ...resolved,
+    size: fileStat.size,
+    modifiedAt: fileStat.mtime.toISOString(),
+    content: await readFile(resolved.path, 'utf8'),
+  }
+}
+
+async function writeRuntimeTextFile(payload: RuntimeFileRequest = {}) {
+  if (typeof payload.content !== 'string') {
+    throw runtimeError('BAD_REQUEST', 'File content must be a string.')
+  }
+  const resolved = resolveRuntimeManagedPath(payload.path)
+  await mkdir(dirname(resolved.path), { recursive: true })
+  await writeFile(resolved.path, payload.content, 'utf8')
+  return readRuntimeTextFile({ path: resolved.path })
+}
+
+function requireSessionId(value: unknown): string {
+  const sessionId = String(value ?? '').trim()
+  if (!sessionId) throw runtimeError('BAD_REQUEST', 'Session id is required.')
+  return sessionId
+}
+
+function getRuntimeSession(sessionId: string): RuntimeSessionState {
+  const existing = runtimeSessions.get(sessionId)
+  if (existing) return existing
+  const created: RuntimeSessionState = {
+    id: sessionId,
+    labels: [],
+    sources: [],
+    skills: [],
+    status: 'ready',
+    cancelled: false,
+    updatedAt: new Date().toISOString(),
+    commands: [],
+  }
+  runtimeSessions.set(sessionId, created)
+  return created
+}
+
+function applySessionCommand(payload: RuntimeSessionCommandRequest = {}) {
+  const sessionId = requireSessionId(payload.sessionId)
+  const session = getRuntimeSession(sessionId)
+  const command = payload.command && typeof payload.command === 'object' ? payload.command : {}
+  const type = String(command.type ?? '')
+
+  if (type === 'setLabels' && Array.isArray(command.labels)) session.labels = command.labels
+  if (type === 'setSources' && Array.isArray(command.sourceSlugs)) session.sources = command.sourceSlugs
+  if (type === 'setSkills' && Array.isArray(command.skillSlugs)) session.skills = command.skillSlugs
+  if (type === 'setStatus' && typeof command.status === 'string') session.status = command.status
+  if (type === 'updateWorkingDirectory' && typeof command.dir === 'string') session.workingDirectory = command.dir
+
+  session.cancelled = false
+  session.updatedAt = new Date().toISOString()
+  session.commands.push(command)
+  return {
+    accepted: true,
+    session,
+  }
+}
+
+function cancelRuntimeSession(payload: RuntimeSessionCancelRequest = {}) {
+  const sessionId = requireSessionId(payload.sessionId)
+  const session = getRuntimeSession(sessionId)
+  session.cancelled = true
+  session.status = payload.silent ? 'cancelled-silent' : 'cancelled'
+  session.updatedAt = new Date().toISOString()
+  return {
+    accepted: true,
+    session,
+  }
+}
+
+async function readRuntimeSettings(): Promise<Record<string, unknown>> {
+  try {
+    const parsed = JSON.parse(await readFile(runtimeSettingsPath, 'utf8'))
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {}
+  } catch {
+    return {}
+  }
+}
+
+async function writeRuntimeSettings(settings: Record<string, unknown>): Promise<void> {
+  await mkdir(dirname(runtimeSettingsPath), { recursive: true })
+  await writeFile(runtimeSettingsPath, JSON.stringify(settings, null, 2), 'utf8')
+}
+
+async function readRuntimeSetting(payload: RuntimeSettingReadRequest = {}) {
+  const key = String(payload.key ?? '').trim()
+  if (!key) throw runtimeError('BAD_REQUEST', 'Setting key is required.')
+  const settings = await readRuntimeSettings()
+  return settings[key]
+}
+
+async function writeRuntimeSetting(payload: RuntimeSettingWriteRequest = {}) {
+  const key = String(payload.key ?? '').trim()
+  if (!key) throw runtimeError('BAD_REQUEST', 'Setting key is required.')
+  const settings = await readRuntimeSettings()
+  settings[key] = payload.value
+  await writeRuntimeSettings(settings)
+  return { key, updated: true }
+}
+
+function runtimeDiagnosticsSnapshot() {
+  return {
+    status: runtimeStatus(),
+    capabilities: runtimeCapabilities(),
+    paths: {
+      workspaceRoot,
+      basicMemoryRoot,
+      browserShellDistDir,
+      runtimeSettingsPath,
+    },
+    process: runtimeProcessDiagnostics(),
+  }
+}
+
+function runtimeProcessDiagnostics() {
+  return {
+    pid: process.pid,
+    platform: process.platform,
+    arch: process.arch,
+    versions: process.versions,
+    uptimeSeconds: process.uptime(),
+    memoryUsage: process.memoryUsage(),
+  }
 }
 
 async function findLatestGraphId(): Promise<string | null> {
@@ -447,6 +926,10 @@ async function shutdownRuntime(payload: RuntimeShutdownRequest = {}): Promise<{ 
 
   const stoppedAt = new Date().toISOString()
   setTimeout(() => {
+    if (keepAliveTimer) {
+      clearInterval(keepAliveTimer)
+      keepAliveTimer = undefined
+    }
     server.stop(true)
   }, 50)
 
@@ -501,6 +984,90 @@ function proxyRequestHeaders(source: Headers): Headers {
   return headers
 }
 
+function proxyApiPath(pathname: string): string {
+  return pathname.slice('/plm/proxy/api/v1'.length) || '/'
+}
+
+function isPromptRegistryCompatPath(url: URL): boolean {
+  const path = proxyApiPath(url.pathname)
+  return path === '/llm-control/prompts'
+    || path === '/llm-control/prompts/stats'
+    || path === '/llm-control/prompts/nodes'
+    || path.startsWith('/llm-control/prompts/')
+}
+
+function promptRegistryNodeKey(path: string, payload: Record<string, unknown>): string {
+  const suffix = path.startsWith('/llm-control/prompts/')
+    ? decodeURIComponent(path.slice('/llm-control/prompts/'.length))
+    : ''
+  const payloadKey = String(payload.node_key ?? payload.nodeKey ?? payload.key ?? payload.id ?? '').trim()
+  const nameKey = String(payload.name ?? payload.title ?? 'drama-runtime-prompt')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return suffix || payloadKey || nameKey || `prompt-${promptRegistry.size + 1}`
+}
+
+async function parseProxyJsonBody(body: ArrayBuffer | undefined): Promise<Record<string, unknown>> {
+  if (!body || body.byteLength === 0) return {}
+  try {
+    const parsed = JSON.parse(new TextDecoder().decode(body))
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {}
+  } catch {
+    return {}
+  }
+}
+
+async function promptRegistryCompatResponse(method: string, url: URL, body: ArrayBuffer | undefined): Promise<Response | null> {
+  const path = proxyApiPath(url.pathname)
+  if (method === 'GET' && path === '/llm-control/prompts/stats') {
+    return json({
+      total: promptRegistry.size,
+      total_nodes: promptRegistry.size,
+      dramaRuntimePromptCompat: true,
+      source: 'drama-runtime-plotpilot-compat',
+    })
+  }
+
+  if (method === 'GET' && path === '/llm-control/prompts') {
+    const prompts = [...promptRegistry.values()]
+    return json({
+      prompts,
+      nodes: prompts,
+      total: prompts.length,
+      source: 'drama-runtime-plotpilot-compat',
+    })
+  }
+
+  if ((method === 'PUT' && path.startsWith('/llm-control/prompts/')) || (method === 'POST' && path === '/llm-control/prompts/nodes')) {
+    const payload = await parseProxyJsonBody(body)
+    const nodeKey = promptRegistryNodeKey(path, payload)
+    const existing = promptRegistry.get(nodeKey) ?? {}
+    const node = {
+      ...existing,
+      ...payload,
+      id: nodeKey,
+      key: nodeKey,
+      node_key: nodeKey,
+      updated_at: new Date().toISOString(),
+      source: 'drama-runtime-plotpilot-compat',
+    }
+    promptRegistry.set(nodeKey, node)
+    return json({
+      status: 'ok',
+      node,
+      message: 'Prompt stored by Drama runtime PlotPilot-compatible registry fallback.',
+      source: 'drama-runtime-plotpilot-compat',
+      compatible: true,
+    })
+  }
+
+  return null
+}
+
 async function proxyPlotPilotRequest(request: Request, url: URL): Promise<Response | null> {
   if (url.pathname !== '/plm/proxy/health' && !url.pathname.startsWith('/plm/proxy/api/v1')) {
     return null
@@ -518,14 +1085,25 @@ async function proxyPlotPilotRequest(request: Request, url: URL): Promise<Respon
 
   const targetUrl = url.pathname === '/plm/proxy/health'
     ? `${status.baseUrl.replace(/\/+$/, '')}/health${url.search}`
-    : `${status.apiBaseUrl.replace(/\/+$/, '')}${url.pathname.slice('/plm/proxy/api/v1'.length) || '/'}${url.search}`
+    : `${status.apiBaseUrl.replace(/\/+$/, '')}${proxyApiPath(url.pathname)}${url.search}`
+  const requestBody = request.method === 'GET' || request.method === 'HEAD'
+    ? undefined
+    : await request.arrayBuffer()
 
   const targetResponse = await fetch(targetUrl, {
     method: request.method,
     headers: proxyRequestHeaders(request.headers),
-    body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+    body: requestBody,
     redirect: 'manual',
   })
+
+  if (
+    isPromptRegistryCompatPath(url)
+    && [404, 405, 501].includes(targetResponse.status)
+  ) {
+    const compatResponse = await promptRegistryCompatResponse(request.method, url, requestBody)
+    if (compatResponse) return compatResponse
+  }
 
   return new Response(targetResponse.body, {
     status: targetResponse.status,
@@ -549,7 +1127,7 @@ async function getPlotPilotCodexStatus(): Promise<PlotPilotCodexStatusResponse> 
     }
   }
 
-  return createPlotPilotClient({ baseUrl: apiBaseUrl }).getCodexStatus()
+  return createPlotPilotClient({ baseUrl: apiBaseUrl }).getCodexStatus({ timeoutMs: 2_000 })
 }
 
 async function startPlotPilotCodexLogin(): Promise<PlotPilotCodexLoginStartResponse> {
@@ -578,11 +1156,70 @@ async function dispatch(channel: string, payload: unknown): Promise<unknown> {
     case 'runtime:status':
       return runtimeStatus()
 
+    case 'runtime:capabilities':
+      return runtimeCapabilities()
+
     case 'runtime:shutdown':
       return shutdownRuntime(payload as RuntimeShutdownRequest | undefined)
 
+    case 'files:readText':
+    case 'files:preview':
+    case 'files:exportText':
+      return readRuntimeTextFile(payload as RuntimeFileRequest | undefined)
+
+    case 'files:writeText':
+    case 'files:importText':
+      return writeRuntimeTextFile(payload as RuntimeFileRequest | undefined)
+
+    case 'sessions:command':
+      return applySessionCommand(payload as RuntimeSessionCommandRequest | undefined)
+
+    case 'sessions:cancel':
+      return cancelRuntimeSession(payload as RuntimeSessionCancelRequest | undefined)
+
+    case 'sessions:status': {
+      const sessionId = requireSessionId((payload as RuntimeSessionCommandRequest | undefined)?.sessionId)
+      return getRuntimeSession(sessionId)
+    }
+
+    case 'settings:read':
+      return readRuntimeSetting(payload as RuntimeSettingReadRequest | undefined)
+
+    case 'settings:write':
+      return writeRuntimeSetting(payload as RuntimeSettingWriteRequest | undefined)
+
+    case 'diagnostics:snapshot':
+      return runtimeDiagnosticsSnapshot()
+
+    case 'diagnostics:process':
+      return runtimeProcessDiagnostics()
+
+    case 'basicMemory:list':
+    case 'basic-memory:search':
+      return listBasicMemoryNotes(payload as BasicMemoryListRequest | undefined)
+
+    case 'basicMemory:read':
+    case 'basic-memory:read':
+      return readBasicMemoryNote(payload as BasicMemoryReadRequest | undefined)
+
+    case 'basicMemory:write':
+    case 'basic-memory:write':
+      return writeBasicMemoryNote(payload as BasicMemoryWriteRequest | undefined)
+
     case 'drama:graph:load':
       return loadDramaGraph(payload as DramaGraphLoadOptions | undefined)
+
+    case 'drama:graph:persist': {
+      const request = payload as RuntimeGraphPersistRequest | undefined
+      if (request?.graph && isDramaGraph(request.graph)) {
+        const result = await store.saveGraph(request.graph, {
+          type: 'graph.persisted',
+          actor: 'drama:runtime',
+        })
+        return mutationResult(request.graph, result)
+      }
+      return loadDramaGraph({ graphId: request?.graphId })
+    }
 
     case 'drama:graph:history': {
       const request = payload as DramaGraphHistoryRequest
@@ -746,6 +1383,40 @@ async function dispatch(channel: string, payload: unknown): Promise<unknown> {
     case 'drama:crew:agentOutputRecord':
       return recordCrewAgentOutput(payload as RuntimeCrewAgentOutputRequest)
 
+    case 'skill-crew:refresh-skills':
+      return {
+        source: 'drama-runtime',
+        workspaceRoot,
+        skills: [],
+      }
+
+    case 'skill-crew:import-skill':
+      return {
+        source: 'drama-runtime',
+        imported: false,
+        message: 'Skill import is routed through Drama Runtime but no writable crew folder was provided.',
+      }
+
+    case 'skill-crew:run-codex-skill':
+      return recordCrewAgentOutput({
+        ...(payload && typeof payload === 'object' ? payload as RuntimeCrewAgentOutputRequest : { body: '' }),
+        body: typeof (payload as { body?: unknown } | null)?.body === 'string'
+          ? (payload as { body: string }).body
+          : 'Skill run requested through Drama Runtime.',
+        outputType: 'observation',
+      })
+
+    case 'skill-crew:record-feedback':
+      return createCrewSuggestion({
+        ...(payload && typeof payload === 'object' ? payload as RuntimeCrewSuggestionRequest : { title: '', body: '' }),
+        title: typeof (payload as { title?: unknown } | null)?.title === 'string'
+          ? (payload as { title: string }).title
+          : 'Skill feedback',
+        body: typeof (payload as { body?: unknown } | null)?.body === 'string'
+          ? (payload as { body: string }).body
+          : 'Skill feedback routed through Drama Runtime.',
+      })
+
     default:
       throw Object.assign(new Error(`Unsupported Drama runtime channel: ${channel}`), {
         code: 'UNSUPPORTED_CHANNEL' satisfies RuntimeErrorCode,
@@ -800,6 +1471,21 @@ const server = Bun.serve({
         return json(runtimeStatus())
       }
 
+      if (request.method === 'GET' && url.pathname === '/runtime/capabilities') {
+        return json(runtimeCapabilities())
+      }
+
+      if (request.method === 'GET' && url.pathname === '/health') {
+        return json({
+          ok: true,
+          ...runtimeStatus(),
+        })
+      }
+
+      if (request.method === 'GET' && url.pathname === '/capabilities') {
+        return json(runtimeCapabilities())
+      }
+
       if (request.method === 'POST' && url.pathname === '/runtime/rpc') {
         return handleRpc(request)
       }
@@ -848,3 +1534,4 @@ const server = Bun.serve({
 
 console.log(`[drama-runtime] ready at http://${server.hostname}:${server.port}`)
 console.log(`[drama-runtime] workspace ${workspaceRoot}`)
+keepAliveTimer = setInterval(() => undefined, 60_000)

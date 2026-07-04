@@ -1,0 +1,245 @@
+{
+  "ok": true,
+  "schema": "zen-drama-marionette-verification.v2",
+  "surfaceClassification": "product-zen-panel",
+  "surface": "crew",
+  "platform": "darwin",
+  "zenApp": "/Users/gengrf/drama-browser/dist/zen-drama-mac/Zen Browser.app",
+  "zenBin": "/Users/gengrf/drama-browser/dist/zen-drama-mac/Zen Browser.app/Contents/MacOS/zen",
+  "runtimeUrl": "http://127.0.0.1:3198",
+  "profile": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-profile-w7lhu7g3",
+  "logPath": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-1781787832.log",
+  "durationMs": 10067,
+  "marionette": {
+    "hello": {
+      "applicationType": "gecko",
+      "marionetteProtocol": 3
+    },
+    "session": {
+      "sessionId": "0caccabc-32cb-420b-9a8d-645fd68ffe00",
+      "capabilities": {
+        "acceptInsecureCerts": false,
+        "browserName": "zen",
+        "browserVersion": "1.21.2b",
+        "platformName": "mac",
+        "setWindowRect": true,
+        "unhandledPromptBehavior": "dismiss and notify",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:152.0) Gecko/20100101 Firefox/152.0",
+        "moz:buildID": "20260617194839",
+        "moz:headless": false,
+        "moz:platformVersion": "25.4.0",
+        "moz:processID": 45265,
+        "moz:profile": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/zen-drama-marionette-profile-w7lhu7g3",
+        "moz:shutdownTimeout": 60000,
+        "pageLoadStrategy": "normal",
+        "timeouts": {
+          "implicit": 0,
+          "pageLoad": 300000,
+          "script": 30000
+        },
+        "strictFileInteractability": false,
+        "moz:accessibilityChecks": false,
+        "moz:webdriverClick": true,
+        "moz:windowless": false,
+        "proxy": {}
+      }
+    }
+  },
+  "result": {
+    "managerType": "object",
+    "managerConstructor": "nsZenDramaManager",
+    "panelExists": true,
+    "panelHidden": false,
+    "panelDisplay": "flex",
+    "browserExists": true,
+    "currentURI": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+    "statusValue": "Runtime ready / crew",
+    "sidebarButtons": [
+      true,
+      true,
+      true
+    ],
+    "content": {
+      "uri": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+      "readyState": "complete",
+      "title": "Drama Browser Shell",
+      "dataset": {
+        "dramaStyles": "ready",
+        "dramaShellMounted": "true",
+        "dramaSurface": "crew",
+        "dramaHost": "zen",
+        "dramaRuntimePollers": "1",
+        "dramaShellState": "runtime-ready",
+        "dramaFirstStyledViewport": "ready",
+        "host": "zen",
+        "dramaStartupMaxTaskMs": "9",
+        "dramaRuntimeReady": "ready"
+      },
+      "rootExists": true,
+      "rootChildCount": 3,
+      "rootText": "DDrama GraphDrama PLMSkill CrewDrama WorkspaceSkill Crew导演控场Zen panelhost=zenreadyruntime ready新建会话所有会话现压0待办0待审查3完成1数据源Drama Graph.drama / graph-eventsCrew Treescreenplay@screenplay-director读取当前 graph state，拆解章节节奏@story-state把 agent 输出写入 graph event@continuity-reader检查人物、伏笔和章节断链@plm-bridge把章节建议同步到长上下文生成#screenplay导演控场 / graph state room导演控场写入 Event聊天朋友圈AgentOS@screenplay-directorruntime公开章节节奏建议第 1 章应先建立开源黄金年代，再进入 AgentOS 的状态机工作台。drama.graph.current_stategraph patch先历史叙事，再技术转场graph eventchapter-runtimepacing@story-statequeued内部状态机缺口Graph 里已有章节与人物节点，但 Crew 输出需要优先绑定到 chapter_next_gap，避免散文本漂在面板里。drama.graph.diagnosticsgraph patch新增 crew.taskBinding.upserted 事件state machinebindingdiagnosticsAgentOS 状态ready尚未写入 runtime完成读取当前 Drama Graph风险章节链 next 仍有缺口待审把建议写回 graph event观察等待 PLM 章节生成状态Graph Event Tracestructured event preview{\n  \"suggestion\": {\n    \"type\": \"graph.node.patch.proposed\",\n    \"actor\": \"agent:screenplay-director\",\n    \"details\": {\n      \"nodeId\": \"chapter-runtime\",\n      \"agentId\": \"screenplay-director\",\n      \"title\": \"章节节奏建议\",\n      \"body\": \"第 1 章应先建立开源黄金年代，再进入 AgentOS 的状态机工作台。\",\n      \"patch\": {\n        \"fields\": [\n          {\n            \"key\": \"pacing\",\n            \"text\"",
+      "shellExists": true,
+      "shellText": "DDrama GraphDrama PLMSkill CrewDrama WorkspaceSkill Crew导演控场Zen panelhost=zenreadyruntime ready新建会话所有会话现压0待办0待审查3完成1数据源Drama Graph.drama / graph-eventsCrew Treescreenplay@screenplay-director读取当前 graph state，拆解章节节奏@story-state把 agent 输出写入 graph event@continuity-reader检查人物、伏笔和章节断链@plm-bridge把章节建议同步到长上下文生成#screenplay导演控场 / graph state room导演控场写入 Event聊天朋友圈AgentOS@screenplay-directorruntime公开章节节奏建议第 1 章应先建立开源黄金年代，再进入 AgentOS 的状态机工作台。drama.graph.current_stategraph patch先历史叙事，再技术转场graph eventchapter-runtimepacing@story-statequeued内部状态机缺口Graph 里已有章节与人物节点，但 Crew 输出需要优先绑定到 chapter_next_gap，避免散文本漂在面板里。drama.graph.diagnosticsgraph patch新增 crew.taskBinding.upserted 事件state machinebindingdiagnosticsAgentOS 状态ready尚未写入 runtime完成读取当前 Drama Graph风险章节链 next 仍有缺口待审把建议写回 graph event观察等待 PLM 章节生成状态Graph Event Tracestructured event preview{\n  \"suggestion\": {\n    \"type\": \"graph.node.patch.proposed\",\n    \"actor\": \"agent:screenplay-director\",\n    \"details\": {\n      \"nodeId\": \"chapter-runtime\",\n      \"agentId\": \"screenplay-director\",\n      \"title\": \"章节节奏建议\",\n      \"body\": \"第 1 章应先建立开源黄金年代，再进入 AgentOS 的状态机工作台。\",\n      \"patch\": {\n        \"fields\": [\n          {\n            \"key\": \"pacing\",\n            \"text\"",
+      "shellRect": {
+        "width": 1278,
+        "height": 858,
+        "top": 0,
+        "left": 0
+      },
+      "elementCount": 278,
+      "scripts": [
+        "chrome://browser/content/drama/app/assets/index-Gb5Zb-mV.js"
+      ],
+      "stylesheets": 2,
+      "marks": {
+        "shell-document-load": {
+          "name": "shell-document-load",
+          "markedAt": 145.99158333333332,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+          "surface": null,
+          "state": "interactive",
+          "detail": null
+        },
+        "first-styled-viewport": {
+          "name": "first-styled-viewport",
+          "markedAt": 173.24070833333332,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+          "surface": "crew",
+          "state": "ready",
+          "detail": null
+        },
+        "route-ready": {
+          "name": "route-ready",
+          "markedAt": 335.2675416666666,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+          "surface": "crew",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        },
+        "runtime-ready": {
+          "name": "runtime-ready",
+          "markedAt": 332.47608333333335,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+          "surface": "crew",
+          "state": "ready",
+          "detail": {
+            "runtimeBaseUrl": "http://127.0.0.1:3198",
+            "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace"
+          }
+        }
+      },
+      "events": [
+        {
+          "name": "shell-document-load",
+          "markedAt": 145.99158333333332,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+          "surface": null,
+          "state": "interactive",
+          "detail": null
+        },
+        {
+          "name": "first-styled-viewport",
+          "markedAt": 173.24070833333332,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+          "surface": "crew",
+          "state": "ready",
+          "detail": null
+        },
+        {
+          "name": "route-ready",
+          "markedAt": 173.283875,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+          "surface": "crew",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        },
+        {
+          "name": "runtime-ready",
+          "markedAt": 332.47608333333335,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+          "surface": "crew",
+          "state": "ready",
+          "detail": {
+            "runtimeBaseUrl": "http://127.0.0.1:3198",
+            "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace"
+          }
+        },
+        {
+          "name": "route-ready",
+          "markedAt": 335.2675416666666,
+          "url": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+          "surface": "crew",
+          "state": "ready",
+          "detail": {
+            "hostKind": "gecko",
+            "productPath": true
+          }
+        }
+      ],
+      "responsiveness": {
+        "startedAt": 146.0247083333333,
+        "endedAt": 5172.891791666666,
+        "status": "complete",
+        "durationMs": 5000,
+        "intervalMs": 50,
+        "thresholdMs": 100,
+        "samples": 90,
+        "supportedLongTasks": false,
+        "maxLongTaskDurationMs": 0,
+        "maxEventLoopDelayMs": 93.979375,
+        "p95EventLoopDelayMs": 8.532666666666671,
+        "maxStartupBlockingMs": 8.532666666666671
+      }
+    },
+    "documentTitle": "Zen Browser",
+    "location": "chrome://browser/content/browser.xhtml"
+  },
+  "screenshot": {
+    "path": "/Users/gengrf/drama-browser/docs/verification/zen-drama-mac-marionette-crew-current.png",
+    "captured": true,
+    "width": 2560,
+    "height": 1804,
+    "averageLuma": 32.775,
+    "darkRatio": 0.001454,
+    "brightRatio": 0.0,
+    "uniqueColorBuckets": 248
+  },
+  "performance": {
+    "budgets": {
+      "firstStyledViewportMs": 2000,
+      "runtimeReadyOrUnavailableMs": 8000,
+      "sidecarReadyOrUnavailableMs": 45000,
+      "routeSwitchMs": 500,
+      "startupMainThreadTaskMs": 100
+    },
+    "measurements": {
+      "firstStyledViewportMs": 27.249,
+      "runtimeReadyMs": 186.485,
+      "sidecarReadyMs": null,
+      "startupMainThreadTaskMs": 8.533,
+      "shellState": "runtime-ready"
+    },
+    "responsiveness": {
+      "startedAt": 146.0247083333333,
+      "endedAt": 5172.891791666666,
+      "status": "complete",
+      "durationMs": 5000,
+      "intervalMs": 50,
+      "thresholdMs": 100,
+      "samples": 90,
+      "supportedLongTasks": false,
+      "maxLongTaskDurationMs": 0,
+      "maxEventLoopDelayMs": 93.979375,
+      "p95EventLoopDelayMs": 8.532666666666671,
+      "maxStartupBlockingMs": 8.532666666666671
+    },
+    "routeSwitches": null
+  },
+  "failureReasons": []
+}

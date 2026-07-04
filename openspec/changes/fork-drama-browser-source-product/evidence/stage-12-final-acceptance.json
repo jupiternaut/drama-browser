@@ -1,0 +1,65 @@
+{
+  "ok": true,
+  "generatedAt": "2026-06-29T06:24:30.183Z",
+  "objective": "source-level Drama Browser product separation from Zen product identity",
+  "sourceWorkspace": "/Users/gengrf/zen-browser-desktop",
+  "sourceCommit": "eb4cae5bf6e25cbdfe9215c6d4a800fb43274c79",
+  "wrapperRepo": "/Users/gengrf/drama-browser",
+  "wrapperCommitAtEvidenceTime": "2c07187c83bacd4c7cfa048bba3db1d5ae5e8996",
+  "artifacts": {
+    "packedAppBundle": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app",
+    "packedExecutable": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser",
+    "dmg": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser-1.21.2b.en-US.mac.dmg",
+    "mar": "/Users/gengrf/zen-browser-desktop/dist/output.mar"
+  },
+  "evidence": {
+    "openspecValidate": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-12-openspec-validate.json",
+    "productVerifier": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-09-source-product.json",
+    "packedStartVerifier": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-packed-start-current.json",
+    "packedStartScreenshot": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-packed-start-current.png",
+    "uiRuntimeParity": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-10-source-built-ui-runtime-parity.json",
+    "performanceGate": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-11-source-built-performance.json"
+  },
+  "gates": {
+    "openspecStrict": true,
+    "identity": true,
+    "updater": true,
+    "helpers": true,
+    "profile": true,
+    "sourceRegisteredChrome": true,
+    "noOriginalZenWakeup": true,
+    "packedStartUiRuntime": true,
+    "looseAllSurfaceParity": true,
+    "performance": true,
+    "codesignInternal": true
+  },
+  "packedStartMetrics": {
+    "shellState": "runtime-ready",
+    "firstStyledViewportMs": 5.5,
+    "runtimeReadyMs": 8.671,
+    "startupMainThreadTaskMs": 0,
+    "timerThrottled": true,
+    "screenshot": {
+      "path": "/Users/gengrf/drama-browser/docs/verification/drama-source-built-packed-start-current.png",
+      "captured": true,
+      "width": 1750,
+      "height": 1120,
+      "averageLuma": 44.791,
+      "darkRatio": 0.365639,
+      "brightRatio": 0.016959,
+      "uniqueColorBuckets": 1114
+    }
+  },
+  "acceptanceBoundary": {
+    "wrapperAdapter": "kept available as fallback/transition path; not used as source-level acceptance evidence",
+    "sourceBuiltInternal": "accepted for local/internal use: identity, helpers, updater-disabled, profile, chrome, UI/runtime, performance, and no-original-Zen-wakeup gates passed",
+    "publicDistributable": "not accepted as public release yet: requires real Developer ID signing/notarization plus Drama-owned update metadata, keys, endpoint, channel, and rollback policy"
+  },
+  "blockerStatus": {
+    "sourceBuiltSeparation": "none for internal acceptance",
+    "publicDistribution": [
+      "Developer ID signing/notarization not completed",
+      "production updater channel intentionally disabled until Drama-owned release infrastructure exists"
+    ]
+  }
+}

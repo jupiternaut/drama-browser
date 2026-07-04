@@ -10,6 +10,8 @@
 - [x] 2.2 Replace plain text route links with compact icon-first Graph / PLM / Crew controls
 - [x] 2.3 Add runtime status, workspace metadata, and route title as styled shell chrome
 - [x] 2.4 Ensure Zen's sidebar and browser chrome remain visible while Drama occupies the right workbench area
+- [x] 2.5 Add a persistent Zen chrome PLM entry that can reopen Drama after a normal browser tab is closed
+- [x] 2.6 Replace Drama close behavior with a lock action that releases embedded panel memory
 
 ## 3. Theme and CSS Loading
 
@@ -29,15 +31,17 @@
 
 - [x] 5.1 Add styled runtime-unavailable panel with retry and log actions
 - [x] 5.2 Add styled PLM-sidecar-down panel
-- [ ] 5.3 Add styled workspace-missing panel
+- [x] 5.3 Add styled workspace-missing panel
 - [x] 5.4 Ensure raw JSON, stack traces, and debug strings do not dominate the first viewport
 - [x] 5.5 Redirect runtime root `/` to the PLM workbench so users do not land on raw JSON
 
 ## 6. Verification
 
 - [x] 6.1 Add screenshot verification for Zen Graph, PLM, and Crew routes
-- [ ] 6.2 Add screenshot verification for runtime unavailable state
+- [x] 6.2 Add screenshot verification for runtime unavailable state
 - [x] 6.3 Run `bun run browser-shell:typecheck`
 - [x] 6.4 Run `bun run browser-shell:build`
 - [x] 6.5 Run Zen Drama panel verification script after implementation
 - [x] 6.6 Run installed package root redirect smoke for `http://127.0.0.1:3198/`
+- [x] 6.7 Verify the packaged macOS Zen app can reopen PLM from the persistent chrome entry
+- [x] 6.8 Verify the packaged macOS Zen app locks to a blank embedded surface and restores PLM

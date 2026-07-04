@@ -5,6 +5,7 @@ import type {
   PlotPilotRuntimeStatus,
   PlotPilotRuntimeStartOptions,
 } from '../index.ts'
+import { PlotPilotRuntimeManager } from '../runtime-manager.ts'
 
 describe('Drama PLM contracts', () => {
   it('defines the runtime status shape consumed by Electron', () => {
@@ -45,5 +46,36 @@ describe('Drama PLM contracts', () => {
 
     expect(Object.keys(status)).not.toContain('token')
     expect(status.authenticated).toBe(true)
+  })
+
+  it('keeps adopted runtime status across sync snapshots', async () => {
+    const manager = new PlotPilotRuntimeManager({
+      deps: {
+        fetch: async () => new Response(JSON.stringify({
+          status: 'healthy',
+          version: 'test',
+        }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      },
+    })
+
+    const started = await manager.start({ preferExisting: true })
+    expect(started).toMatchObject({
+      state: 'running',
+      healthy: true,
+      port: 8005,
+      adopted: true,
+      owned: false,
+    })
+
+    expect(manager.getStatus()).toMatchObject({
+      state: 'running',
+      healthy: true,
+      port: 8005,
+      adopted: true,
+      owned: false,
+    })
   })
 })

@@ -6,7 +6,7 @@ Host capability contracts for running Drama outside Electron.
 
 `@drama/host` is the boundary between Drama UI packages and whichever desktop or browser shell runs them.
 
-Electron, a browser harness, and a future Gecko/Zen-style shell should implement this package instead of letting React code call `window.electronAPI` directly.
+Electron, a browser harness, and a Gecko adapter should implement this package instead of letting React code call `window.electronAPI` directly. Drama Browser is the product identity; Zen/Gecko is an adapter implementation detail for the current packaged browser path.
 
 ## Public API
 
@@ -14,6 +14,9 @@ Electron, a browser harness, and a future Gecko/Zen-style shell should implement
 - `DramaHostApi`: shell, file, dialog, clipboard, lifecycle, notification, and RPC capability groups.
 - `createBrowserHostApi`: a browser-safe fallback implementation for web harnesses.
 - `assertHostCapability`: a guard for features that require a native host.
+- `classifyDramaPlmSurface`: classifies product, localhost, browser fallback, and legacy Electron surfaces.
+- `product-drama-browser`: canonical packaged Drama Browser product classification.
+- `product-zen-panel`: deprecated compatibility alias for archived Zen/Gecko product-path evidence.
 
 ## Boundary
 

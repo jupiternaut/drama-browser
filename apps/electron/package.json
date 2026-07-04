@@ -48,6 +48,7 @@
     "@drama/graph": "workspace:*",
     "@drama/host": "workspace:*",
     "@drama/plm": "workspace:*",
+    "@sentry/electron": "^7.7.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -89,6 +90,9 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
+    "@electron/packager": "^19.0.1",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
     "@types/canvas-confetti": "^1.9.0",
     "@types/ws": "^8.18.1"
   }

@@ -1,0 +1,41 @@
+# Installed app identity
+APP=/Applications/Drama Browser.app
+app_exists=true
+app.drama-browser.local
+Drama Browser
+drama-browser
+[
+  0 => {
+    "CFBundleURLIconFile" => "document.icns"
+    "CFBundleURLName" => "http URL"
+    "CFBundleURLSchemes" => [
+      0 => "http"
+    ]
+  }
+  1 => {
+    "CFBundleURLIconFile" => "document.icns"
+    "CFBundleURLName" => "https URL"
+    "CFBundleURLSchemes" => [
+      0 => "https"
+    ]
+  }
+  2 => {
+    "CFBundleURLIconFile" => "document.icns"
+    "CFBundleURLName" => "Drama Browser URL"
+    "CFBundleURLSchemes" => [
+      0 => "drama"
+    ]
+  }
+  3 => {
+    "CFBundleURLName" => "file URL"
+    "CFBundleURLSchemes" => [
+      0 => "file"
+    ]
+  }
+]
+electron_framework=absent
+
+# Legacy app state
+legacy_exists=true
+com.jupiternaut.drama
+legacy_electron_framework=present

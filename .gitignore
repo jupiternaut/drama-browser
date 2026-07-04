@@ -38,6 +38,11 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # OSS sync temp directory
 .oss-sync-temp/
+tmp/
+
+# Source-built browser verification profiles contain local cookies, keys, and caches.
+openspec/changes/*/evidence/*profile*/
+openspec/changes/*/evidence/*profiles*/
 
 # IntelliJ based IDEs
 .idea

@@ -1,0 +1,87 @@
+{
+  "ok": true,
+  "sourceWorkspace": "/Users/gengrf/zen-browser-desktop",
+  "appBundle": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app",
+  "generatedAt": "2026-06-29T03:57:52.382Z",
+  "tempHome": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/drama-source-profile-home.ahY3Q6",
+  "tempProfile": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/drama-source-profile-home.ahY3Q6/Library/Application Support/DramaBrowser/Profiles/stage7",
+  "checks": [
+    {
+      "id": "source-workspace",
+      "ok": true,
+      "detail": "/Users/gengrf/zen-browser-desktop"
+    },
+    {
+      "id": "app-bundle",
+      "ok": true,
+      "detail": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app"
+    },
+    {
+      "id": "executable",
+      "ok": true,
+      "detail": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser"
+    },
+    {
+      "id": "build-config-user-appdir",
+      "ok": true,
+      "detail": "source and engine mozconfig set DramaBrowser as the profile owner directory"
+    },
+    {
+      "id": "config-status-profile-owner",
+      "ok": true,
+      "detail": "configured build output records DramaBrowser/Drama Browser profile metadata"
+    },
+    {
+      "id": "application-ini-profile",
+      "ok": true,
+      "detail": "built application.ini identifies the source product and profile as Drama-owned"
+    },
+    {
+      "id": "canonical-pref-alias-order",
+      "ok": true,
+      "detail": "26 drama.browser.* -> zen.drama.* compatibility aliases found"
+    },
+    {
+      "id": "legacy-pref-migration-code",
+      "ok": true,
+      "detail": "Chrome manager imports old zen.drama.* prefs into canonical drama.browser.* prefs once"
+    },
+    {
+      "id": "no-legacy-product-pref-writes",
+      "ok": true,
+      "detail": "source-built manager does not write zen.drama.* as a product preference namespace"
+    },
+    {
+      "id": "migration-plan",
+      "ok": true,
+      "detail": "/Users/gengrf/drama-browser/openspec/changes/fork-drama-browser-source-product/evidence/stage-07-profile-preferences-migration.md"
+    },
+    {
+      "id": "explicit-profile-created",
+      "ok": true,
+      "detail": "/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/drama-source-profile-home.ahY3Q6/Library/Application Support/DramaBrowser/Profiles/stage7"
+    },
+    {
+      "id": "explicit-profile-runtime-path",
+      "ok": true,
+      "detail": "LastVersion=1.21.2b_20260628205739/20260628205739\nLastOSABI=Darwin_aarch64-gcc3\nLastPlatformDir=/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources\nLastAppDir=/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/Resources/browser"
+    },
+    {
+      "id": "no-zen-owned-temp-profile-paths",
+      "ok": true,
+      "detail": "no Zen/ZenDrama profile directories in temp HOME"
+    },
+    {
+      "id": "no-zen-drama-user-prefs",
+      "ok": true,
+      "detail": "fresh source-built profile does not persist zen.drama.* prefs"
+    }
+  ],
+  "launch": {
+    "status": null,
+    "signal": "SIGTERM",
+    "error": "spawnSync /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app/Contents/MacOS/drama-browser ETIMEDOUT",
+    "stdout": "Crash Annotation GraphicsCriticalError: |[0][GFX1-]: RenderCompositorSWGL failed mapping default framebuffer, no dt (t=0.560389) [GFX1-]: RenderCompositorSWGL failed mapping default framebuffer, no dt\n",
+    "stderr": "*** You are running in headless mode.\nExiting due to channel error.\nExiting due to channel error.\nExiting due to channel error.\nExiting due to channel error.\n"
+  }
+}

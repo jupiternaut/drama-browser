@@ -1,0 +1,5 @@
+2026-06-29 04:53:21.224 Drama Browser GPU Helper[29996:36036228] Failure on line 688 in function id scheduleApplicationNotification(LSNotificationCode, NSWorkspaceNotificationCenter *): noErr == _LSModifyNotification(notificationID, 1, &code, 0, NULL, NULL, NULL)
+2026-06-29 04:53:21.290 Drama Browser GPU Helper[29996:36036228] Error received in message reply handler: Connection invalid
+2026-06-29 04:53:21.290 Drama Browser GPU Helper[29996:36036242] Connection Invalid error for service com.apple.hiservices-xpcservice.
+[WARN  rkv::backend::impl_safe::environment] `load_ratio()` is irrelevant for this storage backend.
+UNSUPPORTED (log once): POSSIBLE ISSUE: unit 1 GLD_TEXTURE_INDEX_2D is unloadable and bound to sampler type (Float) - using zero texture because texture unloadable

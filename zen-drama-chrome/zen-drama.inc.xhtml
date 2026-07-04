@@ -2,6 +2,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+<toolbarbutton
+  id="zen-drama-launcher-button"
+  class="toolbarbutton-1 zen-drama-launcher-button"
+  image="chrome://browser/content/zen-icons/drama-plm.svg"
+  label="PLM"
+  tooltiptext="Open Drama PLM" />
+
 <vbox id="zen-drama-panel" hidden="true">
   <hbox id="zen-drama-toolbar" class="chromeclass-toolbar" align="center">
     <toolbarbutton
@@ -22,6 +29,12 @@
       command="cmd_zenDramaOpenCrew"
       label="Crew"
       tooltiptext="Skill Crew" />
+    <toolbarbutton
+      id="zen-drama-memory-button"
+      class="toolbarbutton-1 zen-drama-toolbar-button"
+      command="cmd_zenDramaOpenMemory"
+      label="Memory"
+      tooltiptext="Basic Memory" />
     <spacer flex="1" />
     <label id="zen-drama-runtime-status" value="Drama" />
     <toolbarbutton
@@ -30,10 +43,10 @@
       command="cmd_zenDramaOpenInTab"
       tooltiptext="Open Drama in a tab" />
     <toolbarbutton
-      id="zen-drama-close-button"
+      id="zen-drama-lock-button"
       class="toolbarbutton-1 zen-drama-icon-button"
       command="cmd_zenDramaToggle"
-      tooltiptext="Close Drama" />
+      tooltiptext="Lock Drama and release panel memory" />
   </hbox>
   <browser
     id="zen-drama-browser"
@@ -43,4 +56,3 @@
     maychangeremoteness="true"
     disableglobalhistory="true" />
 </vbox>
-

@@ -1,0 +1,515 @@
+{
+  "ok": true,
+  "generatedAt": "2026-06-29T11:56:48.894Z",
+  "runtimeUrl": "http://127.0.0.1:3198",
+  "checks": [
+    {
+      "id": "runtime-status-ready",
+      "ok": true,
+      "detail": "state=ready; workspace=/Users/gengrf/.craft-agent/workspaces/my-workspace"
+    },
+    {
+      "id": "long-macos-path-file-roundtrip",
+      "ok": true,
+      "detail": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md"
+    },
+    {
+      "id": "session-path-fixtures",
+      "ok": true,
+      "detail": "{\"mac\":{\"accepted\":true,\"session\":{\"id\":\"remove-electron-host-cross-platform-paths\",\"labels\":[\"Windows fixture\",\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"中文状态：路径、恢复和诊断文案保持可读\"],\"sources\":[],\"skills\":[],\"status\":\"ready\",\"cancelled\":false,\"updatedAt\":\"2026-06-29T11:56:48.840Z\",\"commands\":[{\"type\":\"updateWorkingDirectory\",\"dir\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳\"},{\"type\":\"setLabels\",\"labels\":[\"Windows fixture\",\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"中文状态：路径、恢复和诊断文案保持可读\"]},{\"type\":\"updateWorkingDirectory\",\"dir\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳\"}],\"workingDirectory\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳\"}},\"win\":{\"accepted\":true,\"session\":{\"id\":\"remove-electron-host-cross-platform-paths\",\"labels\":[\"Windows fixture\",\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"中文状态：路径、恢复和诊断文案保持可读\"],\"sources\":[],\"skills\":[],\"status\":\"ready\",\"cancelled\":false,\"updatedAt\":\"2026-06-29T11:56:48.840Z\",\"commands\":[{\"type\":\"updateWorkingDirectory\",\"dir\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳\"},{\"type\":\"setLabels\",\"labels\":[\"Windows fixture\",\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"中文状态：路径、恢复和诊断文案保持可读\"]},{\"type\":\"updateWorkingDirectory\",\"dir\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳\"},{\"type\":\"setLabels\",\"labels\":[\"Windows fixture\",\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"中文状态：路径、恢复和诊断文案保持可读\"]}],\"workingDirectory\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳\"}},\"status\":{\"id\":\"remove-electron-host-cross-platform-paths\",\"labels\":[\"Windows fixture\",\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"中文状态：路径、恢复和诊断文案保持可读\"],\"sources\":[],\"skills\":[],\"status\":\"ready\",\"cancelled\":false,\"updatedAt\":\"2026-06-29T11:56:48.840Z\",\"commands\":[{\"type\":\"updateWorkingDirectory\",\"dir\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳\"},{\"type\":\"setLabels\",\"labels\":[\"Windows fixture\",\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"中文状态：路径、恢复和诊断文案保持可读\"]},{\"type\":\"updateWorkingDirectory\",\"dir\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳\"},{\"type\":\"setLabels\",\"labels\":[\"Windows fixture\",\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"中文状态：路径、恢复和诊断文案保持可读\"]}],\"workingDirectory\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳\"}}"
+    },
+    {
+      "id": "settings-windows-style-path-fixtures",
+      "ok": true,
+      "detail": "{\"write\":{\"key\":\"remove-electron-host.cross-platform-paths\",\"updated\":true},\"read\":{\"macLongFile\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\",\"windowsStyleFile\":\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"windowsStyleGraph\":\"C:/Users/jupiter/Drama Browser/Graph/状态机.json\",\"status\":\"中文状态：路径、恢复和诊断文案保持可读\"}}"
+    },
+    {
+      "id": "graph-project-file-path-fixtures",
+      "ok": true,
+      "detail": "{\"record\":{\"projectDir\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths\",\"filePath\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734208841-path-fixture-86690-2d22gp.json\",\"markdownPath\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734208841-path-fixture-86690-2d22gp.md\"},\"list\":{\"projectDir\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths\",\"files\":[{\"filePath\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734208841-path-fixture-86690-2d22gp.json\",\"markdownPath\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734208841-path-fixture-86690-2d22gp.md\",\"schema\":\"drama.project_file_event.v1\",\"projectId\":\"remove-electron-host-cross-platform-paths\",\"source\":\"graph\",\"type\":\"path-fixture\",\"title\":\"跨平台路径验收\",\"createdAt\":1782734208841,\"summary\":{\"macLongFile\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\",\"windowsStyleFile\":\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"windowsStyleGraph\":\"C:/Users/jupiter/Drama Browser/Graph/状态机.json\",\"status\":\"中文状态：路径、恢复和诊断文案保持可读\"},\"payload\":{\"macLongFile\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\",\"windowsStyleFile\":\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"windowsStyleGraph\":\"C:/Users/jupiter/Drama Browser/Graph/状态机.json\"}},{\"filePath\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734100171-path-fixture-86690-348k8o.json\",\"markdownPath\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734100171-path-fixture-86690-348k8o.md\",\"schema\":\"drama.project_file_event.v1\",\"projectId\":\"remove-electron-host-cross-platform-paths\",\"source\":\"graph\",\"type\":\"path-fixture\",\"title\":\"跨平台路径验收\",\"createdAt\":1782734100171,\"summary\":{\"macLongFile\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\",\"windowsStyleFile\":\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"windowsStyleGraph\":\"C:/Users/jupiter/Drama Browser/Graph/状态机.json\",\"status\":\"中文状态：路径、恢复和诊断文案保持可读\"},\"payload\":{\"macLongFile\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\",\"windowsStyleFile\":\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"windowsStyleGraph\":\"C:/Users/jupiter/Drama Browser/Graph/状态机.json\"}}]}}"
+    },
+    {
+      "id": "skill-crew-path-copy-fixture",
+      "ok": true,
+      "detail": "{\"graph\":{\"schema\":\"drama.graph.v1\",\"id\":\"remove-electron-host-cross-platform-paths\",\"title\":\"Drama Graph\",\"createdAt\":1782734100184,\"updatedAt\":1782734100184,\"source\":{\"format\":\"native\",\"graphId\":\"remove-electron-host-cross-platform-paths\"},\"bible\":{\"id\":\"remove-electron-host-cross-platform-paths-bible\",\"title\":\"Drama Graph Bible\",\"worldNodeIds\":[],\"characterNodeIds\":[],\"locationNodeIds\":[],\"plotNodeIds\":[]},\"nodes\":[],\"edges\":[],\"scenes\":[],\"chapters\":[],\"drafts\":[],\"taskBindings\":[],\"metadata\":{}},\"path\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/remove-electron-host-cross-platform-paths.json\"}"
+    },
+    {
+      "id": "basic-memory-path-fixtures",
+      "ok": true,
+      "detail": "{\"list\":{\"root\":\"/Users/gengrf/basic-memory-claude-history\",\"exists\":true,\"total\":1,\"returned\":1,\"truncated\":false,\"query\":\"路径验收\",\"notes\":[{\"path\":\"zz-drama-verification/remove-electron-host/路径验收-第-001-章.md\",\"title\":\"Drama Cross Platform Path Smoke\",\"type\":\"verification\",\"size\":589,\"modifiedAt\":\"2026-06-29T11:56:48.846Z\",\"excerpt\":\"...sers/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\"}]},\"search\":{\"root\":\"/Users/gengrf/basic-memory-claude-history\",\"exists\":true,\"total\":1,\"returned\":1,\"truncated\":false,\"query\":\"C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\",\"notes\":[{\"path\":\"zz-drama-verification/remove-electron-host/路径验收-第-001-章.md\",\"title\":\"Drama Cross Platform Path Smoke\",\"type\":\"verification\",\"size\":589,\"modifiedAt\":\"2026-06-29T11:56:48.846Z\",\"excerpt\":\"Drama Cross Platform Path Smoke 中文状态：路径、恢复和诊断文案保持可读 Windows fixture: C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md macOS long fixture: /Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-0...\"}]},\"read\":{\"root\":\"/Users/gengrf/basic-memory-claude-history\",\"note\":{\"path\":\"zz-drama-verification/remove-electron-host/路径验收-第-001-章.md\",\"title\":\"Drama Cross Platform Path Smoke\",\"type\":\"verification\",\"size\":589,\"modifiedAt\":\"2026-06-29T11:56:48.846Z\",\"excerpt\":\"Drama Cross Platform Path Smoke 中文状态：路径、恢复和诊断文案保持可读 Windows fixture: C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md macOS long fixture: /Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-\"},\"content\":\"---\\ntitle: Drama Cross Platform Path Smoke\\ntype: verification\\n---\\n\\n# Drama Cross Platform Path Smoke\\n\\n中文状态：路径、恢复和诊断文案保持可读\\n\\nWindows fixture: C:\\\\Users\\\\jupiter\\\\Drama Browser\\\\Basic Memory\\\\Claude 历史\\\\第 1 章.md\\nmacOS long fixture: /Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\\n\"}}"
+    },
+    {
+      "id": "diagnostics-chinese-path-copy",
+      "ok": true,
+      "detail": "{\"status\":{\"state\":\"ready\",\"version\":\"0.1.0\",\"message\":\"Drama standalone runtime ready.\",\"updatedAt\":\"2026-06-29T11:56:48.893Z\",\"workspaceRoot\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace\",\"startedAt\":\"2026-06-29T11:42:09.962Z\",\"runtimePackageRoot\":null,\"browserShellDistDir\":\"/Users/gengrf/drama-browser/apps/drama-browser-shell/dist\",\"basicMemoryRoot\":\"/Users/gengrf/basic-memory-claude-history\",\"plmRuntime\":{\"state\":\"running\",\"healthy\":true,\"port\":8005,\"pid\":88060,\"url\":\"http://127.0.0.1:8005\",\"baseUrl\":\"http://127.0.0.1:8005\",\"apiBaseUrl\":\"http://127.0.0.1:8005/api/v1\",\"startedAt\":\"2026-06-29T11:45:47.121Z\",\"owned\":true,\"adopted\":false,\"projectRoot\":\"/Users/gengrf/PlotPilot\",\"dataDir\":\"/Users/gengrf/.plotpilot/data\",\"health\":{\"status\":\"healthy\",\"version\":\"1.0.2\",\"build_id\":\"build-20260209-1200-c4d2\",\"uptime_seconds\":0.37,\"daemon_process\":{\"running\":true,\"pid\":88063}}},\"endpoints\":{\"graph\":\"http://127.0.0.1:3198/graph\",\"plm\":\"http://127.0.0.1:3198/plm/runtime/status\",\"crew\":\"http://127.0.0.1:3198/crew\",\"app\":\"http://127.0.0.1:3198/app\",\"memory\":\"http://127.0.0.1:3198/app/memory\",\"events\":\"ws://127.0.0.1:3198/events\"}},\"capabilities\":{\"files.readTextFile\":true,\"files.writeTextFile\":true,\"runtime.status\":true,\"runtime.capabilities\":true,\"runtime.request\":true,\"sessions.command\":true,\"sessions.cancel\":true,\"plm.sidecar.status\":true,\"plm.sidecar.start\":true,\"plm.sidecar.stop\":true,\"plm.sidecar.logs\":true,\"graph.load\":true,\"graph.history\":true,\"graph.persist\":true,\"graph.backup\":true,\"skillCrew.refresh\":true,\"skillCrew.import\":true,\"skillCrew.run\":true,\"skillCrew.feedback\":true,\"basicMemory.read\":true,\"basicMemory.search\":true,\"basicMemory.write\":true,\"settings.read\":true,\"settings.write\":true,\"diagnostics.snapshot\":true,\"diagnostics.process\":true},\"paths\":{\"workspaceRoot\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace\",\"basicMemoryRoot\":\"/Users/gengrf/basic-memory-claude-history\",\"browserShellDistDir\":\"/Users/gengrf/drama-browser/apps/drama-browser-shell/dist\",\"runtimeSettingsPath\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-runtime-settings.json\"},\"process\":{\"pid\":86690,\"platform\":\"darwin\",\"arch\":\"arm64\",\"versions\":{\"node\":\"24.3.0\",\"bun\":\"1.3.14\",\"boringssl\":\"0c5fce43b7ed5eb6001487ee48ac65766f5ddcd1\",\"openssl\":\"1.1.0\",\"llhttp\":\"9.3.0\",\"libarchive\":\"ded82291ab41d5e355831b96b0e1ff49e24d8939\",\"mimalloc\":\"f15aecb94fc8096008bf87b90c53ed682026914a\",\"picohttpparser\":\"066d2b1e9ab820703db0837a7255d92d30f0c9f5\",\"uwebsockets\":\"0d9b296af33f2b851fcbf4df3e9ec89751734ba4\",\"webkit\":\"5488984d20e0dbfe4be2c3ba8fb18eb81a5e0e8b\",\"zig\":\"04e7f6ac1e009525bc00934f20199c68f04e0a24\",\"zlib\":\"12731092979c6d07f42da27da673a9f6c7b13586\",\"tinycc\":\"12882eee073cfe5c7621bcfadf679e1372d4537b\",\"lolhtml\":\"77127cd2b8545998756e8d64e36ee2313c4bb312\",\"ares\":\"3ac47ee46edd8ea40370222f91613fc16c434853\",\"libdeflate\":\"c8c56a20f8f621e6a966b716b31f1dedab6a41e3\",\"usockets\":\"0d9b296af33f2b851fcbf4df3e9ec89751734ba4\",\"lshpack\":\"8905c024b6d052f083a3d11d0a169b3c2735c8a1\",\"zstd\":\"f8745da6ff1ad1e7bab384bd1f9d742439278e99\",\"v8\":\"13.6.233.10-node.18\",\"uv\":\"1.48.0\",\"napi\":\"10\",\"icu\":\"74.2\",\"unicode\":\"15.1\",\"modules\":\"137\"},\"uptimeSeconds\":878.985266042,\"memoryUsage\":{\"rss\":98795520,\"heapTotal\":4917248,\"heapUsed\":13458795,\"external\":11255451,\"arrayBuffers\":131296}}}"
+    },
+    {
+      "id": "source-built-ui-evidence-references-surfaces",
+      "ok": true,
+      "detail": "5 screenshots referenced from /Users/gengrf/drama-browser/openspec/changes/remove-electron-host/evidence/stage-08-source-built-ui-runtime-parity.json"
+    }
+  ],
+  "data": {
+    "status": {
+      "state": "ready",
+      "version": "0.1.0",
+      "message": "Drama standalone runtime ready.",
+      "updatedAt": "2026-06-29T11:56:48.837Z",
+      "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+      "startedAt": "2026-06-29T11:42:09.962Z",
+      "runtimePackageRoot": null,
+      "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+      "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+      "plmRuntime": {
+        "state": "running",
+        "healthy": true,
+        "port": 8005,
+        "pid": 88060,
+        "url": "http://127.0.0.1:8005",
+        "baseUrl": "http://127.0.0.1:8005",
+        "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+        "startedAt": "2026-06-29T11:45:47.121Z",
+        "owned": true,
+        "adopted": false,
+        "projectRoot": "/Users/gengrf/PlotPilot",
+        "dataDir": "/Users/gengrf/.plotpilot/data",
+        "health": {
+          "status": "healthy",
+          "version": "1.0.2",
+          "build_id": "build-20260209-1200-c4d2",
+          "uptime_seconds": 0.37,
+          "daemon_process": {
+            "running": true,
+            "pid": 88063
+          }
+        }
+      },
+      "endpoints": {
+        "graph": "http://127.0.0.1:3198/graph",
+        "plm": "http://127.0.0.1:3198/plm/runtime/status",
+        "crew": "http://127.0.0.1:3198/crew",
+        "app": "http://127.0.0.1:3198/app",
+        "memory": "http://127.0.0.1:3198/app/memory",
+        "events": "ws://127.0.0.1:3198/events"
+      }
+    },
+    "file": {
+      "write": {
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md",
+        "root": "workspace",
+        "size": 598,
+        "modifiedAt": "2026-06-29T11:56:48.839Z",
+        "content": "# Drama cross-platform path smoke\n\n中文状态：路径、恢复和诊断文案保持可读\nmacOS long path: /Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\nWindows file fixture: C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md\nWindows graph fixture: C:/Users/jupiter/Drama Browser/Graph/状态机.json\n"
+      },
+      "read": {
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md",
+        "root": "workspace",
+        "size": 598,
+        "modifiedAt": "2026-06-29T11:56:48.839Z",
+        "content": "# Drama cross-platform path smoke\n\n中文状态：路径、恢复和诊断文案保持可读\nmacOS long path: /Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\nWindows file fixture: C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md\nWindows graph fixture: C:/Users/jupiter/Drama Browser/Graph/状态机.json\n"
+      },
+      "preview": {
+        "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md",
+        "root": "workspace",
+        "size": 598,
+        "modifiedAt": "2026-06-29T11:56:48.839Z",
+        "content": "# Drama cross-platform path smoke\n\n中文状态：路径、恢复和诊断文案保持可读\nmacOS long path: /Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\nWindows file fixture: C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md\nWindows graph fixture: C:/Users/jupiter/Drama Browser/Graph/状态机.json\n"
+      }
+    },
+    "session": {
+      "mac": {
+        "accepted": true,
+        "session": {
+          "id": "remove-electron-host-cross-platform-paths",
+          "labels": [
+            "Windows fixture",
+            "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+            "中文状态：路径、恢复和诊断文案保持可读"
+          ],
+          "sources": [],
+          "skills": [],
+          "status": "ready",
+          "cancelled": false,
+          "updatedAt": "2026-06-29T11:56:48.840Z",
+          "commands": [
+            {
+              "type": "updateWorkingDirectory",
+              "dir": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳"
+            },
+            {
+              "type": "setLabels",
+              "labels": [
+                "Windows fixture",
+                "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+                "中文状态：路径、恢复和诊断文案保持可读"
+              ]
+            },
+            {
+              "type": "updateWorkingDirectory",
+              "dir": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳"
+            }
+          ],
+          "workingDirectory": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳"
+        }
+      },
+      "win": {
+        "accepted": true,
+        "session": {
+          "id": "remove-electron-host-cross-platform-paths",
+          "labels": [
+            "Windows fixture",
+            "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+            "中文状态：路径、恢复和诊断文案保持可读"
+          ],
+          "sources": [],
+          "skills": [],
+          "status": "ready",
+          "cancelled": false,
+          "updatedAt": "2026-06-29T11:56:48.840Z",
+          "commands": [
+            {
+              "type": "updateWorkingDirectory",
+              "dir": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳"
+            },
+            {
+              "type": "setLabels",
+              "labels": [
+                "Windows fixture",
+                "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+                "中文状态：路径、恢复和诊断文案保持可读"
+              ]
+            },
+            {
+              "type": "updateWorkingDirectory",
+              "dir": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳"
+            },
+            {
+              "type": "setLabels",
+              "labels": [
+                "Windows fixture",
+                "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+                "中文状态：路径、恢复和诊断文案保持可读"
+              ]
+            }
+          ],
+          "workingDirectory": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳"
+        }
+      },
+      "status": {
+        "id": "remove-electron-host-cross-platform-paths",
+        "labels": [
+          "Windows fixture",
+          "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+          "中文状态：路径、恢复和诊断文案保持可读"
+        ],
+        "sources": [],
+        "skills": [],
+        "status": "ready",
+        "cancelled": false,
+        "updatedAt": "2026-06-29T11:56:48.840Z",
+        "commands": [
+          {
+            "type": "updateWorkingDirectory",
+            "dir": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳"
+          },
+          {
+            "type": "setLabels",
+            "labels": [
+              "Windows fixture",
+              "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+              "中文状态：路径、恢复和诊断文案保持可读"
+            ]
+          },
+          {
+            "type": "updateWorkingDirectory",
+            "dir": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳"
+          },
+          {
+            "type": "setLabels",
+            "labels": [
+              "Windows fixture",
+              "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+              "中文状态：路径、恢复和诊断文案保持可读"
+            ]
+          }
+        ],
+        "workingDirectory": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳"
+      }
+    },
+    "settings": {
+      "write": {
+        "key": "remove-electron-host.cross-platform-paths",
+        "updated": true
+      },
+      "read": {
+        "macLongFile": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md",
+        "windowsStyleFile": "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+        "windowsStyleGraph": "C:/Users/jupiter/Drama Browser/Graph/状态机.json",
+        "status": "中文状态：路径、恢复和诊断文案保持可读"
+      }
+    },
+    "graph": {
+      "record": {
+        "projectDir": "/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths",
+        "filePath": "/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734208841-path-fixture-86690-2d22gp.json",
+        "markdownPath": "/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734208841-path-fixture-86690-2d22gp.md"
+      },
+      "list": {
+        "projectDir": "/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths",
+        "files": [
+          {
+            "filePath": "/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734208841-path-fixture-86690-2d22gp.json",
+            "markdownPath": "/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734208841-path-fixture-86690-2d22gp.md",
+            "schema": "drama.project_file_event.v1",
+            "projectId": "remove-electron-host-cross-platform-paths",
+            "source": "graph",
+            "type": "path-fixture",
+            "title": "跨平台路径验收",
+            "createdAt": 1782734208841,
+            "summary": {
+              "macLongFile": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md",
+              "windowsStyleFile": "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+              "windowsStyleGraph": "C:/Users/jupiter/Drama Browser/Graph/状态机.json",
+              "status": "中文状态：路径、恢复和诊断文案保持可读"
+            },
+            "payload": {
+              "macLongFile": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md",
+              "windowsStyleFile": "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+              "windowsStyleGraph": "C:/Users/jupiter/Drama Browser/Graph/状态机.json"
+            }
+          },
+          {
+            "filePath": "/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734100171-path-fixture-86690-348k8o.json",
+            "markdownPath": "/Users/gengrf/.craft-agent/workspaces/my-workspace/drama-projects/remove-electron-host-cross-platform-paths/graph/1782734100171-path-fixture-86690-348k8o.md",
+            "schema": "drama.project_file_event.v1",
+            "projectId": "remove-electron-host-cross-platform-paths",
+            "source": "graph",
+            "type": "path-fixture",
+            "title": "跨平台路径验收",
+            "createdAt": 1782734100171,
+            "summary": {
+              "macLongFile": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md",
+              "windowsStyleFile": "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+              "windowsStyleGraph": "C:/Users/jupiter/Drama Browser/Graph/状态机.json",
+              "status": "中文状态：路径、恢复和诊断文案保持可读"
+            },
+            "payload": {
+              "macLongFile": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md",
+              "windowsStyleFile": "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+              "windowsStyleGraph": "C:/Users/jupiter/Drama Browser/Graph/状态机.json"
+            }
+          }
+        ]
+      }
+    },
+    "skillCrew": {
+      "graph": {
+        "schema": "drama.graph.v1",
+        "id": "remove-electron-host-cross-platform-paths",
+        "title": "Drama Graph",
+        "createdAt": 1782734100184,
+        "updatedAt": 1782734100184,
+        "source": {
+          "format": "native",
+          "graphId": "remove-electron-host-cross-platform-paths"
+        },
+        "bible": {
+          "id": "remove-electron-host-cross-platform-paths-bible",
+          "title": "Drama Graph Bible",
+          "worldNodeIds": [],
+          "characterNodeIds": [],
+          "locationNodeIds": [],
+          "plotNodeIds": []
+        },
+        "nodes": [],
+        "edges": [],
+        "scenes": [],
+        "chapters": [],
+        "drafts": [],
+        "taskBindings": [],
+        "metadata": {}
+      },
+      "path": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama/graphs/remove-electron-host-cross-platform-paths.json"
+    },
+    "basicMemory": {
+      "list": {
+        "root": "/Users/gengrf/basic-memory-claude-history",
+        "exists": true,
+        "total": 1,
+        "returned": 1,
+        "truncated": false,
+        "query": "路径验收",
+        "notes": [
+          {
+            "path": "zz-drama-verification/remove-electron-host/路径验收-第-001-章.md",
+            "title": "Drama Cross Platform Path Smoke",
+            "type": "verification",
+            "size": 589,
+            "modifiedAt": "2026-06-29T11:56:48.846Z",
+            "excerpt": "...sers/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md"
+          }
+        ]
+      },
+      "search": {
+        "root": "/Users/gengrf/basic-memory-claude-history",
+        "exists": true,
+        "total": 1,
+        "returned": 1,
+        "truncated": false,
+        "query": "C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md",
+        "notes": [
+          {
+            "path": "zz-drama-verification/remove-electron-host/路径验收-第-001-章.md",
+            "title": "Drama Cross Platform Path Smoke",
+            "type": "verification",
+            "size": 589,
+            "modifiedAt": "2026-06-29T11:56:48.846Z",
+            "excerpt": "Drama Cross Platform Path Smoke 中文状态：路径、恢复和诊断文案保持可读 Windows fixture: C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md macOS long fixture: /Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-0..."
+          }
+        ]
+      },
+      "read": {
+        "root": "/Users/gengrf/basic-memory-claude-history",
+        "note": {
+          "path": "zz-drama-verification/remove-electron-host/路径验收-第-001-章.md",
+          "title": "Drama Cross Platform Path Smoke",
+          "type": "verification",
+          "size": 589,
+          "modifiedAt": "2026-06-29T11:56:48.846Z",
+          "excerpt": "Drama Cross Platform Path Smoke 中文状态：路径、恢复和诊断文案保持可读 Windows fixture: C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md macOS long fixture: /Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-"
+        },
+        "content": "---\ntitle: Drama Cross Platform Path Smoke\ntype: verification\n---\n\n# Drama Cross Platform Path Smoke\n\n中文状态：路径、恢复和诊断文案保持可读\n\nWindows fixture: C:\\Users\\jupiter\\Drama Browser\\Basic Memory\\Claude 历史\\第 1 章.md\nmacOS long fixture: /Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-verification/remove-electron-host/路径验收-这是一个很长的目录名-用于验证-Gecko-和-Runtime-不依赖-Electron-IPC/第-001-章-低价值碰撞样本-人物-顾临川-沈知夏-环境-高淳/章节正文-含中文-空格-和-long-path-fixture.md\n"
+      }
+    },
+    "diagnostics": {
+      "status": {
+        "state": "ready",
+        "version": "0.1.0",
+        "message": "Drama standalone runtime ready.",
+        "updatedAt": "2026-06-29T11:56:48.893Z",
+        "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+        "startedAt": "2026-06-29T11:42:09.962Z",
+        "runtimePackageRoot": null,
+        "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+        "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+        "plmRuntime": {
+          "state": "running",
+          "healthy": true,
+          "port": 8005,
+          "pid": 88060,
+          "url": "http://127.0.0.1:8005",
+          "baseUrl": "http://127.0.0.1:8005",
+          "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+          "startedAt": "2026-06-29T11:45:47.121Z",
+          "owned": true,
+          "adopted": false,
+          "projectRoot": "/Users/gengrf/PlotPilot",
+          "dataDir": "/Users/gengrf/.plotpilot/data",
+          "health": {
+            "status": "healthy",
+            "version": "1.0.2",
+            "build_id": "build-20260209-1200-c4d2",
+            "uptime_seconds": 0.37,
+            "daemon_process": {
+              "running": true,
+              "pid": 88063
+            }
+          }
+        },
+        "endpoints": {
+          "graph": "http://127.0.0.1:3198/graph",
+          "plm": "http://127.0.0.1:3198/plm/runtime/status",
+          "crew": "http://127.0.0.1:3198/crew",
+          "app": "http://127.0.0.1:3198/app",
+          "memory": "http://127.0.0.1:3198/app/memory",
+          "events": "ws://127.0.0.1:3198/events"
+        }
+      },
+      "capabilities": {
+        "files.readTextFile": true,
+        "files.writeTextFile": true,
+        "runtime.status": true,
+        "runtime.capabilities": true,
+        "runtime.request": true,
+        "sessions.command": true,
+        "sessions.cancel": true,
+        "plm.sidecar.status": true,
+        "plm.sidecar.start": true,
+        "plm.sidecar.stop": true,
+        "plm.sidecar.logs": true,
+        "graph.load": true,
+        "graph.history": true,
+        "graph.persist": true,
+        "graph.backup": true,
+        "skillCrew.refresh": true,
+        "skillCrew.import": true,
+        "skillCrew.run": true,
+        "skillCrew.feedback": true,
+        "basicMemory.read": true,
+        "basicMemory.search": true,
+        "basicMemory.write": true,
+        "settings.read": true,
+        "settings.write": true,
+        "diagnostics.snapshot": true,
+        "diagnostics.process": true
+      },
+      "paths": {
+        "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+        "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+        "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+        "runtimeSettingsPath": "/Users/gengrf/.craft-agent/workspaces/my-workspace/.drama-runtime-settings.json"
+      },
+      "process": {
+        "pid": 86690,
+        "platform": "darwin",
+        "arch": "arm64",
+        "versions": {
+          "node": "24.3.0",
+          "bun": "1.3.14",
+          "boringssl": "0c5fce43b7ed5eb6001487ee48ac65766f5ddcd1",
+          "openssl": "1.1.0",
+          "llhttp": "9.3.0",
+          "libarchive": "ded82291ab41d5e355831b96b0e1ff49e24d8939",
+          "mimalloc": "f15aecb94fc8096008bf87b90c53ed682026914a",
+          "picohttpparser": "066d2b1e9ab820703db0837a7255d92d30f0c9f5",
+          "uwebsockets": "0d9b296af33f2b851fcbf4df3e9ec89751734ba4",
+          "webkit": "5488984d20e0dbfe4be2c3ba8fb18eb81a5e0e8b",
+          "zig": "04e7f6ac1e009525bc00934f20199c68f04e0a24",
+          "zlib": "12731092979c6d07f42da27da673a9f6c7b13586",
+          "tinycc": "12882eee073cfe5c7621bcfadf679e1372d4537b",
+          "lolhtml": "77127cd2b8545998756e8d64e36ee2313c4bb312",
+          "ares": "3ac47ee46edd8ea40370222f91613fc16c434853",
+          "libdeflate": "c8c56a20f8f621e6a966b716b31f1dedab6a41e3",
+          "usockets": "0d9b296af33f2b851fcbf4df3e9ec89751734ba4",
+          "lshpack": "8905c024b6d052f083a3d11d0a169b3c2735c8a1",
+          "zstd": "f8745da6ff1ad1e7bab384bd1f9d742439278e99",
+          "v8": "13.6.233.10-node.18",
+          "uv": "1.48.0",
+          "napi": "10",
+          "icu": "74.2",
+          "unicode": "15.1",
+          "modules": "137"
+        },
+        "uptimeSeconds": 878.985266042,
+        "memoryUsage": {
+          "rss": 98795520,
+          "heapTotal": 4917248,
+          "heapUsed": 13458795,
+          "external": 11255451,
+          "arrayBuffers": 131296
+        }
+      }
+    },
+    "uiEvidence": {
+      "path": "/Users/gengrf/drama-browser/openspec/changes/remove-electron-host/evidence/stage-08-source-built-ui-runtime-parity.json",
+      "ok": true,
+      "screenshots": [
+        "/Users/gengrf/drama-browser/docs/verification/drama-source-built-start-current.png",
+        "/Users/gengrf/drama-browser/docs/verification/drama-source-built-graph-current.png",
+        "/Users/gengrf/drama-browser/docs/verification/drama-source-built-plm-current.png",
+        "/Users/gengrf/drama-browser/docs/verification/drama-source-built-crew-current.png",
+        "/Users/gengrf/drama-browser/docs/verification/drama-source-built-memory-current.png"
+      ]
+    }
+  }
+}

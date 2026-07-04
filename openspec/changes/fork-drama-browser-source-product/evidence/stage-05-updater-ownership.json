@@ -1,0 +1,48 @@
+{
+  "ok": true,
+  "sourceWorkspace": "/Users/gengrf/zen-browser-desktop",
+  "appBundle": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app",
+  "generatedAt": "2026-06-29T02:55:53.166Z",
+  "checks": [
+    {
+      "id": "source-workspace",
+      "ok": true,
+      "detail": "/Users/gengrf/zen-browser-desktop"
+    },
+    {
+      "id": "app-bundle",
+      "ok": true,
+      "detail": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app"
+    },
+    {
+      "id": "source-disable-updater",
+      "ok": true,
+      "detail": "source and engine mozconfigs disable updater"
+    },
+    {
+      "id": "config-status-no-moz-updater",
+      "ok": true,
+      "detail": "configured objdir does not enable MOZ_UPDATER"
+    },
+    {
+      "id": "bundle-no-updater-files",
+      "ok": true,
+      "detail": "no updater files/directories in app bundle"
+    },
+    {
+      "id": "bundle-no-privileged-updater",
+      "ok": true,
+      "detail": "no privileged updater declaration in app bundle"
+    },
+    {
+      "id": "bundle-no-zen-update-identity",
+      "ok": true,
+      "detail": "no Zen update identity strings in app bundle"
+    }
+  ],
+  "warnings": [
+    "non-shipped MAR artifact remains: /Users/gengrf/zen-browser-desktop/dist/output.mar (75015496 bytes)",
+    "non-shipped update framework artifact remains: /Users/gengrf/zen-browser-desktop/dist/drama-browser-1.21.2b.en-US.mac.update_framework_artifacts.zip",
+    "MOZ_UPDATE_CHANNEL remains release even though MOZ_UPDATER is disabled"
+  ]
+}

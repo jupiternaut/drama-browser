@@ -1,9 +1,16 @@
+import type { DramaRuntimeRequestOptions, DramaRuntimeStatus } from './runtime-client.ts'
+
 export type DramaHostKind = 'electron' | 'browser' | 'gecko' | 'test'
 
 export type DramaHostCapability =
   | 'shell.openUrl'
   | 'shell.openFile'
   | 'shell.showInFolder'
+  | 'navigation.openUrl'
+  | 'navigation.openInternalRoute'
+  | 'navigation.newTab'
+  | 'navigation.newWindow'
+  | 'navigation.diagnostics'
   | 'files.readTextFile'
   | 'files.readBinaryFile'
   | 'files.writeTextFile'
@@ -17,6 +24,31 @@ export type DramaHostCapability =
   | 'notifications.show'
   | 'rpc.request'
   | 'events.subscribe'
+  | 'runtime.status'
+  | 'runtime.capabilities'
+  | 'runtime.request'
+  | 'sessions.command'
+  | 'sessions.cancel'
+  | 'sessions.subscribe'
+  | 'plm.sidecar.status'
+  | 'plm.sidecar.start'
+  | 'plm.sidecar.stop'
+  | 'plm.sidecar.logs'
+  | 'graph.load'
+  | 'graph.history'
+  | 'graph.persist'
+  | 'graph.backup'
+  | 'skillCrew.refresh'
+  | 'skillCrew.import'
+  | 'skillCrew.run'
+  | 'skillCrew.feedback'
+  | 'basicMemory.read'
+  | 'basicMemory.search'
+  | 'basicMemory.write'
+  | 'settings.read'
+  | 'settings.write'
+  | 'diagnostics.snapshot'
+  | 'diagnostics.process'
 
 export type DramaHostCapabilities = Partial<Record<DramaHostCapability, boolean>>
 
@@ -122,10 +154,79 @@ export interface DramaHostEventsApi {
   ): DramaHostUnsubscribe
 }
 
+export interface DramaHostNavigationApi {
+  openUrl(url: string): Promise<DramaHostOpenResult>
+  openInternalRoute?(route: string, params?: Record<string, string>): Promise<DramaHostOpenResult>
+  newTab?(url?: string): Promise<DramaHostOpenResult>
+  newWindow?(url?: string): Promise<DramaHostOpenResult>
+  getDiagnostics?(): Promise<unknown>
+}
+
+export interface DramaHostRuntimeApi {
+  getStatus(options?: DramaRuntimeRequestOptions): Promise<DramaRuntimeStatus>
+  getCapabilities?(options?: DramaRuntimeRequestOptions): Promise<DramaHostCapabilities>
+  request?<TResponse = unknown, TPayload = unknown>(
+    channel: string,
+    payload?: TPayload,
+    options?: DramaRuntimeRequestOptions,
+  ): Promise<TResponse>
+}
+
+export interface DramaHostSessionApi {
+  command<TResponse = unknown, TCommand = unknown>(
+    sessionId: string,
+    command: TCommand,
+    options?: DramaRuntimeRequestOptions,
+  ): Promise<TResponse>
+  cancel?(sessionId: string, silent?: boolean, options?: DramaRuntimeRequestOptions): Promise<void>
+  subscribe?<TPayload = unknown>(
+    sessionId: string,
+    listener: (event: DramaHostEventEnvelope<TPayload>) => void,
+  ): DramaHostUnsubscribe
+}
+
+export interface DramaHostPlmApi {
+  getSidecarStatus<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  startSidecar?<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  stopSidecar?<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  getSidecarLogs?<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+}
+
+export interface DramaHostGraphApi {
+  load<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  history?<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  persist?<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  restoreBackup?<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+}
+
+export interface DramaHostSkillCrewApi {
+  refresh<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  importSkill?<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  run<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  recordFeedback?<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+}
+
+export interface DramaHostBasicMemoryApi {
+  read<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  search<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  write<TResponse = unknown>(payload?: unknown, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+}
+
+export interface DramaHostSettingsApi {
+  read<TResponse = unknown>(key: string, options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  write<TValue = unknown>(key: string, value: TValue, options?: DramaRuntimeRequestOptions): Promise<void>
+}
+
+export interface DramaHostDiagnosticsApi {
+  snapshot<TResponse = unknown>(options?: DramaRuntimeRequestOptions): Promise<TResponse>
+  process?<TResponse = unknown>(options?: DramaRuntimeRequestOptions): Promise<TResponse>
+}
+
 export interface DramaHostApi {
   getInfo(): DramaHostInfo
   getCapabilities(): DramaHostCapabilities
   shell: DramaHostShellApi
+  navigation?: DramaHostNavigationApi
   files?: DramaHostFilesApi
   dialogs?: DramaHostDialogsApi
   clipboard?: DramaHostClipboardApi
@@ -133,6 +234,14 @@ export interface DramaHostApi {
   notifications?: DramaHostNotificationsApi
   rpc?: DramaHostRpcApi
   events?: DramaHostEventsApi
+  runtime?: DramaHostRuntimeApi
+  sessions?: DramaHostSessionApi
+  plm?: DramaHostPlmApi
+  graph?: DramaHostGraphApi
+  skillCrew?: DramaHostSkillCrewApi
+  basicMemory?: DramaHostBasicMemoryApi
+  settings?: DramaHostSettingsApi
+  diagnostics?: DramaHostDiagnosticsApi
 }
 
 export interface CreateBrowserHostApiOptions {
@@ -210,18 +319,56 @@ export function hasHostCapability(host: DramaHostApi, capability: DramaHostCapab
   return host.getCapabilities()[capability] === true
 }
 
+export function getMissingHostCapabilities(
+  host: DramaHostApi,
+  capabilities: readonly DramaHostCapability[],
+): DramaHostCapability[] {
+  return capabilities.filter((capability) => !hasHostCapability(host, capability))
+}
+
+export function hasHostCapabilities(
+  host: DramaHostApi,
+  capabilities: readonly DramaHostCapability[],
+): boolean {
+  return getMissingHostCapabilities(host, capabilities).length === 0
+}
+
 export function assertHostCapability(host: DramaHostApi, capability: DramaHostCapability): void {
   if (hasHostCapability(host, capability)) return
   const info = host.getInfo()
   throw new Error(`Drama host "${info.name}" (${info.kind}) does not provide ${capability}.`)
 }
 
+export function assertHostCapabilities(host: DramaHostApi, capabilities: readonly DramaHostCapability[]): void {
+  const missing = getMissingHostCapabilities(host, capabilities)
+  if (missing.length === 0) return
+  const info = host.getInfo()
+  throw new Error(`Drama host "${info.name}" (${info.kind}) does not provide: ${missing.join(', ')}.`)
+}
+
 export type {
   DramaRuntimeClient,
   DramaRuntimeClientOptions,
+  DramaRuntimeCapabilities,
+  DramaRuntimeRequestOptions,
   DramaRuntimeRpcRequest,
   DramaRuntimeRpcResponse,
   DramaRuntimeState,
   DramaRuntimeStatus,
 } from './runtime-client.ts'
 export { DramaRuntimeError, createDramaRuntimeClient } from './runtime-client.ts'
+export type {
+  DramaPlmReadinessState,
+  DramaPlmReadinessStatus,
+  DramaPlmReadinessTier,
+  DramaPlmHostAdapter,
+  DramaPlmSurfaceClassification,
+  DramaPlmSurfaceClassificationInput,
+  DramaPlmSurfaceClassificationResult,
+} from './surface.ts'
+export {
+  classifyDramaPlmSurface,
+  isDramaBrowserProductPath,
+  isZenDramaProductPath,
+  normalizeDramaPlmSurfaceClassification,
+} from './surface.ts'

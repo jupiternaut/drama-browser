@@ -1,0 +1,57 @@
+{
+  "ok": true,
+  "sourceWorkspace": "/Users/gengrf/zen-browser-desktop",
+  "generatedAt": "2026-06-29T02:38:56.690Z",
+  "checks": [
+    {
+      "id": "source-workspace",
+      "ok": true,
+      "detail": "/Users/gengrf/zen-browser-desktop"
+    },
+    {
+      "id": "binary-name",
+      "ok": true,
+      "detail": "binaryName=drama-browser"
+    },
+    {
+      "id": "source-mozconfig-app-name",
+      "ok": true,
+      "detail": "build config resolves main executable name to drama-browser"
+    },
+    {
+      "id": "mac-bundle-id",
+      "ok": true,
+      "detail": "mac bundle id suffix is Drama-owned and provided by branding confvars"
+    },
+    {
+      "id": "plugin-container-helper",
+      "ok": true,
+      "detail": "generic child process bundle/name is Drama-owned"
+    },
+    {
+      "id": "media-helper",
+      "ok": true,
+      "detail": "media plugin helper executable/bundle id seed is Drama-owned"
+    },
+    {
+      "id": "gpu-helper",
+      "ok": true,
+      "detail": "GPU helper executable/bundle id seed is Drama-owned"
+    },
+    {
+      "id": "security-module-helper",
+      "ok": true,
+      "detail": "security module helper executable/bundle id seed is Drama-owned"
+    },
+    {
+      "id": "entitlement-bundle-id",
+      "ok": true,
+      "detail": "macOS hardened runtime entitlement no longer points at app.zen-browser.zen"
+    },
+    {
+      "id": "no-stage4-zen-product-id",
+      "ok": true,
+      "detail": "stage 4 product identity fields do not reference Zen"
+    }
+  ]
+}

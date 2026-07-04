@@ -42,8 +42,13 @@ export async function recordDramaProjectFile(
   await mkdir(sourceDir, { recursive: true })
 
   const createdAt = now()
-  const filePath = resolve(sourceDir, `${timestampFilePart(createdAt)}-${type}-${uniqueFilePart()}.json`)
+  const fileStem = `${timestampFilePart(createdAt)}-${type}-${uniqueFilePart()}`
+  const filePath = resolve(sourceDir, `${fileStem}.json`)
+  const markdownPath = typeof options.request.markdown === 'string'
+    ? resolve(sourceDir, `${fileStem}.md`)
+    : undefined
   assertInside(sourceDir, filePath)
+  if (markdownPath) assertInside(sourceDir, markdownPath)
 
   const record = {
     schema: 'drama.project_file_event.v1',
@@ -57,10 +62,14 @@ export async function recordDramaProjectFile(
   }
 
   await writeFile(filePath, `${JSON.stringify(record, null, 2)}\n`, 'utf8')
+  if (markdownPath) {
+    await writeFile(markdownPath, ensureTrailingNewline(options.request.markdown ?? ''), 'utf8')
+  }
 
   return {
     projectDir,
     filePath,
+    ...(markdownPath ? { markdownPath } : {}),
   }
 }
 
@@ -110,6 +119,7 @@ export async function listDramaProjectFiles(
       if (options.request.typePrefix && !type?.startsWith(options.request.typePrefix)) continue
       records.push({
         filePath,
+        markdownPath: existsSync(markdownPathForRecord(filePath)) ? markdownPathForRecord(filePath) : undefined,
         schema: 'drama.project_file_event.v1' as const,
         projectId: String(record.projectId ?? ''),
         source: typeof record.source === 'string' ? record.source : undefined,
@@ -150,6 +160,14 @@ export function safeDramaProjectFileStem(value: string): string {
     .replace(/^-+|-+$/g, '')
 
   return stem || 'project'
+}
+
+function markdownPathForRecord(filePath: string): string {
+  return filePath.replace(/\.json$/i, '.md')
+}
+
+function ensureTrailingNewline(value: string): string {
+  return value.endsWith('\n') ? value : `${value}\n`
 }
 
 function timestampFilePart(value: number): string {

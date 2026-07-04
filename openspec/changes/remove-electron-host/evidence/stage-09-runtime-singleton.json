@@ -1,0 +1,206 @@
+{
+  "ok": true,
+  "generatedAt": "2026-06-29T11:55:00.627Z",
+  "runtimeUrl": "http://127.0.0.1:3198",
+  "checks": [
+    {
+      "id": "launch-script-exists",
+      "ok": true,
+      "detail": "/Users/gengrf/drama-browser/scripts/launch-drama-runtime.sh"
+    },
+    {
+      "id": "initial-launch-exits-zero",
+      "ok": true,
+      "detail": "status=0; stderr="
+    },
+    {
+      "id": "runtime-ready-before-duplicate-launch",
+      "ok": true,
+      "detail": "{\"state\":\"ready\",\"version\":\"0.1.0\",\"message\":\"Drama standalone runtime ready.\",\"updatedAt\":\"2026-06-29T11:55:00.494Z\",\"workspaceRoot\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace\",\"startedAt\":\"2026-06-29T11:42:09.962Z\",\"runtimePackageRoot\":null,\"browserShellDistDir\":\"/Users/gengrf/drama-browser/apps/drama-browser-shell/dist\",\"basicMemoryRoot\":\"/Users/gengrf/basic-memory-claude-history\",\"plmRuntime\":{\"state\":\"running\",\"healthy\":true,\"port\":8005,\"pid\":88060,\"url\":\"http://127.0.0.1:8005\",\"baseUrl\":\"http://127.0.0.1:8005\",\"apiBaseUrl\":\"http://127.0.0.1:8005/api/v1\",\"startedAt\":\"2026-06-29T11:45:47.121Z\",\"owned\":true,\"adopted\":false,\"projectRoot\":\"/Users/gengrf/PlotPilot\",\"dataDir\":\"/Users/gengrf/.plotpilot/data\",\"health\":{\"status\":\"healthy\",\"version\":\"1.0.2\",\"build_id\":\"build-20260209-1200-c4d2\",\"uptime_seconds\":0.37,\"daemon_process\":{\"running\":true,\"pid\":88063}}},\"endpoints\":{\"graph\":\"http://127.0.0.1:3198/graph\",\"plm\":\"http://127.0.0.1:3198/plm/runtime/status\",\"crew\":\"http://127.0.0.1:3198/crew\",\"app\":\"http://127.0.0.1:3198/app\",\"memory\":\"http://127.0.0.1:3198/app/memory\",\"events\":\"ws://127.0.0.1:3198/events\"}}"
+    },
+    {
+      "id": "duplicate-launches-exit-zero",
+      "ok": true,
+      "detail": "#0: status=0; #1: status=0; #2: status=0"
+    },
+    {
+      "id": "runtime-ready-after-duplicate-launch",
+      "ok": true,
+      "detail": "{\"state\":\"ready\",\"version\":\"0.1.0\",\"message\":\"Drama standalone runtime ready.\",\"updatedAt\":\"2026-06-29T11:55:00.569Z\",\"workspaceRoot\":\"/Users/gengrf/.craft-agent/workspaces/my-workspace\",\"startedAt\":\"2026-06-29T11:42:09.962Z\",\"runtimePackageRoot\":null,\"browserShellDistDir\":\"/Users/gengrf/drama-browser/apps/drama-browser-shell/dist\",\"basicMemoryRoot\":\"/Users/gengrf/basic-memory-claude-history\",\"plmRuntime\":{\"state\":\"running\",\"healthy\":true,\"port\":8005,\"pid\":88060,\"url\":\"http://127.0.0.1:8005\",\"baseUrl\":\"http://127.0.0.1:8005\",\"apiBaseUrl\":\"http://127.0.0.1:8005/api/v1\",\"startedAt\":\"2026-06-29T11:45:47.121Z\",\"owned\":true,\"adopted\":false,\"projectRoot\":\"/Users/gengrf/PlotPilot\",\"dataDir\":\"/Users/gengrf/.plotpilot/data\",\"health\":{\"status\":\"healthy\",\"version\":\"1.0.2\",\"build_id\":\"build-20260209-1200-c4d2\",\"uptime_seconds\":0.37,\"daemon_process\":{\"running\":true,\"pid\":88063}}},\"endpoints\":{\"graph\":\"http://127.0.0.1:3198/graph\",\"plm\":\"http://127.0.0.1:3198/plm/runtime/status\",\"crew\":\"http://127.0.0.1:3198/crew\",\"app\":\"http://127.0.0.1:3198/app\",\"memory\":\"http://127.0.0.1:3198/app/memory\",\"events\":\"ws://127.0.0.1:3198/events\"}}"
+    },
+    {
+      "id": "single-runtime-listener",
+      "ok": true,
+      "detail": "listeners=86690"
+    },
+    {
+      "id": "runtime-pid-matches-listener",
+      "ok": true,
+      "detail": "runtimePid=86690; listeners=86690"
+    },
+    {
+      "id": "no-electron-processes",
+      "ok": true,
+      "detail": "no Electron Helper or legacy Drama Electron processes"
+    }
+  ],
+  "data": {
+    "initialLaunch": {
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "beforeStatus": {
+      "state": "ready",
+      "version": "0.1.0",
+      "message": "Drama standalone runtime ready.",
+      "updatedAt": "2026-06-29T11:55:00.494Z",
+      "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+      "startedAt": "2026-06-29T11:42:09.962Z",
+      "runtimePackageRoot": null,
+      "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+      "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+      "plmRuntime": {
+        "state": "running",
+        "healthy": true,
+        "port": 8005,
+        "pid": 88060,
+        "url": "http://127.0.0.1:8005",
+        "baseUrl": "http://127.0.0.1:8005",
+        "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+        "startedAt": "2026-06-29T11:45:47.121Z",
+        "owned": true,
+        "adopted": false,
+        "projectRoot": "/Users/gengrf/PlotPilot",
+        "dataDir": "/Users/gengrf/.plotpilot/data",
+        "health": {
+          "status": "healthy",
+          "version": "1.0.2",
+          "build_id": "build-20260209-1200-c4d2",
+          "uptime_seconds": 0.37,
+          "daemon_process": {
+            "running": true,
+            "pid": 88063
+          }
+        }
+      },
+      "endpoints": {
+        "graph": "http://127.0.0.1:3198/graph",
+        "plm": "http://127.0.0.1:3198/plm/runtime/status",
+        "crew": "http://127.0.0.1:3198/crew",
+        "app": "http://127.0.0.1:3198/app",
+        "memory": "http://127.0.0.1:3198/app/memory",
+        "events": "ws://127.0.0.1:3198/events"
+      }
+    },
+    "duplicateLaunches": [
+      {
+        "index": 0,
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "index": 1,
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "index": 2,
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "afterStatus": {
+      "state": "ready",
+      "version": "0.1.0",
+      "message": "Drama standalone runtime ready.",
+      "updatedAt": "2026-06-29T11:55:00.569Z",
+      "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+      "startedAt": "2026-06-29T11:42:09.962Z",
+      "runtimePackageRoot": null,
+      "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+      "basicMemoryRoot": "/Users/gengrf/basic-memory-claude-history",
+      "plmRuntime": {
+        "state": "running",
+        "healthy": true,
+        "port": 8005,
+        "pid": 88060,
+        "url": "http://127.0.0.1:8005",
+        "baseUrl": "http://127.0.0.1:8005",
+        "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+        "startedAt": "2026-06-29T11:45:47.121Z",
+        "owned": true,
+        "adopted": false,
+        "projectRoot": "/Users/gengrf/PlotPilot",
+        "dataDir": "/Users/gengrf/.plotpilot/data",
+        "health": {
+          "status": "healthy",
+          "version": "1.0.2",
+          "build_id": "build-20260209-1200-c4d2",
+          "uptime_seconds": 0.37,
+          "daemon_process": {
+            "running": true,
+            "pid": 88063
+          }
+        }
+      },
+      "endpoints": {
+        "graph": "http://127.0.0.1:3198/graph",
+        "plm": "http://127.0.0.1:3198/plm/runtime/status",
+        "crew": "http://127.0.0.1:3198/crew",
+        "app": "http://127.0.0.1:3198/app",
+        "memory": "http://127.0.0.1:3198/app/memory",
+        "events": "ws://127.0.0.1:3198/events"
+      }
+    },
+    "process": {
+      "runtime": {
+        "pid": 86690,
+        "platform": "darwin",
+        "arch": "arm64",
+        "versions": {
+          "node": "24.3.0",
+          "bun": "1.3.14",
+          "boringssl": "0c5fce43b7ed5eb6001487ee48ac65766f5ddcd1",
+          "openssl": "1.1.0",
+          "llhttp": "9.3.0",
+          "libarchive": "ded82291ab41d5e355831b96b0e1ff49e24d8939",
+          "mimalloc": "f15aecb94fc8096008bf87b90c53ed682026914a",
+          "picohttpparser": "066d2b1e9ab820703db0837a7255d92d30f0c9f5",
+          "uwebsockets": "0d9b296af33f2b851fcbf4df3e9ec89751734ba4",
+          "webkit": "5488984d20e0dbfe4be2c3ba8fb18eb81a5e0e8b",
+          "zig": "04e7f6ac1e009525bc00934f20199c68f04e0a24",
+          "zlib": "12731092979c6d07f42da27da673a9f6c7b13586",
+          "tinycc": "12882eee073cfe5c7621bcfadf679e1372d4537b",
+          "lolhtml": "77127cd2b8545998756e8d64e36ee2313c4bb312",
+          "ares": "3ac47ee46edd8ea40370222f91613fc16c434853",
+          "libdeflate": "c8c56a20f8f621e6a966b716b31f1dedab6a41e3",
+          "usockets": "0d9b296af33f2b851fcbf4df3e9ec89751734ba4",
+          "lshpack": "8905c024b6d052f083a3d11d0a169b3c2735c8a1",
+          "zstd": "f8745da6ff1ad1e7bab384bd1f9d742439278e99",
+          "v8": "13.6.233.10-node.18",
+          "uv": "1.48.0",
+          "napi": "10",
+          "icu": "74.2",
+          "unicode": "15.1",
+          "modules": "137"
+        },
+        "uptimeSeconds": 770.660874042,
+        "memoryUsage": {
+          "rss": 88965120,
+          "heapTotal": 4129792,
+          "heapUsed": 12890058,
+          "external": 10861754,
+          "arrayBuffers": 131296
+        }
+      },
+      "listenerPids": [
+        "86690"
+      ]
+    },
+    "electronProcesses": []
+  }
+}

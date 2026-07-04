@@ -66,6 +66,8 @@ export default defineConfig({
       '@drama/plm/': resolve(__dirname, '../../packages/drama-plm/src/'),
       '@drama/plm-ui': resolve(__dirname, '../../packages/drama-plm-ui/src/index.ts'),
       '@drama/plm-ui/': resolve(__dirname, '../../packages/drama-plm-ui/src/'),
+      '@drama/ui': resolve(__dirname, '../../packages/drama-ui/src/index.ts'),
+      '@drama/ui/': resolve(__dirname, '../../packages/drama-ui/src/'),
       // Force all React imports to use the root node_modules React
       // Bun hoists deps to root. This prevents "multiple React copies" error from @craft-agent/ui
       'react': resolve(__dirname, '../../node_modules/react'),

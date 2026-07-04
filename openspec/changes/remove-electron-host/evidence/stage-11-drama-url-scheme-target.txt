@@ -1,0 +1,9 @@
+# drama URL scheme target
+## NSWorkspace urlForApplication(toOpen: drama://start)
+/Applications/Drama Browser.app
+
+## LaunchServices default handler
+app.drama-browser.local
+
+## Explicit bundle lookup
+/Applications/Drama Browser.app

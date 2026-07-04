@@ -243,7 +243,27 @@ checks = {
     "surfaceInactiveAfterWebTab": result and result.get("surfaceActiveAfterWebTab") is False,
 }
 ok = all(checks.values())
-print(json.dumps({"ok": ok, "checks": checks, "result": result}, ensure_ascii=False, indent=2))
+surface_classification = "product-zen-panel" if checks["surfaceUrl"] else "browser-fallback"
+readiness = [
+    {
+        "tier": "shell-ready",
+        "state": "ready" if checks["surfaceUrl"] and checks["panelVisible"] else "blocked",
+        "message": "Zen chrome-resource panel loaded." if checks["surfaceUrl"] else "Zen chrome-resource panel URL did not match.",
+    },
+    {
+        "tier": "runtime-ready",
+        "state": "ready" if checks["runtimeReady"] else "blocked",
+        "message": str(result.get("status") if result else "runtime status unavailable"),
+    },
+]
+print(json.dumps({
+    "ok": ok,
+    "surfaceClassification": surface_classification,
+    "documentUri": result.get("currentURI") if result else None,
+    "readiness": readiness,
+    "checks": checks,
+    "result": result,
+}, ensure_ascii=False, indent=2))
 sys.exit(0 if ok else 1)
 '@
 

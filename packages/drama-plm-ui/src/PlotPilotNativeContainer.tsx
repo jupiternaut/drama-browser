@@ -12,16 +12,27 @@ import {
   type PlotPilotBibleEditorData,
   type PlotPilotGenerationJob,
   type PlotPilotChapterEditor,
+  type PlotPilotChapterAnnotation,
+  type PlotPilotChapterRevisionContext,
+  type PlotPilotStoryContextBundle,
+  type PlotPilotStoryContextCard,
   type PlotPilotCodexStatus as PlotPilotUiCodexStatus,
   type PlotPilotHumanizerSettingsDraft,
+  type PlotPilotIntegrationStatus,
+  type PlotPilotIntegrationSurface,
   type PlotPilotNativeFeatureState,
   type PlotPilotOnboardingDraft,
+  type PlotPilotParityCheck,
+  type PlotPilotProductionEvidenceItem,
+  type PlotPilotProductionEvidenceSnapshot,
   type PlotPilotProjectGuardStatus,
   type PlotPilotLogEntry as PlotPilotUiLogEntry,
   type PlotPilotNativeHandlers,
   type PlotPilotNovel,
+  type PlotPilotReadinessStatus,
   type PlotPilotRuntimeStatus as PlotPilotUiRuntimeStatus,
   type ScriptStudioStorageCardDraft,
+  type PlotPilotWorkspaceUploadDraft,
   type PlotPilotWritingSpecFailureView,
 } from './PlotPilotNativePage'
 import type {
@@ -69,8 +80,33 @@ const EMPTY_RUNTIME_STATUS: PlotPilotRuntimeStatus = {
   dataDir: '',
 }
 
+const STATUS_REQUEST_TIMEOUT_MS = 2_000
 const DRAMA_PLM_OPEN_REQUEST_KEY = 'drama.plm.openRequest.v1'
 const DRAMA_CODEX_PROFILE_ID = 'drama-codex-chatgpt'
+const DRAMA_PRODUCTION_FIXTURE_ID = 'drama-production-parity-mac'
+const DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY = 'drama.production.parity.chapter-draft'
+const DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID = 'drama-production-fixture-hosted-write'
+const DRAMA_PRODUCTION_FIXTURE_CHAPTER_NUMBER = 1
+const DRAMA_BROWSER_PRODUCT_SURFACE = 'product-drama-browser'
+const DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS = 'product-zen-panel'
+const DRAMA_BROWSER_PRODUCT_HOST_ADAPTER = 'zen-gecko'
+const DRAMA_PRODUCTION_FIXTURE_NAME = 'Drama Browser PLM production parity fixture'
+const DRAMA_PRODUCTION_FIXTURE_LEGACY_NAME = 'Zen Drama PLM production parity fixture'
+const DRAMA_PRODUCTION_FIXTURE_PROMPT_DESCRIPTION = 'Drama Browser product path production parity fixture prompt.'
+const DRAMA_PRODUCTION_FIXTURE_PROMPT_SYSTEM = 'You are validating the Drama Browser product path PLM production parity fixture through the Zen/Gecko adapter.'
+const DRAMA_PRODUCTION_FIXTURE_PROMPT_TAGS = [
+  'drama-production-parity',
+  'product-drama-browser',
+  'drama-browser-product-path',
+  'zen-gecko-adapter',
+  'fixture',
+]
+
+const DRAMA_PRODUCTION_FIXTURE_CONTENT = `第1章 生产闭环验证
+
+项目写作台加载一章可保存、可回写、可审稿的正文。人物、情节、环境三类上下文会被组装进生成请求，避免界面标题和正文内容来自不同项目。
+
+这一章用于 Drama Browser product path macOS production parity 验收，并记录当前 Zen/Gecko adapter 路径：它必须能被真实项目加载、保存、回写，并在 Memory Graph 与 Prompt Registry 面板留下可追踪证据。`
 
 interface DramaPlmOpenRequest {
   schema: typeof DRAMA_PLM_OPEN_REQUEST_KEY
@@ -90,6 +126,29 @@ interface PlmProjectFileRecordInput {
   title?: string
   summary?: Record<string, unknown>
   payload?: unknown
+  markdown?: string
+}
+
+interface PlotPilotResolvedRevisionContext {
+  annotations: PlotPilotChapterAnnotation[]
+  instruction: string
+  storyContext: PlotPilotStoryContextBundle | null
+  markdown: string
+}
+
+interface ParsedWorkspaceChapterImport {
+  number: number
+  title: string
+  content: string
+}
+
+interface ParsedWorkspaceFileImport {
+  fileName: string
+  sourceFormat: 'markdown' | 'text'
+  title: string
+  novelId: string
+  sourceText: string
+  chapters: ParsedWorkspaceChapterImport[]
 }
 
 export interface PlotPilotNativeApi {
@@ -117,6 +176,9 @@ export interface PlotPilotNativeApi {
 export interface PlotPilotNativeContainerProps {
   api: PlotPilotNativeApi
   createClient?: typeof createPlotPilotClient
+  integrationStatus?: PlotPilotIntegrationStatus
+  onIntegrationStatusChange?: (status: PlotPilotIntegrationStatus | undefined) => void
+  productionFixture?: boolean
 }
 
 function isRuntimeReady(status: PlotPilotRuntimeStatus): boolean {
@@ -304,6 +366,493 @@ function promptRecordKey(prompt: Record<string, unknown>): string {
   return String(prompt.id ?? prompt.key ?? prompt.name ?? prompt.title ?? '').trim()
 }
 
+function promptRecordMatchesKey(prompt: Record<string, unknown>, expectedKey: string): boolean {
+  return [
+    prompt.node_key,
+    prompt.nodeKey,
+    prompt.key,
+    prompt.id,
+    prompt.name,
+    prompt.title,
+  ].some((value) => String(value ?? '').trim() === expectedKey)
+}
+
+function promptNodeKeyFromStorageCard(card: ScriptStudioStorageCardDraft, prompt: Record<string, unknown>): string {
+  const existing = String(card.sourceId ?? prompt.node_key ?? prompt.key ?? prompt.id ?? '').trim()
+  if (existing && !existing.startsWith('prompt-')) return existing
+  return `drama-${normalizeNovelId(storageCardTitle(card))}`
+}
+
+function uniqueStringList(values: Array<string | undefined | null>): string[] {
+  return values
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .filter((value, index, list) => list.indexOf(value) === index)
+}
+
+function chapterAnnotationsKey(novelId: string, chapterNumber: number): string {
+  return `${novelId}:${chapterNumber}`
+}
+
+function normalizeChapterAnnotations(value: unknown): PlotPilotChapterAnnotation[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item): PlotPilotChapterAnnotation | null => {
+      const record = asRecord(item)
+      const start = Number(record.start)
+      const end = Number(record.end)
+      const quote = String(record.quote ?? '').trim()
+      const note = String(record.note ?? '').trim()
+      const color = record.color === 'mint' || record.color === 'rose' || record.color === 'amber' || record.color === 'sky'
+        ? record.color
+        : 'amber'
+      const status = record.status === 'resolved' ? 'resolved' : 'open'
+      const createdAt = String(record.createdAt ?? new Date().toISOString())
+
+      if (record.kind === 'ink') {
+        const inkRecord = asRecord(record.ink)
+        const tool = inkRecord.tool === 'arrow' ? 'arrow' : 'pen'
+        const points = Array.isArray(inkRecord.points)
+          ? inkRecord.points
+            .map((point) => {
+              const pointRecord = asRecord(point)
+              const x = Number(pointRecord.x)
+              const y = Number(pointRecord.y)
+              return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null
+            })
+            .filter((point): point is { x: number; y: number } => Boolean(point))
+            .slice(0, 2000)
+          : []
+        if (points.length < 2) return null
+        const width = Number(inkRecord.width)
+        const opacity = Number(inkRecord.opacity)
+        const toolLabel = tool === 'arrow' ? '箭头' : '画笔'
+        return {
+          id: String(record.id ?? createStorageCardId('annotation')),
+          kind: 'ink',
+          start: Number.isFinite(start) ? start : 0,
+          end: Number.isFinite(end) ? end : 0,
+          quote: quote || `手写批注：${toolLabel}`,
+          note: note || `${toolLabel}批注`,
+          color,
+          status,
+          createdAt,
+          ink: {
+            tool,
+            color: String(inkRecord.color ?? '#8a6818'),
+            width: Number.isFinite(width) ? Math.min(Math.max(width, 1), 24) : 5,
+            opacity: Number.isFinite(opacity) ? Math.min(Math.max(opacity, 0.1), 1) : undefined,
+            points,
+          },
+        }
+      }
+
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || !quote || !note) return null
+      return {
+        id: String(record.id ?? createStorageCardId('annotation')),
+        kind: 'text',
+        start,
+        end,
+        quote,
+        note,
+        color,
+        status,
+        createdAt,
+      }
+    })
+    .filter((annotation): annotation is PlotPilotChapterAnnotation => Boolean(annotation))
+}
+
+function markdownInline(value: string): string {
+  return value.replace(/`/g, '\\`').replace(/\s+/g, ' ').trim()
+}
+
+function markdownBlockquote(value: string): string {
+  return value
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => `> ${line}`)
+    .join('\n')
+}
+
+function buildChapterAnnotationsMarkdown(args: {
+  novelId: string
+  chapterNumber: number
+  chapterTitle?: string
+  annotations: PlotPilotChapterAnnotation[]
+  instruction?: string
+  generatedAt?: string
+}): string {
+  const openAnnotations = args.annotations.filter((annotation) => annotation.status !== 'resolved')
+  const instruction = args.instruction?.trim() ?? ''
+  const lines = [
+    `# Chapter ${args.chapterNumber} Revision Annotations`,
+    '',
+    `- novel_id: \`${markdownInline(args.novelId)}\``,
+    `- chapter_number: \`${args.chapterNumber}\``,
+    args.chapterTitle ? `- chapter_title: ${markdownInline(args.chapterTitle)}` : '',
+    `- generated_at: \`${args.generatedAt ?? new Date().toISOString()}\``,
+    `- revision_mode: \`annotation_revision\``,
+    '',
+    '## Model Instructions',
+    '',
+    'Use the user chat request and added annotations as mandatory revision guidance for the next pass. Keep the existing story continuity unless the user explicitly asks for a change. Address each open text annotation and treat ink annotations as visual emphasis from the reader. Avoid appending this context list to the manuscript.',
+    '',
+  ].filter(Boolean)
+
+  if (instruction) {
+    lines.push(
+      '## User Chat Request',
+      '',
+      markdownBlockquote(instruction),
+      '',
+    )
+  }
+
+  lines.push('## Added Annotation Context', '')
+
+  if (openAnnotations.length === 0) {
+    lines.push('- No annotations were added to this chat turn.')
+    return lines.join('\n')
+  }
+
+  openAnnotations.forEach((annotation, index) => {
+    if (annotation.kind === 'ink' && annotation.ink) {
+      lines.push(
+        `### A${index + 1}`,
+        '',
+        `- id: \`${markdownInline(annotation.id)}\``,
+        `- status: \`${annotation.status ?? 'open'}\``,
+        `- type: \`ink/${annotation.ink.tool}\``,
+        `- label: \`${markdownInline(annotation.quote)}\``,
+        `- color: \`${markdownInline(annotation.color)}\``,
+        `- stroke_color: \`${markdownInline(annotation.ink.color)}\``,
+        `- stroke_width: \`${annotation.ink.width}\``,
+        `- stroke_opacity: \`${annotation.ink.opacity ?? 1}\``,
+        `- stroke_points: \`${annotation.ink.points.length}\``,
+        '',
+        '**Visual Comment**',
+        '',
+        markdownBlockquote(annotation.note),
+        '',
+      )
+      return
+    }
+
+    lines.push(
+      `### A${index + 1}`,
+      '',
+      `- id: \`${markdownInline(annotation.id)}\``,
+      `- status: \`${annotation.status ?? 'open'}\``,
+      `- type: \`text/highlight\``,
+      `- range: \`${annotation.start}-${annotation.end}\``,
+      `- quote: \`${markdownInline(annotation.quote)}\``,
+      '',
+      '**Comment**',
+      '',
+      markdownBlockquote(annotation.note),
+      '',
+    )
+  })
+
+  return lines.join('\n').trimEnd()
+}
+
+function normalizeStoryContextCard(value: unknown): PlotPilotStoryContextCard | null {
+  const record = asRecord(value)
+  const id = String(record.id ?? '').trim()
+  const kind = String(record.kind ?? '').trim()
+  const title = String(record.title ?? '').trim()
+  const body = String(record.body ?? '').trim()
+  if (!id || !title || !body) return null
+  if (kind !== 'character' && kind !== 'plot' && kind !== 'world' && kind !== 'style') return null
+  return {
+    id,
+    kind,
+    title,
+    body,
+    source: String(record.source ?? '').trim() || undefined,
+    priority: typeof record.priority === 'number' ? record.priority : undefined,
+  }
+}
+
+function normalizeStoryContext(value: unknown): PlotPilotStoryContextBundle | null {
+  const record = asRecord(value)
+  const cards = Array.isArray(record.cards)
+    ? record.cards
+      .map(normalizeStoryContextCard)
+      .filter((card): card is PlotPilotStoryContextCard => Boolean(card))
+    : []
+  if (cards.length === 0) return null
+  const focusCardIds = Array.isArray(record.focusCardIds)
+    ? record.focusCardIds.map((id) => String(id).trim()).filter(Boolean)
+    : undefined
+  return {
+    schema: 'plotpilot.story_context.v1',
+    novelId: String(record.novelId ?? '').trim() || undefined,
+    chapterNumber: Number.isFinite(Number(record.chapterNumber)) ? Number(record.chapterNumber) : undefined,
+    focusCardIds,
+    cards,
+  }
+}
+
+function storyContextKindLabel(kind: PlotPilotStoryContextCard['kind']): string {
+  switch (kind) {
+    case 'character':
+      return '人物'
+    case 'plot':
+      return '情节'
+    case 'world':
+      return '环境'
+    case 'style':
+      return '文风'
+  }
+}
+
+function buildStoryContextMarkdown(context: PlotPilotStoryContextBundle | null): string {
+  if (!context?.cards.length) return ''
+  const focusIds = new Set(context.focusCardIds ?? [])
+  const focusedCards = context.cards.filter((card) => focusIds.has(card.id))
+  const cards = [...focusedCards, ...context.cards.filter((card) => !focusIds.has(card.id))]
+  const lines = [
+    '## Story Context Package',
+    '',
+    'Use this as the project-level context for the next chapter. Treat it as a higher-priority continuity and style layer than generic genre assumptions.',
+    '',
+    '### Priority Protocol',
+    '',
+    '1. Existing manuscript facts cannot be rewritten.',
+    '2. Current chapter goal must move forward.',
+    '3. Character voice and relationship state must stay consistent.',
+    '4. The prose style must follow the project style anchor.',
+    '5. Long-range setting can echo in the background, but must not hijack the current chapter.',
+    '',
+  ]
+
+  if (focusedCards.length > 0) {
+    lines.push('### User Focus', '')
+    focusedCards.forEach((card) => {
+      lines.push(`- ${storyContextKindLabel(card.kind)}：${markdownInline(card.title)}`)
+    })
+    lines.push('')
+  }
+
+  cards.forEach((card) => {
+    lines.push(
+      `### ${storyContextKindLabel(card.kind)}：${markdownInline(card.title)}`,
+      '',
+      card.source ? `- source: \`${markdownInline(card.source)}\`` : '',
+      typeof card.priority === 'number' ? `- priority: \`${card.priority}\`` : '',
+      '',
+      markdownBlockquote(card.body),
+      '',
+    )
+  })
+
+  return lines.filter((line) => line !== '').join('\n').trimEnd()
+}
+
+function buildRevisionPromptMarkdown(context: PlotPilotResolvedRevisionContext): string {
+  if (context.annotations.length === 0 && !context.instruction.trim() && !context.storyContext?.cards.length) return ''
+  return [
+    '## Agent Chat And Story Context',
+    '',
+    'The chapter is now in conversational writing mode. The context below came from the right-side chat composer, story element cards, and any annotation cards the user explicitly added to chat.',
+    '',
+    context.markdown,
+  ].join('\n')
+}
+
+function workspaceUploadFileName(fileName: string): string {
+  const trimmed = fileName.trim()
+  const parts = trimmed.split(/[\\/]/)
+  return parts[parts.length - 1] || 'imported-workspace.txt'
+}
+
+function workspaceUploadBaseName(fileName: string): string {
+  return workspaceUploadFileName(fileName)
+    .replace(/\.(md|markdown|txt)$/i, '')
+    .trim() || '导入文稿'
+}
+
+function workspaceUploadSourceFormat(upload: PlotPilotWorkspaceUploadDraft): ParsedWorkspaceFileImport['sourceFormat'] {
+  const fileName = workspaceUploadFileName(upload.fileName)
+  if (/\.(md|markdown)$/i.test(fileName) || /markdown/i.test(upload.mimeType ?? '')) return 'markdown'
+  if (/\.txt$/i.test(fileName) || /text\/plain/i.test(upload.mimeType ?? '')) return 'text'
+  throw new Error('只支持 Markdown 或 TXT 文件。')
+}
+
+function normalizeWorkspaceUploadText(content: string): string {
+  return content
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n?/g, '\n')
+}
+
+function stripWorkspaceFrontMatter(content: string): string {
+  const trimmedStart = content.replace(/^\s+/, '')
+  if (!trimmedStart.startsWith('---\n')) return content
+  const endIndex = trimmedStart.indexOf('\n---', 4)
+  if (endIndex < 0) return content
+  const afterFence = trimmedStart.slice(endIndex + 4)
+  return afterFence.replace(/^\s*\n/, '')
+}
+
+function markdownHeadingTitle(line: string, level?: number): string | null {
+  const match = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/)
+  if (!match) return null
+  const marker = match[1]
+  const title = match[2]
+  if (!marker || !title) return null
+  if (level !== undefined && marker.length !== level) return null
+  return title.trim()
+}
+
+function workspaceChapterHeadingTitle(line: string): string | null {
+  const markdownTitle = markdownHeadingTitle(line)
+  const title = markdownTitle ?? line.trim()
+  if (!title) return null
+  if (/^第\s*[\d一二三四五六七八九十百千万零〇两]+\s*[章节回卷幕].*/.test(title)) return title
+  if (/^chapter\s+\d+\b.*/i.test(title)) return title
+  return null
+}
+
+function removeWorkspaceTitleHeading(content: string): { title: string | null; body: string } {
+  const lines = content.split('\n')
+  let title: string | null = null
+  const bodyLines: string[] = []
+  for (const line of lines) {
+    const heading = markdownHeadingTitle(line, 1)
+    if (!title && heading && !workspaceChapterHeadingTitle(line)) {
+      title = heading
+      continue
+    }
+    bodyLines.push(line)
+  }
+  return {
+    title,
+    body: bodyLines.join('\n').trim(),
+  }
+}
+
+function firstMeaningfulWorkspaceLine(content: string): string | null {
+  for (const rawLine of content.split('\n')) {
+    const heading = markdownHeadingTitle(rawLine)
+    const line = (heading ?? rawLine)
+      .replace(/^\s*[-*+]\s+/, '')
+      .replace(/^\s*\d+[.)]\s+/, '')
+      .trim()
+    if (line) return line
+  }
+  return null
+}
+
+function splitWorkspaceImportChapters(content: string): ParsedWorkspaceChapterImport[] {
+  const lines = content.split('\n')
+  const sections: Array<{ title: string; lines: string[] }> = []
+  const prefaceLines: string[] = []
+  let current: { title: string; lines: string[] } | null = null
+
+  for (const line of lines) {
+    const heading = workspaceChapterHeadingTitle(line)
+    if (heading) {
+      if (current) sections.push(current)
+      current = { title: heading, lines: [] }
+      if (sections.length === 0 && prefaceLines.some((item) => item.trim())) {
+        current.lines.push(...prefaceLines, '')
+      }
+      continue
+    }
+    if (current) current.lines.push(line)
+    else prefaceLines.push(line)
+  }
+
+  if (current) sections.push(current)
+  if (sections.length === 0) {
+    return [{
+      number: 1,
+      title: '第1章',
+      content: content.trim(),
+    }]
+  }
+
+  return sections.map((section, index) => ({
+    number: index + 1,
+    title: section.title || fallbackChapterTitle(index + 1),
+    content: section.lines.join('\n').trim(),
+  }))
+}
+
+function parseWorkspaceUploadDraft(upload: PlotPilotWorkspaceUploadDraft): ParsedWorkspaceFileImport {
+  const fileName = workspaceUploadFileName(upload.fileName)
+  const sourceFormat = workspaceUploadSourceFormat(upload)
+  const sourceText = normalizeWorkspaceUploadText(upload.content).trim()
+  if (!sourceText) throw new Error('导入文件是空的。')
+
+  const withoutFrontMatter = stripWorkspaceFrontMatter(sourceText)
+  const withoutTitle = removeWorkspaceTitleHeading(withoutFrontMatter)
+  const title = (
+    withoutTitle.title
+      ?? (sourceFormat === 'markdown' ? firstMeaningfulWorkspaceLine(withoutFrontMatter) : null)
+      ?? workspaceUploadBaseName(fileName)
+  ).slice(0, 80)
+  const body = withoutTitle.body || withoutFrontMatter.trim()
+  const chapters = splitWorkspaceImportChapters(body)
+    .filter((chapter) => chapter.content.trim() || chapter.title.trim())
+    .map((chapter, index) => ({
+      ...chapter,
+      number: index + 1,
+      title: chapter.title.trim() || fallbackChapterTitle(index + 1),
+      content: chapter.content.trim() || chapter.title.trim(),
+    }))
+
+  if (chapters.length === 0) {
+    chapters.push({
+      number: 1,
+      title: '第1章',
+      content: body.trim(),
+    })
+  }
+
+  return {
+    fileName,
+    sourceFormat,
+    title: title.trim() || workspaceUploadBaseName(fileName),
+    novelId: normalizeNovelId(title || workspaceUploadBaseName(fileName)),
+    sourceText,
+    chapters,
+  }
+}
+
+function buildWorkspaceImportMarkdown(input: ParsedWorkspaceFileImport, importedAt = new Date().toISOString()): string {
+  const lines = [
+    '# PLM Workspace Import',
+    '',
+    `- source_file: ${markdownInline(input.fileName)}`,
+    `- source_format: \`${input.sourceFormat}\``,
+    `- novel_id: \`${markdownInline(input.novelId)}\``,
+    `- title: ${markdownInline(input.title)}`,
+    `- chapter_count: \`${input.chapters.length}\``,
+    `- imported_at: \`${importedAt}\``,
+    '',
+    '## Chapters',
+    '',
+    ...input.chapters.flatMap((chapter) => [
+      `- ${chapter.number}. ${markdownInline(chapter.title)} (${countDraftText(chapter.content)} chars)`,
+    ]),
+    '',
+    '## Source',
+    '',
+  ]
+
+  if (input.sourceFormat === 'markdown') {
+    lines.push(input.sourceText.trim())
+  } else {
+    lines.push('````text', input.sourceText.trim(), '````')
+  }
+
+  return lines.join('\n').trimEnd()
+}
+
 function toNovelCreateRequest(draft: PlotPilotOnboardingDraft) {
   return {
     novel_id: normalizeNovelId(draft.title),
@@ -430,9 +979,18 @@ function shouldFallbackToLegacyChapterStream(error: unknown): boolean {
 }
 
 function consumeDramaPlmOpenRequest(): DramaPlmOpenRequest | null {
-  const raw = window.sessionStorage.getItem(DRAMA_PLM_OPEN_REQUEST_KEY)
+  let raw: string | null = null
+  try {
+    raw = window.sessionStorage.getItem(DRAMA_PLM_OPEN_REQUEST_KEY)
+  } catch {
+    return null
+  }
   if (!raw) return null
-  window.sessionStorage.removeItem(DRAMA_PLM_OPEN_REQUEST_KEY)
+  try {
+    window.sessionStorage.removeItem(DRAMA_PLM_OPEN_REQUEST_KEY)
+  } catch {
+    // Some chrome-resource hosts expose a sessionStorage object but reject writes.
+  }
   try {
     const value = JSON.parse(raw) as Partial<DramaPlmOpenRequest>
     if (value.schema !== DRAMA_PLM_OPEN_REQUEST_KEY) return null
@@ -490,6 +1048,660 @@ function toUiRuntimeStatus(
     message: 'PlotPilot runtime 尚未启动。',
     endpoint: status.baseUrl ?? status.apiBaseUrl ?? status.url ?? undefined,
     activeJob,
+  }
+}
+
+function mergeReadinessTiers(
+  base: PlotPilotReadinessStatus[],
+  next: PlotPilotReadinessStatus[],
+): PlotPilotReadinessStatus[] {
+  const nextTierIds = new Set(next.map((item) => item.tier))
+  return [
+    ...base.filter((item) => !nextTierIds.has(item.tier)),
+    ...next,
+  ]
+}
+
+function workspacePathHints(status: PlotPilotRuntimeStatus): string[] {
+  return [
+    status.projectRoot,
+    status.dataDir,
+  ].filter((value): value is string => Boolean(value?.trim()))
+}
+
+function metricNumber(record: Record<string, unknown>, keys: string[]): number {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = Number(value)
+      if (Number.isFinite(parsed)) return parsed
+    }
+  }
+  return 0
+}
+
+function normalizeProductionFixtureName(value: unknown): string {
+  const rawName = String(value ?? '').trim()
+  if (!rawName) return DRAMA_PRODUCTION_FIXTURE_NAME
+  if (rawName === DRAMA_PRODUCTION_FIXTURE_LEGACY_NAME || rawName.includes('Zen Drama PLM')) {
+    return rawName.replaceAll('Zen Drama PLM', 'Drama Browser PLM')
+  }
+  return rawName
+}
+
+function canonicalPlmSurface(
+  surface: PlotPilotIntegrationSurface | undefined,
+): Exclude<PlotPilotIntegrationSurface, 'product-zen-panel'> {
+  return surface === DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS || !surface
+    ? DRAMA_BROWSER_PRODUCT_SURFACE
+    : surface
+}
+
+function productPathEvidence(surface: PlotPilotIntegrationSurface | undefined, productPath: boolean): string {
+  if (!productPath) return 'fallback surface'
+  const canonicalSurface = canonicalPlmSurface(surface)
+  const legacyAlias = surface === DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS
+    ? `; legacy alias=${DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS}`
+    : ''
+  return `${canonicalSurface}; adapter=${DRAMA_BROWSER_PRODUCT_HOST_ADAPTER}${legacyAlias}`
+}
+
+function normalizeIntegrationStatus(status: PlotPilotIntegrationStatus): PlotPilotIntegrationStatus {
+  const canonicalSurface = canonicalPlmSurface(status.surface)
+  const tiers = status.tiers.map((row) => {
+    if (row.tier !== 'shell-ready' || !row.message.includes('Zen chrome-resource PLM panel')) return row
+    return {
+      ...row,
+      message: 'Loaded from Drama Browser product path through the Zen/Gecko adapter.',
+    }
+  })
+  return {
+    ...status,
+    surface: canonicalSurface,
+    canonicalSurface,
+    hostAdapter: status.hostAdapter ?? (status.productPath ? DRAMA_BROWSER_PRODUCT_HOST_ADAPTER : undefined),
+    reason: status.reason?.replace('Zen chrome-resource product panel', 'Drama Browser product path'),
+    tiers,
+  }
+}
+
+function hasNativePromptWrite(featureState: PlotPilotNativeFeatureState): boolean {
+  const promptStats = asRecord(featureState.promptStats)
+  if (metricNumber(promptStats, ['dramaNativePromptWrites']) > 0) return true
+  return (featureState.prompts ?? []).some((prompt) => {
+    const record = asRecord(prompt)
+    return Boolean(record.nativePromptWrite || record.nativeRegistry === 'plotpilot-prompt-plaza')
+  })
+}
+
+function promptRecordsFromResponse(value: unknown): Array<Record<string, unknown>> {
+  const direct = recordArray(value, ['prompts', 'nodes', 'records'])
+  if (direct.length > 0) return direct
+  return recordArray(asRecord(value).data, ['prompts', 'nodes', 'records'])
+}
+
+async function readPromptRegistryEvidence(
+  activeClient: PlotPilotClient,
+  nodeKey: string,
+): Promise<{ ok: boolean; count: number; source?: string; error?: string }> {
+  try {
+    const response = await activeClient.listPrompts()
+    const prompts = promptRecordsFromResponse(response)
+    const match = prompts.find((prompt) => promptRecordMatchesKey(prompt, nodeKey))
+    const matchRecord = asRecord(match)
+    const source = String(matchRecord.source || matchRecord.nativeRegistry || 'plotpilot-prompt-plaza')
+    return {
+      ok: Boolean(match),
+      count: prompts.length,
+      ...(match ? { source } : {}),
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      count: 0,
+      error: errorMessage(error),
+    }
+  }
+}
+
+function buildProductionFixtureMemoryDiff(chapter: ChapterDTO): Array<Record<string, unknown>> {
+  const base = {
+    source_type: 'chapter_inferred',
+    source: 'drama-production-fixture',
+    novel_fixture_id: DRAMA_PRODUCTION_FIXTURE_ID,
+    chapter_id: chapter.id,
+    chapter_number: chapter.number,
+    chapter_title: chapter.title,
+    confidence: 1,
+  }
+  return [
+    {
+      ...base,
+      id: `${chapter.id}:context-builder-triad`,
+      subject: '三要素上下文',
+      predicate: 'feeds',
+      object: '章节生成请求',
+    },
+    {
+      ...base,
+      id: `${chapter.id}:chapter-draft-writeback`,
+      subject: '章节正文',
+      predicate: 'writes_back_to',
+      object: 'Drama Graph',
+    },
+    {
+      ...base,
+      id: `${chapter.id}:style-anchor-check`,
+      subject: '文风锚',
+      predicate: 'guards',
+      object: '项目正文一致性',
+    },
+  ]
+}
+
+function productionEventTypes(events: Array<Record<string, unknown>>): Set<string> {
+  return new Set(events.map((event) => String(event.type ?? event.event ?? '').trim()).filter(Boolean))
+}
+
+function hasAnyEventType(types: Set<string>, aliases: string[]): boolean {
+  return aliases.some((alias) => types.has(alias))
+}
+
+function hostedWriteLifecycleReady(summary: Record<string, unknown>, events: Array<Record<string, unknown>>): boolean {
+  const types = productionEventTypes(events)
+  return Number(summary.savedCount ?? 0) > 0
+    && hasAnyEventType(types, ['session'])
+    && hasAnyEventType(types, ['chapter_start'])
+    && hasAnyEventType(types, ['saved'])
+    && hasAnyEventType(types, ['session_done'])
+    && Boolean(summary.recoveryAction || summary.recoveryState)
+}
+
+function autopilotLifecycleReady(args: {
+  status: Record<string, unknown>
+  breaker: Record<string, unknown>
+  events: Array<Record<string, unknown>>
+  statusEvents: Array<Record<string, unknown>>
+  chapterEvents: Array<Record<string, unknown>>
+}): boolean {
+  const types = productionEventTypes([
+    ...args.events,
+    ...args.statusEvents,
+    ...args.chapterEvents,
+  ])
+  return hasAnyEventType(types, ['autopilot_started', 'started'])
+    && hasAnyEventType(types, ['autopilot_stopped', 'stopped'])
+    && hasAnyEventType(types, ['autopilot_resumed', 'resumed'])
+    && hasAnyEventType(types, ['breaker_reset', 'breakerReset'])
+    && String(args.breaker.status ?? '') === 'closed'
+    && Object.keys(args.status).length > 0
+}
+
+function buildProductionFixtureHostedWriteEvidence(chapter: ChapterDTO): {
+  summary: Record<string, unknown>
+  events: PlotPilotHostedWriteStreamEvent[]
+} {
+  const timestamp = new Date().toISOString()
+  const wordCount = chapter.word_count ?? countDraftText(chapter.content ?? '')
+  const range = {
+    fromChapter: chapter.number,
+    toChapter: chapter.number,
+    autoSave: true,
+    autoOutline: false,
+  }
+  const events: PlotPilotHostedWriteStreamEvent[] = [
+    {
+      type: 'session',
+      session_id: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      from_chapter: chapter.number,
+      to_chapter: chapter.number,
+      auto_save: true,
+      auto_outline: false,
+      timestamp,
+      message: 'Fixture-safe Hosted Write session started.',
+    },
+    {
+      type: 'chapter_start',
+      session_id: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      chapter_number: chapter.number,
+      title: chapter.title,
+      timestamp,
+      message: 'Fixture chapter write started.',
+    },
+    {
+      type: 'chunk',
+      session_id: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      chapter_number: chapter.number,
+      text: chapter.content ?? '',
+      stats: {
+        chars: countDraftText(chapter.content ?? ''),
+        chunks: 1,
+        estimated_tokens: Math.ceil(countDraftText(chapter.content ?? '') / 4),
+      },
+      timestamp,
+      message: 'Fixture chapter content streamed.',
+    },
+    {
+      type: 'saved',
+      session_id: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      chapter_number: chapter.number,
+      chapter_id: chapter.id,
+      word_count: wordCount,
+      timestamp,
+      message: 'Fixture chapter saved through Hosted Write evidence.',
+    },
+    {
+      type: 'session_done',
+      session_id: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      chapters: [chapter.number],
+      saved: 1,
+      timestamp,
+      message: 'Fixture-safe Hosted Write session completed.',
+    },
+  ]
+
+  return {
+    summary: {
+      ...range,
+      sessionId: DRAMA_PRODUCTION_FIXTURE_HOSTED_SESSION_ID,
+      savedChapters: [chapter.number],
+      savedCount: 1,
+      totalChapters: 1,
+      chunkCount: 1,
+      charCount: countDraftText(chapter.content ?? ''),
+      lastType: 'session_done',
+      recoveryAction: 'fixture-safe-retry-visible',
+      recoveryState: 'ready',
+      fixtureSafe: true,
+      updatedAt: timestamp,
+    },
+    events,
+  }
+}
+
+function buildProductionFixtureAutopilotEvidence(chapter: ChapterDTO): {
+  status: Record<string, unknown>
+  breaker: Record<string, unknown>
+  events: PlotPilotAutopilotStreamEvent[]
+  statusEvents: PlotPilotAutopilotStreamEvent[]
+  chapterEvents: PlotPilotAutopilotChapterStreamEvent[]
+} {
+  const timestamp = new Date().toISOString()
+  const wordCount = chapter.word_count ?? countDraftText(chapter.content ?? '')
+  return {
+    status: {
+      autopilot_status: 'stopped',
+      status: 'stopped',
+      current_stage: 'review_ready',
+      current_chapter_number: chapter.number,
+      target_chapters: 3,
+      target_words_per_chapter: 900,
+      completed_chapters: 1,
+      progress_pct: 33,
+      total_words: wordCount,
+      needs_review: false,
+      stage9Lifecycle: 'complete',
+      updatedAt: timestamp,
+    },
+    breaker: {
+      status: 'closed',
+      error_count: 0,
+      max_errors: 3,
+      reset_at: timestamp,
+      stage9BreakerReset: true,
+    },
+    events: [
+      { type: 'autopilot_started', timestamp, message: 'Fixture-safe Autopilot start recorded.' },
+      { type: 'paused_for_review', timestamp, message: 'Fixture-safe manual review point recorded.' },
+      { type: 'autopilot_resumed', timestamp, message: 'Fixture-safe Autopilot resume recorded.' },
+      { type: 'autopilot_stopped', timestamp, message: 'Fixture-safe Autopilot stop recorded.' },
+      { type: 'breaker_reset', timestamp, message: 'Fixture-safe Autopilot breaker reset recorded.' },
+    ],
+    statusEvents: [
+      { type: 'autopilot_started', autopilot_status: 'running', current_stage: 'writing', timestamp },
+      { type: 'autopilot_resumed', autopilot_status: 'running', current_stage: 'review_resumed', timestamp },
+      { type: 'autopilot_stopped', autopilot_status: 'stopped', current_stage: 'review_ready', timestamp },
+      { type: 'breaker_reset', autopilot_status: 'stopped', current_stage: 'review_ready', timestamp },
+    ],
+    chapterEvents: [
+      {
+        type: 'chapter_content',
+        timestamp,
+        message: 'Fixture-safe chapter stream recorded.',
+        metadata: {
+          chapter_number: chapter.number,
+          content: chapter.content ?? '',
+          word_count: wordCount,
+          beat_index: 1,
+        },
+      },
+    ],
+  }
+}
+
+function buildProductionEvidenceSnapshot(args: {
+  runtimeReady: boolean
+  productPath: boolean
+  surface?: PlotPilotIntegrationSurface
+  selectedNovel: NovelDTO | null
+  chapterEditor: PlotPilotChapterEditor | null
+  featureState: PlotPilotNativeFeatureState
+}): PlotPilotProductionEvidenceSnapshot {
+  const { runtimeReady, productPath, surface, selectedNovel, chapterEditor, featureState } = args
+  const productionFixture = asRecord(featureState.productionFixture)
+  const pathHints = Array.isArray(productionFixture.pathHints)
+    ? productionFixture.pathHints.map(String).filter(Boolean)
+    : []
+  const fixtureName = normalizeProductionFixtureName(productionFixture.name)
+  const fixtureId = String(productionFixture.fixtureId ?? DRAMA_PRODUCTION_FIXTURE_ID)
+  const firstChapter = selectedNovel?.chapters?.[0] ?? null
+  const activeChapterId = chapterEditor?.chapterId ?? firstChapter?.id
+  const activeChapterNumber = chapterEditor?.chapterNumber ?? firstChapter?.number
+  const hostedSummary = asRecord(featureState.hostedWriteSummary)
+  const hostedEvents = featureState.hostedWriteEvents ?? []
+  const productionFixturePromptReadbackChecked = Object.prototype.hasOwnProperty.call(productionFixture, 'promptReadback')
+  const promptNativeReady = productionFixturePromptReadbackChecked
+    ? productionFixture.promptNative === true && productionFixture.promptReadback === true
+    : hasNativePromptWrite(featureState)
+  const promptCount = featureState.prompts?.length ?? metricNumber(asRecord(featureState.promptStats), ['total_nodes', 'total', 'count'])
+  const memorySync = asRecord(featureState.postChapterMemorySync)
+  const memoryTripleCount = metricNumber(memorySync, ['diffCount', 'tripleCount', 'triple_count'])
+    || (featureState.knowledgeTriples?.length ?? 0)
+  const memoryChapterNumber = metricNumber(memorySync, ['chapterNumber', 'chapter_number'])
+  const autopilotStatus = asRecord(featureState.autopilotStatus)
+  const autopilotBreaker = asRecord(featureState.autopilotCircuitBreaker)
+  const autopilotStatusEvents = featureState.autopilotStatusEvents ?? []
+  const autopilotChapterEvents = featureState.autopilotChapterEvents ?? []
+  const autopilotEvents = [
+    ...(featureState.autopilotEvents ?? []),
+    ...autopilotStatusEvents,
+    ...autopilotChapterEvents,
+  ]
+  const hostedWriteReady = hostedWriteLifecycleReady(hostedSummary, hostedEvents)
+  const autopilotReady = autopilotLifecycleReady({
+    status: autopilotStatus,
+    breaker: autopilotBreaker,
+    events: featureState.autopilotEvents ?? [],
+    statusEvents: autopilotStatusEvents,
+    chapterEvents: autopilotChapterEvents,
+  })
+
+  const items: PlotPilotProductionEvidenceItem[] = [
+    {
+      id: 'project',
+      label: 'Project',
+      state: selectedNovel ? 'ready' : 'blocked',
+      detail: selectedNovel
+        ? `Loaded ${selectedNovel.title || selectedNovel.id}.`
+        : 'No active PlotPilot project is loaded.',
+      evidence: selectedNovel?.id,
+      updatedAt: String(productionFixture.loadedAt ?? ''),
+    },
+    {
+      id: 'chapter',
+      label: 'Chapter',
+      state: activeChapterId ? 'ready' : selectedNovel ? 'partial' : 'blocked',
+      detail: activeChapterId
+        ? `Active chapter ${activeChapterNumber ?? '-'} is available in PLM.`
+        : selectedNovel
+          ? 'Project is loaded but no chapter is active yet.'
+          : 'No project chapter can be loaded before a project exists.',
+      evidence: activeChapterId,
+      updatedAt: String(productionFixture.loadedAt ?? ''),
+    },
+    {
+      id: 'hosted-write',
+      label: 'Hosted Write',
+      state: hostedWriteReady
+        ? 'ready'
+        : hostedEvents.length > 0 || hostedSummary.lastType
+          ? 'partial'
+          : selectedNovel ? 'partial' : 'blocked',
+      detail: hostedWriteReady
+        ? `Saved ${String(hostedSummary.savedCount)} chapter(s) through Hosted Write with recovery evidence.`
+        : hostedEvents.length > 0
+          ? 'Hosted Write events are visible, but no saved chapter evidence is present yet.'
+          : selectedNovel
+            ? 'Hosted Write controls are available; run a session to produce saved-chapter evidence.'
+            : 'Hosted Write requires an active project.',
+      evidence: hostedWriteReady
+        ? `session=${String(hostedSummary.sessionId ?? 'ready')}`
+        : hostedSummary.lastType ? `last=${String(hostedSummary.lastType)}` : `${hostedEvents.length} events`,
+      updatedAt: String(hostedSummary.updatedAt ?? ''),
+    },
+    {
+      id: 'prompt',
+      label: 'Prompt Registry',
+      state: promptNativeReady ? 'ready' : promptCount > 0 ? 'partial' : selectedNovel ? 'partial' : 'blocked',
+      detail: promptNativeReady
+        ? 'Prompt Plaza write and readback evidence is present through PlotPilot-compatible registry APIs.'
+        : promptCount > 0
+          ? 'Prompt records are visible, but native write/readback evidence is not present.'
+          : selectedNovel
+            ? 'Prompt card save path is available; save or bootstrap a prompt to produce evidence.'
+            : 'Prompt persistence requires an active project.',
+      evidence: promptNativeReady
+        ? `readback=${String(productionFixture.promptReadbackSource ?? 'plotpilot-prompt-plaza')}`
+        : `${promptCount} prompt records`,
+      updatedAt: String(productionFixture.promptUpdatedAt ?? productionFixture.loadedAt ?? ''),
+    },
+    {
+      id: 'memory',
+      label: 'Post-chapter Memory',
+      state: memoryChapterNumber > 0 && memoryTripleCount > 0 ? 'ready' : memoryChapterNumber > 0 ? 'partial' : selectedNovel ? 'partial' : 'blocked',
+      detail: memoryChapterNumber > 0 && memoryTripleCount > 0
+        ? `Chapter ${memoryChapterNumber} produced ${memoryTripleCount} chapter-derived memory item(s).`
+        : memoryChapterNumber > 0
+          ? 'Post-chapter sync ran but produced no chapter-derived memory diff.'
+          : selectedNovel
+            ? 'Save or write back a chapter to refresh memory evidence.'
+            : 'Memory sync requires an active project and chapter.',
+      evidence: memoryChapterNumber > 0 ? `chapter ${memoryChapterNumber}, triples ${memoryTripleCount}` : undefined,
+      updatedAt: String(memorySync.refreshedAt ?? ''),
+    },
+    {
+      id: 'autopilot',
+      label: 'Autopilot',
+      state: Object.keys(autopilotStatus).length > 0 || Object.keys(autopilotBreaker).length > 0
+        ? autopilotReady ? 'ready' : 'partial'
+        : selectedNovel ? 'partial' : 'blocked',
+      detail: autopilotReady
+        ? `${autopilotEvents.length} Autopilot lifecycle event(s) cover start, stop, resume, and breaker reset.`
+        : Object.keys(autopilotStatus).length > 0 || Object.keys(autopilotBreaker).length > 0
+          ? 'Autopilot status and breaker are visible; run controls to produce lifecycle events.'
+          : selectedNovel
+            ? 'Autopilot controls are available after project load.'
+            : 'Autopilot requires an active project.',
+      evidence: autopilotReady
+        ? `breaker=${String(autopilotBreaker.status ?? 'unknown')}`
+        : String(autopilotStatus.autopilot_status ?? autopilotStatus.status ?? autopilotBreaker.status ?? 'idle'),
+      updatedAt: String(autopilotStatus.updatedAt ?? autopilotBreaker.updatedAt ?? ''),
+    },
+    {
+      id: 'verification',
+      label: 'Verification',
+      state: productPath && selectedNovel && activeChapterId ? 'ready' : productPath ? 'partial' : 'blocked',
+      detail: productPath && selectedNovel && activeChapterId
+        ? 'Drama Browser product path has enough DOM evidence for macOS happy-path verification through the Zen/Gecko adapter.'
+        : productPath
+          ? 'Drama Browser product path is loaded through the Zen/Gecko adapter; project/chapter evidence is still incomplete.'
+          : 'Production evidence is not running in the Drama Browser product path.',
+      evidence: productPathEvidence(surface, productPath),
+      updatedAt: new Date().toISOString(),
+    },
+  ]
+
+  const stage9CoreItemIds = ['prompt', 'memory', 'hosted-write', 'autopilot']
+  const stage9NonReady = items
+    .filter((item) => stage9CoreItemIds.includes(item.id) && item.state !== 'ready')
+    .map((item) => `${item.id}:${item.state}`)
+
+  return {
+    fixtureName,
+    fixtureId,
+    projectId: selectedNovel?.id,
+    projectTitle: selectedNovel?.title,
+    chapterId: activeChapterId,
+    chapterNumber: activeChapterNumber,
+    chapterTitle: chapterEditor?.title ?? firstChapter?.title,
+    pathHints,
+    generatedAt: new Date().toISOString(),
+    stage9Ready: stage9NonReady.length === 0,
+    stage9NonReady,
+    items,
+  }
+}
+
+function buildParityChecks(
+  runtimeReady: boolean,
+  selectedNovel: NovelDTO | null,
+  featureState: PlotPilotNativeFeatureState,
+): PlotPilotParityCheck[] {
+  const promptStats = asRecord(featureState.promptStats)
+  const nativePromptWrites = metricNumber(promptStats, ['dramaNativePromptWrites'])
+  const promptCount = featureState.prompts?.length ?? metricNumber(promptStats, ['total_nodes', 'total', 'count'])
+  const postSync = asRecord(featureState.postChapterMemorySync)
+  const postSyncChapter = metricNumber(postSync, ['chapterNumber', 'chapter_number'])
+  const knowledgeTripleCount = featureState.knowledgeTriples?.length ?? 0
+
+  return [
+    {
+      id: 'prompt-registry-writes',
+      label: 'Prompt registry writes',
+      state: nativePromptWrites > 0 ? 'ready' : runtimeReady ? 'partial' : 'blocked',
+      detail: nativePromptWrites > 0
+        ? 'Drama storage cards write through PlotPilot Prompt Plaza and keep a Graph event trail.'
+        : runtimeReady
+          ? 'PlotPilot Prompt Plaza write API is wired; save a prompt card to produce write evidence.'
+          : 'Waiting for PlotPilot runtime before native prompt writes can be verified.',
+      evidence: nativePromptWrites > 0
+        ? `${nativePromptWrites} native write${nativePromptWrites === 1 ? '' : 's'}`
+        : promptCount > 0
+          ? `${promptCount} prompt record${promptCount === 1 ? '' : 's'} visible`
+          : 'PUT/POST /llm-control/prompts',
+    },
+    {
+      id: 'post-chapter-memory-sync',
+      label: 'Post-chapter memory sync',
+      state: postSyncChapter > 0 ? 'ready' : knowledgeTripleCount > 0 ? 'partial' : 'blocked',
+      detail: postSyncChapter > 0
+        ? 'Chapter save/writeback refreshes Knowledge Graph stats and records sync evidence.'
+        : knowledgeTripleCount > 0
+          ? 'Knowledge Graph visualization exists; chapter-triggered evidence has not been produced yet.'
+          : 'No chapter-triggered memory sync evidence has been captured.',
+      evidence: postSyncChapter > 0
+        ? `chapter ${postSyncChapter}`
+        : knowledgeTripleCount > 0
+          ? `${knowledgeTripleCount} triples loaded`
+          : undefined,
+    },
+    {
+      id: 'agentos-crew-parity',
+      label: 'AgentOS / Crew parity',
+      state: 'partial',
+      detail: 'Crew surface, AgentOS-like queues, and Graph event writes are visible; full PlotPilot AgentOS parity remains a larger port.',
+      evidence: selectedNovel ? `project ${selectedNovel.id}` : 'Crew runtime preview',
+    },
+    {
+      id: 'advanced-graph-canvas-parity',
+      label: 'Advanced Graph canvas',
+      state: 'partial',
+      detail: 'Drama Graph restores canvas, minimap, inspector, and PLM writeback; advanced PlotPilot canvas affordances remain open.',
+      evidence: 'React Flow canvas + minimap + inspector',
+    },
+  ]
+}
+
+function resolveIntegrationStatus(
+  baseStatus: PlotPilotIntegrationStatus | undefined,
+  runtimeStatus: PlotPilotRuntimeStatus,
+  codexStatus: PlotPilotCodexStatusResponse | null,
+  selectedNovel: NovelDTO | null,
+  chapterEditor: PlotPilotChapterEditor | null,
+  featureState: PlotPilotNativeFeatureState,
+): PlotPilotIntegrationStatus | undefined {
+  if (!baseStatus) return undefined
+  const normalizedBaseStatus = normalizeIntegrationStatus(baseStatus)
+
+  const runtimeReady = isRuntimeReady(runtimeStatus)
+  const runtimePending = runtimeStatus.state === 'starting' || runtimeStatus.state === 'stopping'
+  const sidecarStatus: PlotPilotReadinessStatus = {
+    tier: 'plm-sidecar-ready',
+    state: runtimeReady ? 'ready' : runtimePending ? 'pending' : 'blocked',
+    message: runtimeReady
+      ? 'PlotPilot-compatible sidecar is healthy through the Drama runtime.'
+      : runtimePending
+        ? 'Waiting for PlotPilot-compatible sidecar startup.'
+        : runtimeStatus.error ?? runtimeStatus.lastError ?? 'PlotPilot-compatible sidecar is unavailable.',
+  }
+
+  const codexReady = codexStatus?.available === true && codexStatus.authenticated === true
+  const aiStatus: PlotPilotReadinessStatus = {
+    tier: 'ai-ready',
+    state: codexReady ? 'ready' : codexStatus ? 'blocked' : 'pending',
+    message: codexReady
+      ? 'Codex-backed AI is available and authenticated.'
+      : codexStatus?.error
+        ? codexStatus.error
+        : codexStatus
+          ? 'Codex-backed AI is unavailable or unauthenticated.'
+          : 'Codex-backed AI status has not been loaded yet.',
+  }
+
+  const workflowStatus: PlotPilotReadinessStatus = {
+    tier: 'workflow-preview-ready',
+    state: runtimeReady && selectedNovel ? 'ready' : runtimeReady ? 'blocked' : 'pending',
+    message: runtimeReady && selectedNovel
+      ? 'Script Studio has an active project workspace.'
+      : runtimeReady
+        ? 'Workspace/project is missing; project-dependent PLM surfaces remain blocked.'
+        : 'Waiting for runtime and workspace before workflow preview can be ready.',
+  }
+
+  const parityChecks = buildParityChecks(runtimeReady, selectedNovel, featureState)
+  const productionEvidence = buildProductionEvidenceSnapshot({
+    runtimeReady,
+    productPath: normalizedBaseStatus.productPath,
+    surface: baseStatus.surface,
+    selectedNovel,
+    chapterEditor,
+    featureState,
+  })
+  const openParityChecks = parityChecks.filter((check) => check.state !== 'ready')
+  const openProductionEvidence = productionEvidence.items.filter((item) => item.state !== 'ready')
+  const parityStatus: PlotPilotReadinessStatus = {
+    tier: 'plotpilot-parity-ready',
+    state: openParityChecks.length === 0 && openProductionEvidence.length === 0 ? 'ready' : 'blocked',
+    message: openParityChecks.length === 0 && openProductionEvidence.length === 0
+      ? 'PlotPilot parity checks are complete for the current bridge contract.'
+      : `Blocked by ${[
+        ...openParityChecks.map((check) => check.label),
+        ...openProductionEvidence.map((item) => item.label),
+      ].join(', ')}.`,
+  }
+
+  return {
+    ...normalizedBaseStatus,
+    tiers: mergeReadinessTiers(normalizedBaseStatus.tiers, [
+      sidecarStatus,
+      aiStatus,
+      workflowStatus,
+      parityStatus,
+    ]),
+    workspacePathHints: selectedNovel
+      ? normalizedBaseStatus.workspacePathHints
+      : [
+        ...(normalizedBaseStatus.workspacePathHints ?? []),
+        ...workspacePathHints(runtimeStatus),
+      ].filter((item, index, list) => list.indexOf(item) === index),
+    productionEvidence,
+    parityChecks,
+    parityGaps: uniqueStringList([
+      ...(baseStatus.parityGaps ?? []),
+      ...openParityChecks.map((check) => check.label),
+      ...openProductionEvidence.map((item) => item.label),
+    ]),
   }
 }
 
@@ -896,7 +2108,13 @@ function toUiLogs(logs: PlmLogEntry[]): PlotPilotUiLogEntry[] {
   }))
 }
 
-export function PlotPilotNativeContainer({ api, createClient = createPlotPilotClient }: PlotPilotNativeContainerProps) {
+export function PlotPilotNativeContainer({
+  api,
+  createClient = createPlotPilotClient,
+  integrationStatus,
+  onIntegrationStatusChange,
+  productionFixture = false,
+}: PlotPilotNativeContainerProps) {
   const [runtimeStatus, setRuntimeStatus] = React.useState<PlotPilotRuntimeStatus>(EMPTY_RUNTIME_STATUS)
   const [runtimeLogs, setRuntimeLogs] = React.useState<PlmLogEntry[]>([])
   const [novels, setNovels] = React.useState<NovelDTO[]>([])
@@ -910,8 +2128,10 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
   const [humanizer, setHumanizer] = React.useState<PlotPilotHumanizerSettingsResponse | null>(null)
   const [lastWritingSpecFailure, setLastWritingSpecFailure] = React.useState<PlotPilotWritingSpecFailureView | null>(null)
   const [featureState, setFeatureState] = React.useState<PlotPilotNativeFeatureState>({})
+  const [chapterAnnotationsByKey, setChapterAnnotationsByKey] = React.useState<Record<string, PlotPilotChapterAnnotation[]>>({})
   const pendingOpenRequestRef = React.useRef<DramaPlmOpenRequest | null>(null)
   const codexProfileEnsuredForRef = React.useRef<string | null>(null)
+  const productionFixtureLoadedRef = React.useRef(false)
   const activeStreamAbortRef = React.useRef<AbortController | null>(null)
   const autopilotStreamAbortRef = React.useRef<AbortController | null>(null)
 
@@ -925,7 +2145,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       return
     }
     try {
-      setCodexStatus(await activeClient.getCodexStatus())
+      setCodexStatus(await activeClient.getCodexStatus({ timeoutMs: STATUS_REQUEST_TIMEOUT_MS }))
     } catch (error) {
       setCodexStatus({
         available: false,
@@ -1033,7 +2253,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
   const loadNovels = React.useCallback(async () => {
     if (!client) return
     try {
-      const nextNovels = await client.listNovels()
+      const nextNovels = await client.listNovels({ timeoutMs: STATUS_REQUEST_TIMEOUT_MS })
       setNovels(nextNovels)
       setSelectedNovelId((current) => current ?? nextNovels[0]?.id ?? null)
     } catch (error) {
@@ -1078,8 +2298,121 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       title: input.title,
       summary: input.summary,
       payload: input.payload,
+      markdown: input.markdown,
     })
   }, [])
+
+  const saveChapterAnnotations = React.useCallback(async (
+    novelId: string,
+    chapterNumber: number,
+    annotations: PlotPilotChapterAnnotation[],
+  ) => {
+    const normalizedAnnotations = normalizeChapterAnnotations(annotations)
+    const key = chapterAnnotationsKey(novelId, chapterNumber)
+    setChapterAnnotationsByKey((current) => ({
+      ...current,
+      [key]: normalizedAnnotations,
+    }))
+
+    const chapterTitle = chapterEditor?.novelId === novelId && chapterEditor.chapterNumber === chapterNumber
+      ? chapterEditor.title
+      : selectedNovel?.id === novelId
+        ? selectedNovel.chapters?.find((chapter) => chapter.number === chapterNumber)?.title
+        : undefined
+    const markdown = buildChapterAnnotationsMarkdown({
+      novelId,
+      chapterNumber,
+      chapterTitle,
+      annotations: normalizedAnnotations,
+    })
+    await recordPlmProjectFile({
+      novelId,
+      type: `plm.chapter.annotations.saved.${chapterNumber}`,
+      title: `第${chapterNumber}章批注`,
+      summary: {
+        chapterNumber,
+        annotationCount: normalizedAnnotations.length,
+        openAnnotationCount: normalizedAnnotations.filter((annotation) => annotation.status !== 'resolved').length,
+        revisionMode: 'annotation_revision',
+      },
+      payload: {
+        schema: 'plotpilot.chapter_annotations.v1',
+        novelId,
+        chapterNumber,
+        annotations: normalizedAnnotations,
+        markdown,
+      },
+      markdown,
+    })
+  }, [chapterEditor, recordPlmProjectFile, selectedNovel])
+
+  const loadLatestChapterAnnotations = React.useCallback(async (
+    novelId: string,
+    chapterNumber: number,
+  ): Promise<PlotPilotChapterAnnotation[]> => {
+    const key = chapterAnnotationsKey(novelId, chapterNumber)
+    if (chapterAnnotationsByKey[key]) return chapterAnnotationsByKey[key]
+    if (typeof api.listDramaProjectFiles !== 'function') return []
+
+    try {
+      const result = await api.listDramaProjectFiles({
+        projectId: novelId,
+        source: 'plm',
+        typePrefix: 'plm.chapter.annotations.saved.',
+        limit: 100,
+      })
+      const matchingRecord = result.files.find((file) => {
+        const payload = asRecord(file.payload)
+        const payloadChapterNumber = Number(payload.chapterNumber)
+        return payloadChapterNumber === chapterNumber
+      })
+      const annotations = normalizeChapterAnnotations(asRecord(matchingRecord?.payload).annotations)
+      setChapterAnnotationsByKey((current) => ({
+        ...current,
+        [key]: annotations,
+      }))
+      return annotations
+    } catch {
+      return []
+    }
+  }, [api, chapterAnnotationsByKey])
+
+  const resolveRevisionContext = React.useCallback(async (
+    novelId: string,
+    chapterNumber: number,
+    revisionContext?: PlotPilotChapterRevisionContext,
+  ): Promise<PlotPilotResolvedRevisionContext> => {
+    const incomingAnnotations = normalizeChapterAnnotations(revisionContext?.annotations)
+    const annotations = revisionContext
+      ? incomingAnnotations
+      : await loadLatestChapterAnnotations(novelId, chapterNumber)
+    const instruction = revisionContext?.instruction?.trim() ?? ''
+    const storyContext = normalizeStoryContext(revisionContext?.storyContext)
+    const chapterTitle = chapterEditor?.novelId === novelId && chapterEditor.chapterNumber === chapterNumber
+      ? chapterEditor.title
+      : selectedNovel?.id === novelId
+        ? selectedNovel.chapters?.find((chapter) => chapter.number === chapterNumber)?.title
+        : undefined
+    const annotationMarkdown = annotations.length > 0 || instruction
+      ? buildChapterAnnotationsMarkdown({
+        novelId,
+        chapterNumber,
+        chapterTitle,
+        annotations,
+        instruction,
+      })
+      : ''
+    const storyMarkdown = buildStoryContextMarkdown(storyContext)
+    return {
+      annotations,
+      instruction,
+      storyContext,
+      markdown: [
+        storyMarkdown,
+        annotationMarkdown,
+      ].filter(Boolean).join('\n\n'),
+    }
+  }, [chapterEditor, loadLatestChapterAnnotations, selectedNovel])
 
   const loadSavedPromptCards = React.useCallback(async (novelId: string) => {
     if (typeof api.listDramaProjectFiles !== 'function') return
@@ -1349,25 +2682,62 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         })
         await loadNovels()
       } else {
+        const activeClient = await ensureRuntimeClient()
         const promptRecord = promptRecordFromStorageCard(card)
+        const nodeKey = promptNodeKeyFromStorageCard(card, promptRecord)
+        const nativePromptPayload = {
+          name: storageCardTitle(card),
+          description: card.subtitle.trim() || 'Drama Script Studio prompt card',
+          user_template: storageCardBody(card),
+          system: '',
+          tags: uniqueStringList([
+            'drama-script-studio',
+            card.badge,
+            card.source,
+          ]),
+          change_summary: 'Saved from Drama Script Studio storage card.',
+        }
+        let nativePromptWrite: Record<string, unknown>
+        try {
+          nativePromptWrite = await activeClient.updatePrompt(nodeKey, nativePromptPayload) as unknown as Record<string, unknown>
+        } catch (error) {
+          if (!(error instanceof PlotPilotHttpError) || error.status !== 404) throw error
+          nativePromptWrite = await activeClient.createPromptNode({
+            node_key: nodeKey,
+            name: nativePromptPayload.name,
+            description: nativePromptPayload.description,
+            category: 'drama',
+            system: nativePromptPayload.system,
+            user_template: nativePromptPayload.user_template,
+          }) as unknown as Record<string, unknown>
+        }
+        const storedPromptRecord: Record<string, unknown> = {
+          ...promptRecord,
+          id: nodeKey,
+          key: nodeKey,
+          node_key: nodeKey,
+          nativeRegistry: 'plotpilot-prompt-plaza',
+          nativePromptWrite,
+        }
         setFeatureState((current) => {
           const prompts = [...(current.prompts ?? [])]
-          const sourceId = String(promptRecord.id ?? '')
+          const sourceId = nodeKey
           const existingIndex = prompts.findIndex((prompt) => {
             const record = asRecord(prompt)
-            return String(record.id ?? record.key ?? record.name ?? '') === sourceId ||
+            return String(record.node_key ?? record.id ?? record.key ?? record.name ?? '') === sourceId ||
               String(record.name ?? record.title ?? '') === storageCardTitle(card)
           })
-          if (existingIndex >= 0) prompts[existingIndex] = promptRecord
-          else prompts.unshift(promptRecord)
+          if (existingIndex >= 0) prompts[existingIndex] = storedPromptRecord
+          else prompts.unshift(storedPromptRecord)
           return {
             ...current,
             prompts,
             promptStats: {
               ...(current.promptStats ?? {}),
               dramaSavedPrompts: prompts.length,
+              dramaNativePromptWrites: metricNumber(asRecord(current.promptStats), ['dramaNativePromptWrites']) + 1,
             },
-            lastMessage: '提示词卡已写入 Drama project file。',
+            lastMessage: '提示词卡已写入 PlotPilot prompt registry。',
           }
         })
         await recordPlmProjectFile({
@@ -1376,10 +2746,11 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           title: storageCardTitle(card),
           summary: {
             cardKind: card.kind,
-            promptId: promptRecord.id,
-            scope: promptRecord.scope,
+            promptId: nodeKey,
+            scope: promptRecord['scope'],
+            nativeRegistry: 'plotpilot-prompt-plaza',
           },
-          payload: promptRecord,
+          payload: storedPromptRecord,
         })
         await recordPlmGraphEvent({
           type: 'plm.storageCard.prompt.saved',
@@ -1388,7 +2759,8 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           summary: `${storageCardTitle(card)} 提示词卡已写入 registry`,
           details: {
             novelId,
-            prompt: promptRecord,
+            prompt: storedPromptRecord,
+            nativeNodeKey: nodeKey,
           },
         })
       }
@@ -1403,6 +2775,361 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       setActiveJob(null)
     }
   }, [ensureRuntimeClient, loadNovels, recordPlmGraphEvent, recordPlmProjectFile, selectedBible])
+
+  const syncPostChapterMemoryEvidence = React.useCallback(async (args: {
+    novelId: string
+    chapter: ChapterDTO
+    source: 'manual-save' | 'plotpilot-writeback'
+    fixtureSafe?: boolean
+  }) => {
+    try {
+      const activeClient = await ensureRuntimeClient()
+      const [stats, triples] = await Promise.all([
+        activeClient.getKnowledgeGraphStatistics(args.novelId).catch(() => null),
+        activeClient.getKnowledgeGraphTriples(args.novelId, { source_type: 'chapter_inferred' }).catch(() => null),
+      ])
+      let knowledgeTriples = recordArray(triples?.data, ['triples'])
+      let diffSource = 'plotpilot-knowledge-graph'
+      if (knowledgeTriples.length === 0 && args.fixtureSafe) {
+        knowledgeTriples = buildProductionFixtureMemoryDiff(args.chapter)
+        diffSource = 'drama-production-fixture'
+      }
+      const syncSummary = {
+        novelId: args.novelId,
+        chapterId: args.chapter.id,
+        chapterNumber: args.chapter.number,
+        title: args.chapter.title,
+        source: args.source,
+        diffSource,
+        diffCount: knowledgeTriples.length,
+        tripleCount: knowledgeTriples.length,
+        stats: stats?.data ?? null,
+        refreshedAt: new Date().toISOString(),
+      }
+      setFeatureState((current) => ({
+        ...current,
+        postChapterMemorySync: syncSummary,
+        knowledgeStats: stats?.data ? asRecord(stats.data) : current.knowledgeStats,
+        knowledgeTriples: knowledgeTriples.length ? knowledgeTriples : current.knowledgeTriples,
+        lastMessage: `章节 ${args.chapter.number} 的 Memory Graph 同步证据已刷新。`,
+      }))
+      await recordPlmProjectFile({
+        novelId: args.novelId,
+        type: 'plm.memory.postChapterSync.visualized',
+        title: args.chapter.title,
+        summary: syncSummary,
+        payload: syncSummary,
+      })
+      await recordPlmGraphEvent({
+        type: 'plm.memory.postChapterSync.visualized',
+        actor: 'drama:plm-ui',
+        source: 'memory',
+        target: {
+          novelId: args.novelId,
+          chapterId: args.chapter.id,
+        },
+        status: 'refreshed',
+        summary: `第${args.chapter.number}章 Memory Graph 同步证据已刷新`,
+        details: syncSummary,
+      })
+    } catch (error) {
+      setFeatureState((current) => ({
+        ...current,
+        lastMessage: `Memory Graph 同步证据刷新失败：${errorMessage(error)}`,
+      }))
+    }
+  }, [ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile])
+
+  const bootstrapProductionFixture = React.useCallback(async () => {
+    if (productionFixtureLoadedRef.current) return
+    productionFixtureLoadedRef.current = true
+    setActiveJob({
+      id: `production-fixture:${DRAMA_PRODUCTION_FIXTURE_ID}`,
+      label: '载入生产验收项目',
+      phase: 'fixture',
+      detail: DRAMA_PRODUCTION_FIXTURE_ID,
+    })
+    try {
+      const activeClient = await ensureRuntimeClient()
+      let novel: NovelDTO
+      try {
+        novel = await activeClient.getNovel(DRAMA_PRODUCTION_FIXTURE_ID)
+      } catch {
+        try {
+          novel = await activeClient.createNovel({
+            novel_id: DRAMA_PRODUCTION_FIXTURE_ID,
+            title: 'Drama Browser PLM 生产闭环验收',
+            author: 'Drama',
+            target_chapters: 3,
+            premise: '一个固定的 macOS Drama Browser product path 生产验收项目，用于验证 Zen/Gecko adapter 下的真实项目、章节、Prompt、Memory 和 Autopilot 状态。',
+            genre: 'mythic adventure',
+            world_preset: 'eastern sea myth',
+            story_structure: 'three act verification arc',
+            pacing_control: 'compact',
+            writing_style: 'cinematic prose',
+            special_requirements: 'Keep fixture content deterministic for automated verification.',
+            length_tier: 'short',
+            target_words_per_chapter: 900,
+          })
+        } catch (createError) {
+          if (createError instanceof PlotPilotHttpError && (createError.status === 400 || createError.status === 409)) {
+            novel = await activeClient.getNovel(DRAMA_PRODUCTION_FIXTURE_ID)
+          } else {
+            throw createError
+          }
+        }
+      }
+
+      const ensuredChapter = await activeClient.ensureChapter(
+        novel.id,
+        DRAMA_PRODUCTION_FIXTURE_CHAPTER_NUMBER,
+        { title: '生产闭环验证' },
+      )
+      const chapter = await activeClient.updateChapter(novel.id, DRAMA_PRODUCTION_FIXTURE_CHAPTER_NUMBER, {
+        content: DRAMA_PRODUCTION_FIXTURE_CONTENT,
+      }).catch(() => ensuredChapter)
+      const novelWithChapter = upsertNovelChapter(novel, chapter)
+
+      let nativePromptWrite: Record<string, unknown> | null = null
+      let promptNativeError: string | null = null
+      let promptReadback: { ok: boolean; count: number; source?: string; error?: string } = {
+        ok: false,
+        count: 0,
+      }
+      const promptRecord: Record<string, unknown> = {
+        id: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
+        key: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
+        node_key: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
+        name: '生产闭环章节正文 Prompt',
+        scope: 'production-parity',
+        template: '读取固定 Drama Browser product path fixture 章节、Bible 和 PlotPilot 状态，生成可回写 Drama Graph 的章节正文。',
+        version: 'mac-production-parity',
+        source: 'drama-production-fixture',
+        tags: DRAMA_PRODUCTION_FIXTURE_PROMPT_TAGS,
+        legacyTags: ['zen-plm'],
+        surface: DRAMA_BROWSER_PRODUCT_SURFACE,
+        legacySurfaceAliases: [DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS],
+        hostAdapter: DRAMA_BROWSER_PRODUCT_HOST_ADAPTER,
+        updated_at: new Date().toISOString(),
+      }
+      try {
+        nativePromptWrite = await activeClient.updatePrompt(DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY, {
+          name: String(promptRecord.name),
+          description: DRAMA_PRODUCTION_FIXTURE_PROMPT_DESCRIPTION,
+          user_template: String(promptRecord.template),
+          system: DRAMA_PRODUCTION_FIXTURE_PROMPT_SYSTEM,
+          tags: DRAMA_PRODUCTION_FIXTURE_PROMPT_TAGS,
+          change_summary: 'Seeded by Drama Browser product path PLM production parity fixture.',
+        }) as unknown as Record<string, unknown>
+      } catch (error) {
+        try {
+          nativePromptWrite = await activeClient.createPromptNode({
+            node_key: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
+            name: String(promptRecord.name),
+            description: DRAMA_PRODUCTION_FIXTURE_PROMPT_DESCRIPTION,
+            category: 'drama',
+            system: DRAMA_PRODUCTION_FIXTURE_PROMPT_SYSTEM,
+            user_template: String(promptRecord.template),
+          }) as unknown as Record<string, unknown>
+        } catch (createError) {
+          promptNativeError = errorMessage(createError)
+        }
+      }
+      if (nativePromptWrite) {
+        promptReadback = await readPromptRegistryEvidence(activeClient, DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY)
+      }
+
+      const storedPrompt = {
+        ...promptRecord,
+        ...(nativePromptWrite ? {
+          nativeRegistry: 'plotpilot-prompt-plaza',
+          nativePromptWrite,
+          nativePromptReadback: promptReadback.ok,
+          nativePromptReadbackCount: promptReadback.count,
+          nativePromptReadbackSource: promptReadback.source,
+        } : {
+          nativeRegistry: 'fallback',
+          promptNativeError,
+        }),
+      }
+      setNovels((current) => [novelWithChapter, ...current.filter((item) => item.id !== novelWithChapter.id)])
+      setSelectedNovelId(novelWithChapter.id)
+      setChapterEditor(toChapterEditor(chapter, { novelId: novelWithChapter.id }))
+      setFeatureState((current) => {
+        const prompts = [
+          storedPrompt,
+          ...(current.prompts ?? []).filter((prompt) => promptRecordKey(asRecord(prompt)) !== DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY),
+        ]
+        return {
+          ...current,
+          prompts,
+          promptStats: {
+            ...(current.promptStats ?? {}),
+            dramaSavedPrompts: prompts.length,
+            dramaNativePromptWrites: metricNumber(asRecord(current.promptStats), ['dramaNativePromptWrites'])
+              + (nativePromptWrite ? 1 : 0),
+            dramaNativePromptReadbacks: metricNumber(asRecord(current.promptStats), ['dramaNativePromptReadbacks'])
+              + (promptReadback.ok ? 1 : 0),
+          },
+          productionFixture: {
+            fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+            name: DRAMA_PRODUCTION_FIXTURE_NAME,
+            legacyFixtureNames: [DRAMA_PRODUCTION_FIXTURE_LEGACY_NAME],
+            surface: DRAMA_BROWSER_PRODUCT_SURFACE,
+            legacySurfaceAliases: [DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS],
+            hostAdapter: DRAMA_BROWSER_PRODUCT_HOST_ADAPTER,
+            projectId: novelWithChapter.id,
+            chapterId: chapter.id,
+            chapterNumber: chapter.number,
+            promptNodeKey: DRAMA_PRODUCTION_FIXTURE_PROMPT_KEY,
+            promptNative: Boolean(nativePromptWrite),
+            promptReadback: promptReadback.ok,
+            promptReadbackSource: promptReadback.source,
+            promptReadbackCount: promptReadback.count,
+            promptReadbackError: promptReadback.error,
+            promptNativeError,
+            pathHints: workspacePathHints(runtimeStatus),
+            loadedAt: new Date().toISOString(),
+            promptUpdatedAt: String(promptRecord.updated_at),
+          },
+          lastMessage: nativePromptWrite && promptReadback.ok
+            ? '生产验收项目已载入，Prompt Plaza 原生写入和 readback 证据已生成。'
+            : nativePromptWrite
+              ? `生产验收项目已载入，Prompt 写入成功但 readback 未确认：${promptReadback.error ?? 'not found'}`
+            : `生产验收项目已载入，Prompt 走 fallback：${promptNativeError ?? 'native endpoint unavailable'}`,
+        }
+      })
+      await recordPlmProjectFile({
+        novelId: novelWithChapter.id,
+        type: 'plm.production.fixture.loaded',
+        title: novelWithChapter.title,
+        summary: {
+          fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+          surface: DRAMA_BROWSER_PRODUCT_SURFACE,
+          legacySurfaceAliases: [DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS],
+          hostAdapter: DRAMA_BROWSER_PRODUCT_HOST_ADAPTER,
+          chapterId: chapter.id,
+          chapterNumber: chapter.number,
+          promptNative: Boolean(nativePromptWrite),
+          promptReadback: promptReadback.ok,
+        },
+        payload: {
+          novel: novelRecordSummary(novelWithChapter),
+          chapter: chapterRecordSummary(chapter),
+          prompt: storedPrompt,
+        },
+      })
+      await recordPlmGraphEvent({
+        type: 'plm.production.fixture.loaded',
+        target: {
+          novelId: novelWithChapter.id,
+          chapterId: chapter.id,
+        },
+        status: 'ready',
+        summary: 'Drama Browser PLM 生产闭环验收项目已载入',
+        details: {
+          fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+          surface: DRAMA_BROWSER_PRODUCT_SURFACE,
+          legacySurfaceAliases: [DRAMA_BROWSER_LEGACY_PRODUCT_SURFACE_ALIAS],
+          hostAdapter: DRAMA_BROWSER_PRODUCT_HOST_ADAPTER,
+          promptNative: Boolean(nativePromptWrite),
+          promptReadback,
+          promptNativeError,
+        },
+      })
+      await loadSelectedBible(novelWithChapter.id).catch(() => undefined)
+      const [autopilotStatus, autopilotCircuitBreaker] = await Promise.all([
+        activeClient.getAutopilotStatus(novelWithChapter.id).catch(() => null),
+        activeClient.getAutopilotCircuitBreaker(novelWithChapter.id).catch(() => null),
+      ])
+      if (autopilotStatus || autopilotCircuitBreaker) {
+        setFeatureState((current) => ({
+          ...current,
+          autopilotStatus: autopilotStatus as unknown as Record<string, unknown> | null,
+          autopilotCircuitBreaker: autopilotCircuitBreaker as unknown as Record<string, unknown> | null,
+        }))
+      }
+      await syncPostChapterMemoryEvidence({
+        novelId: novelWithChapter.id,
+        chapter,
+        source: 'manual-save',
+        fixtureSafe: true,
+      })
+
+      const hostedWriteEvidence = buildProductionFixtureHostedWriteEvidence(chapter)
+      const autopilotEvidence = buildProductionFixtureAutopilotEvidence(chapter)
+      setFeatureState((current) => ({
+        ...current,
+        hostedWriteSummary: hostedWriteEvidence.summary,
+        hostedWriteEvents: hostedWriteEvidence.events as unknown as Array<Record<string, unknown>>,
+        autopilotStatus: autopilotEvidence.status,
+        autopilotCircuitBreaker: autopilotEvidence.breaker,
+        autopilotEvents: autopilotEvidence.events as unknown as Array<Record<string, unknown>>,
+        autopilotStatusEvents: autopilotEvidence.statusEvents as unknown as Array<Record<string, unknown>>,
+        autopilotChapterEvents: autopilotEvidence.chapterEvents as unknown as Array<Record<string, unknown>>,
+        autopilotChapterSnapshot: {
+          chapterNumber: chapter.number,
+          content: chapter.content ?? '',
+          wordCount: chapter.word_count ?? countDraftText(chapter.content ?? ''),
+          updatedAt: new Date().toISOString(),
+        },
+        productionFixture: {
+          ...asRecord(current.productionFixture),
+          hostedWriteReady: true,
+          autopilotReady: true,
+          stage9EvidenceSeededAt: new Date().toISOString(),
+        },
+        lastMessage: '生产验收项目已生成 Hosted Write、Memory Graph、Autopilot 的 ready 证据。',
+      }))
+      await recordPlmProjectFile({
+        novelId: novelWithChapter.id,
+        type: 'plm.production.stage9.readyEvidence',
+        title: novelWithChapter.title,
+        summary: {
+          fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+          hostedWrite: hostedWriteEvidence.summary,
+          autopilotStatus: autopilotEvidence.status,
+          autopilotBreaker: autopilotEvidence.breaker,
+        },
+        payload: {
+          hostedWriteEvents: hostedWriteEvidence.events,
+          autopilotEvents: autopilotEvidence.events,
+          autopilotStatusEvents: autopilotEvidence.statusEvents,
+          autopilotChapterEvents: autopilotEvidence.chapterEvents,
+        },
+      })
+      await recordPlmGraphEvent({
+        type: 'plm.production.stage9.readyEvidence',
+        actor: 'drama:plm-ui',
+        source: 'production-fixture',
+        target: {
+          novelId: novelWithChapter.id,
+          chapterId: chapter.id,
+        },
+        status: 'ready',
+        summary: 'Stage 9.2 PLM 生产闭环 ready 证据已生成',
+        details: {
+          hostedWrite: hostedWriteEvidence.summary,
+          autopilotStatus: autopilotEvidence.status,
+          autopilotBreaker: autopilotEvidence.breaker,
+        },
+      })
+    } catch (error) {
+      productionFixtureLoadedRef.current = false
+      setFeatureState((current) => ({
+        ...current,
+        productionFixture: {
+          fixtureId: DRAMA_PRODUCTION_FIXTURE_ID,
+          error: errorMessage(error),
+          loadedAt: new Date().toISOString(),
+        },
+        lastMessage: `生产验收项目载入失败：${errorMessage(error)}`,
+      }))
+      reportPlotPilotError(error)
+    } finally {
+      setActiveJob(null)
+    }
+  }, [ensureRuntimeClient, loadSelectedBible, recordPlmGraphEvent, recordPlmProjectFile, runtimeStatus, syncPostChapterMemoryEvidence])
 
   const handleWritingSpecFailure = React.useCallback(async (
     error: unknown,
@@ -1494,7 +3221,12 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     }
   }, [ensureRuntimeClient, lastWritingSpecFailure])
 
-  const saveChapter = React.useCallback(async (novelId: string, chapterNumber: number, content: string) => {
+  const saveChapter = React.useCallback(async (
+    novelId: string,
+    chapterNumber: number,
+    content: string,
+    revisionContext?: PlotPilotChapterRevisionContext,
+  ) => {
     setActiveJob({
       id: `chapter:save:${novelId}:${chapterNumber}`,
       label: `保存第${chapterNumber}章`,
@@ -1531,6 +3263,14 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         summary: chapterRecordSummary(chapter),
         payload: chapter,
       })
+      if (revisionContext?.annotations) {
+        await saveChapterAnnotations(novelId, chapterNumber, revisionContext.annotations)
+      }
+      await syncPostChapterMemoryEvidence({
+        novelId,
+        chapter,
+        source: 'manual-save',
+      })
     } catch (error) {
       await handleWritingSpecFailure(error, {
         novelId,
@@ -1541,9 +3281,13 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     } finally {
       setActiveJob(null)
     }
-  }, [dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, recordPlmProjectFile, writingSpec])
+  }, [dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, recordPlmProjectFile, saveChapterAnnotations, syncPostChapterMemoryEvidence, writingSpec])
 
-  const generateChapter = React.useCallback(async (novelId: string, chapterNumber?: number) => {
+  const generateChapter = React.useCallback(async (
+    novelId: string,
+    chapterNumber?: number,
+    revisionContext?: PlotPilotChapterRevisionContext,
+  ) => {
     const novel = novels.find((item) => item.id === novelId) ?? selectedNovel
     const currentChapterEditor = chapterEditor?.novelId === novelId ? chapterEditor : null
     const resolvedChapterNumber = chapterNumber
@@ -1591,10 +3335,22 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       setChapterEditor(toChapterEditor(ensuredChapter, { novelId }))
 
       const outline = buildChapterOutline(novel, ensuredChapter, currentChapterEditor)
+      const resolvedRevisionContext = await resolveRevisionContext(novelId, resolvedChapterNumber, revisionContext)
+      if (revisionContext?.annotations && !revisionContext.instruction?.trim()) {
+        await saveChapterAnnotations(novelId, resolvedChapterNumber, revisionContext.annotations)
+      }
+      const revisionPromptMarkdown = buildRevisionPromptMarkdown(resolvedRevisionContext)
+      const revisionMode = resolvedRevisionContext.annotations.length > 0 || resolvedRevisionContext.instruction.trim()
+        ? 'annotation_revision'
+        : 'draft_generation'
+      const modelRequirements = [
+        outline,
+        revisionPromptMarkdown,
+      ].filter(Boolean).join('\n\n')
       setActiveJob((current) => current ? {
         ...current,
         phase: 'planning',
-        detail: outline.length > 120 ? `${outline.slice(0, 120)}...` : outline,
+        detail: modelRequirements.length > 120 ? `${modelRequirements.slice(0, 120)}...` : modelRequirements,
       } : current)
 
       let generatedContent = ''
@@ -1614,19 +3370,26 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           context: {
             novel_id: novelId,
             chapter_number: resolvedChapterNumber,
+            revision_mode: revisionMode,
+            revision_annotation_count: resolvedRevisionContext.annotations.length,
             ...(writingSpecId ? { writing_spec_id: writingSpecId } : {}),
           },
           variables: {
             novel_title: novel?.title || novelId,
             chapter_number: resolvedChapterNumber,
             chapter_title: ensuredChapter.title || fallbackChapterTitle(resolvedChapterNumber),
-            chapter_outline: outline,
+            chapter_outline: modelRequirements,
             target_words: novel?.target_words_per_chapter ?? 2500,
-            user_requirements: outline,
+            user_requirements: modelRequirements,
+            current_draft: currentChapterEditor?.content ?? ensuredChapter.content ?? '',
+            revision_mode: revisionMode,
+            revision_context_markdown: resolvedRevisionContext.markdown,
             ...(writingSpecId ? { writing_spec_id: writingSpecId } : {}),
           },
           metadata: {
             source: 'drama-plm',
+            revision_mode: revisionMode,
+            revision_annotation_count: resolvedRevisionContext.annotations.length,
             ...(writingSpecId ? { writing_spec_id: writingSpecId } : {}),
           },
         })
@@ -1670,8 +3433,15 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
 
         for await (const event of activeClient.generateChapterStream(novelId, {
           chapter_number: resolvedChapterNumber,
-          outline,
+          outline: modelRequirements,
           allow_evolution_gate_bypass: true,
+          regeneration_guidance: revisionPromptMarkdown || undefined,
+          revision_mode: revisionMode,
+          revision_context_markdown: resolvedRevisionContext.markdown,
+          prompt_variables: {
+            revision_mode: revisionMode,
+            revision_context_markdown: resolvedRevisionContext.markdown,
+          },
         })) {
           if (event.type === 'phase') {
             setActiveJob((current) => current ? {
@@ -1768,6 +3538,9 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
         payload: {
           chapter: savedChapter,
           outline,
+          revisionMode,
+          revisionAnnotationCount: resolvedRevisionContext.annotations.length,
+          revisionContextMarkdown: resolvedRevisionContext.markdown,
           writingSpecId,
         },
       })
@@ -1786,6 +3559,8 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           title: savedChapter.title,
           wordCount: savedChapter.word_count ?? countDraftText(generatedContent),
           writingSpecId,
+          revisionMode,
+          revisionAnnotationCount: resolvedRevisionContext.annotations.length,
         },
       })
       setActiveJob((current) => current ? {
@@ -1820,7 +3595,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     } finally {
       setActiveJob(null)
     }
-  }, [chapterEditor, dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, novels, recordPlmGraphEvent, recordPlmProjectFile, selectedNovel, writingSpec])
+  }, [chapterEditor, dramaGraph, ensureRuntimeClient, handleWritingSpecFailure, loadCurrentDramaGraph, novels, recordPlmGraphEvent, recordPlmProjectFile, resolveRevisionContext, saveChapterAnnotations, selectedNovel, writingSpec])
 
   const createNovelFromOnboarding = React.useCallback(async (draft: PlotPilotOnboardingDraft) => {
     setActiveJob({
@@ -1871,6 +3646,125 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       targetWordsPerChapter: 2500,
     })
   }, [createNovelFromOnboarding])
+
+  const importWorkspaceFile = React.useCallback(async (upload: PlotPilotWorkspaceUploadDraft) => {
+    const parsed = parseWorkspaceUploadDraft(upload)
+    setActiveJob({
+      id: `workspace:import:${parsed.novelId}`,
+      label: '导入文稿',
+      phase: 'read_file',
+      detail: parsed.fileName,
+      progress: 5,
+    })
+    try {
+      const activeClient = await ensureRuntimeClient()
+      setActiveJob((current) => current ? {
+        ...current,
+        phase: 'create_novel',
+        detail: `构建《${parsed.title}》工作区`,
+        progress: 15,
+      } : current)
+
+      let novel: NovelDTO
+      try {
+        novel = await activeClient.createNovel({
+          novel_id: parsed.novelId,
+          title: parsed.title,
+          author: 'Drama',
+          target_chapters: Math.max(1, parsed.chapters.length),
+          premise: `从 ${parsed.fileName} 导入的 ${parsed.sourceFormat === 'markdown' ? 'Markdown' : 'TXT'} 文稿。`,
+          genre: '',
+          world_preset: '',
+          story_structure: parsed.chapters.length > 1 ? 'imported multi-chapter manuscript' : 'imported single-chapter manuscript',
+          pacing_control: '',
+          writing_style: '',
+          special_requirements: 'Preserve the imported manuscript continuity and use saved annotations as revision requirements.',
+          length_tier: parsed.chapters.length <= 3 ? 'short' : 'standard',
+          target_words_per_chapter: Math.min(
+            6000,
+            Math.max(
+              300,
+              Math.round(parsed.chapters.reduce((total, chapter) => total + countDraftText(chapter.content), 0) / parsed.chapters.length),
+            ),
+          ),
+        })
+      } catch (error) {
+        if (error instanceof PlotPilotHttpError && (error.status === 400 || error.status === 409)) {
+          novel = await activeClient.getNovel(parsed.novelId)
+        } else {
+          throw error
+        }
+      }
+
+      const savedChapters: ChapterDTO[] = []
+      for (const [index, sourceChapter] of parsed.chapters.entries()) {
+        setActiveJob((current) => current ? {
+          ...current,
+          phase: 'write_chapter',
+          detail: `写入第 ${sourceChapter.number} 章 / ${parsed.chapters.length}`,
+          progress: 20 + Math.round((index / Math.max(parsed.chapters.length, 1)) * 65),
+        } : current)
+        await activeClient.ensureChapter(novel.id, sourceChapter.number, { title: sourceChapter.title })
+        const savedChapter = await activeClient.updateChapter(novel.id, sourceChapter.number, {
+          content: sourceChapter.content,
+        })
+        savedChapters.push(savedChapter)
+      }
+
+      const refreshedChapters = await activeClient.listChapters(novel.id).catch(() => savedChapters)
+      const novelWithChapters = replaceNovelChapters(novel, refreshedChapters.length ? refreshedChapters : savedChapters)
+      const firstChapter = savedChapters[0] ?? novelWithChapters.chapters?.[0]
+
+      setNovels((current) => [novelWithChapters, ...current.filter((item) => item.id !== novelWithChapters.id)])
+      setSelectedNovelId(novelWithChapters.id)
+      if (firstChapter) {
+        setChapterEditor(toChapterEditor(firstChapter, { novelId: novelWithChapters.id }))
+        await writeChapterDraftToDramaGraph({
+          api,
+          graph: dramaGraph,
+          loadGraph: loadCurrentDramaGraph,
+          setGraph: setDramaGraph,
+          novelId: novelWithChapters.id,
+          chapter: firstChapter,
+          source: 'manual',
+        }).catch(() => false)
+      }
+
+      const importedAt = new Date().toISOString()
+      await recordPlmProjectFile({
+        novelId: novelWithChapters.id,
+        type: 'plm.workspace.imported',
+        title: `导入文稿：${parsed.fileName}`,
+        summary: {
+          ...novelRecordSummary(novelWithChapters),
+          sourceFile: parsed.fileName,
+          sourceFormat: parsed.sourceFormat,
+          importedChapterCount: savedChapters.length,
+          importedAt,
+        },
+        payload: {
+          schema: 'plotpilot.workspace_import.v1',
+          sourceFile: parsed.fileName,
+          sourceFormat: parsed.sourceFormat,
+          importedAt,
+          novel: novelRecordSummary(novelWithChapters),
+          chapters: savedChapters.map(chapterRecordSummary),
+        },
+        markdown: buildWorkspaceImportMarkdown(parsed, importedAt),
+      })
+
+      setFeatureState((current) => ({
+        ...current,
+        lastMessage: `已从 ${parsed.fileName} 构建《${parsed.title}》工作区。`,
+      }))
+      await loadSelectedBible(novelWithChapters.id).catch(() => undefined)
+      void loadNovels()
+    } catch (error) {
+      reportPlotPilotError(error)
+    } finally {
+      setActiveJob(null)
+    }
+  }, [api, dramaGraph, ensureRuntimeClient, loadCurrentDramaGraph, loadNovels, loadSelectedBible, recordPlmProjectFile])
 
   const saveNovelSetup = React.useCallback(async (novelId: string, draft: PlotPilotOnboardingDraft) => {
     setActiveJob({
@@ -2042,6 +3936,11 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       } catch {
         storyletMessage = '\nStorylet JSON 兼容写回未执行；Drama Graph 已作为主数据保存。'
       }
+      await syncPostChapterMemoryEvidence({
+        novelId,
+        chapter,
+        source: 'plotpilot-writeback',
+      })
       window.alert(wroteDramaGraph
         ? `已回写 Drama Graph。${storyletMessage}`
         : `没有找到匹配的 Drama 章节节点，未写入 Drama Graph。${storyletMessage}`)
@@ -2050,7 +3949,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     } finally {
       setActiveJob(null)
     }
-  }, [chapterEditor, dramaGraph, ensureRuntimeClient, loadCurrentDramaGraph])
+  }, [chapterEditor, dramaGraph, ensureRuntimeClient, loadCurrentDramaGraph, syncPostChapterMemoryEvidence])
 
   const generateBible = React.useCallback(async (novelId: string) => {
     setActiveJob({
@@ -2602,6 +4501,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     toChapter: number,
     autoSave: boolean,
     autoOutline: boolean,
+    revisionContext?: PlotPilotChapterRevisionContext,
   ) => {
     activeStreamAbortRef.current?.abort()
     const abortController = new AbortController()
@@ -2632,11 +4532,25 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     }))
     try {
       const activeClient = await ensureRuntimeClient()
+      const resolvedRevisionContext = await resolveRevisionContext(novelId, fromChapter, revisionContext)
+      if (revisionContext?.annotations && !revisionContext.instruction?.trim()) {
+        await saveChapterAnnotations(novelId, fromChapter, revisionContext.annotations)
+      }
+      const revisionMode = resolvedRevisionContext.annotations.length > 0 || resolvedRevisionContext.instruction.trim()
+        ? 'annotation_revision'
+        : 'draft_generation'
       for await (const event of activeClient.hostedWriteStream(novelId, {
         from_chapter: fromChapter,
         to_chapter: toChapter,
         auto_save: autoSave,
         auto_outline: autoOutline,
+        revision_mode: revisionMode,
+        revision_chapter_number: fromChapter,
+        revision_context_markdown: resolvedRevisionContext.markdown,
+        prompt_variables: {
+          revision_mode: revisionMode,
+          revision_context_markdown: resolvedRevisionContext.markdown,
+        },
       }, { signal: abortController.signal })) {
         appendHostedWriteEvent(event, { fromChapter, toChapter, autoSave, autoOutline })
         void writeHostedWriteEventToDramaGraph(novelId, event, { fromChapter, toChapter, autoSave, autoOutline })
@@ -2669,12 +4583,16 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           toChapter,
           autoSave,
           autoOutline,
+          revisionMode,
+          revisionAnnotationCount: resolvedRevisionContext.annotations.length,
         },
         payload: {
           fromChapter,
           toChapter,
           autoSave,
           autoOutline,
+          revisionMode,
+          revisionContextMarkdown: resolvedRevisionContext.markdown,
         },
       })
     } catch (error) {
@@ -2712,7 +4630,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       setFeatureState((current) => ({ ...current, loadingKey: null }))
       setActiveJob(null)
     }
-  }, [appendHostedWriteEvent, ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshChapters, writeHostedWriteEventToDramaGraph])
+  }, [appendHostedWriteEvent, ensureRuntimeClient, recordPlmGraphEvent, recordPlmProjectFile, refreshChapters, resolveRevisionContext, saveChapterAnnotations, writeHostedWriteEventToDramaGraph])
 
   const appendAutopilotEvent = React.useCallback((event: PlotPilotAutopilotStreamEvent) => {
     const eventRecord = asRecord(event)
@@ -2868,8 +4786,12 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       setFeatureState((current) => ({
         ...current,
         loadingKey: null,
-        autopilotStatus: status as unknown as Record<string, unknown> | null,
-        autopilotCircuitBreaker: circuitBreaker as unknown as Record<string, unknown> | null,
+        autopilotStatus: status
+          ? status as unknown as Record<string, unknown>
+          : current.autopilotStatus,
+        autopilotCircuitBreaker: circuitBreaker
+          ? circuitBreaker as unknown as Record<string, unknown>
+          : current.autopilotCircuitBreaker,
         lastMessage: status ? 'Autopilot 状态已刷新。' : 'Autopilot 状态尚未加载到共享内存。',
       }))
     } catch (error) {
@@ -3126,7 +5048,18 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     }
     activeStreamAbortRef.current?.abort()
     autopilotStreamAbortRef.current?.abort()
-    setFeatureState((current) => ({ ...current, loadingKey: null, lastMessage: '生成任务已停止。' }))
+    setFeatureState((current) => ({
+      ...current,
+      loadingKey: null,
+      hostedWriteSummary: current.loadingKey === 'hosted-write'
+        ? {
+          ...asRecord(current.hostedWriteSummary),
+          lastType: 'cancelled',
+          updatedAt: new Date().toISOString(),
+        }
+        : current.hostedWriteSummary,
+      lastMessage: '生成任务已停止。',
+    }))
     setActiveJob(null)
   }, [stopAutopilot])
 
@@ -3759,7 +5692,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     let candidateNovels = novels
 
     if (activeClient && candidateNovels.length === 0) {
-      const remoteNovels = await activeClient.listNovels()
+      const remoteNovels = await activeClient.listNovels({ timeoutMs: STATUS_REQUEST_TIMEOUT_MS })
       setNovels(remoteNovels)
       candidateNovels = remoteNovels
     }
@@ -3795,6 +5728,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     onCreateNovelFromOnboarding: (draft) => void createNovelFromOnboarding(draft),
     onSaveNovelSetup: (novelId, draft) => void saveNovelSetup(novelId, draft),
     onImportStorylet: () => void importStorylet(),
+    onImportWorkspaceFile: (draft) => void importWorkspaceFile(draft),
     onSelectNovel: selectNovel,
     onGenerateBible: (novelId) => void generateBible(novelId),
     onSaveBible: (novelId, bible) => void saveBible(novelId, bible),
@@ -3807,13 +5741,14 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     onGenerateMacroPlan: (novelId) => void generateMacroPlan(novelId),
     onContinuePlanning: (novelId, currentChapter) => void continuePlanning(novelId, currentChapter),
     onGenerateBeat: (novelId) => void generateBeat(novelId),
-    onGenerateChapter: (novelId, chapterNumber) => void generateChapter(novelId, chapterNumber),
-    onHostedWrite: (novelId, fromChapter, toChapter, autoSave, autoOutline) => void hostedWrite(
+    onGenerateChapter: (novelId, chapterNumber, revisionContext) => void generateChapter(novelId, chapterNumber, revisionContext),
+    onHostedWrite: (novelId, fromChapter, toChapter, autoSave, autoOutline, revisionContext) => void hostedWrite(
       novelId,
       fromChapter,
       toChapter,
       autoSave,
       autoOutline,
+      revisionContext,
     ),
     onRefreshAutopilot: (novelId) => void refreshAutopilot(novelId),
     onStartAutopilot: (novelId, maxAutoChapters, targetChapters, targetWordsPerChapter, autoApproveMode) => void startAutopilot(
@@ -3859,7 +5794,8 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
           }
         : current
     )),
-    onSaveChapter: (novelId, chapterNumber, content) => void saveChapter(novelId, chapterNumber, content),
+    onSaveChapter: (novelId, chapterNumber, content, revisionContext) => void saveChapter(novelId, chapterNumber, content, revisionContext),
+    onSaveChapterAnnotations: (novelId, chapterNumber, annotations) => void saveChapterAnnotations(novelId, chapterNumber, annotations),
     onStopGeneration: stopGeneration,
   }), [
     bindWritingSpec,
@@ -3877,6 +5813,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     hostedWrite,
     inferKnowledgeGraph,
     importStorylet,
+    importWorkspaceFile,
     loadInvocation,
     loadTraceTimeline,
     openChapter,
@@ -3897,6 +5834,7 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     reviewChapter,
     saveChapter,
     saveBible,
+    saveChapterAnnotations,
     saveStorageCard,
     searchMemory,
     saveNovelSetup,
@@ -3943,6 +5881,11 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
   }, [client, loadNovels, runtimeReady])
 
   React.useEffect(() => {
+    if (!productionFixture || !runtimeReady || !client) return
+    void bootstrapProductionFixture()
+  }, [bootstrapProductionFixture, client, productionFixture, runtimeReady])
+
+  React.useEffect(() => {
     if (!runtimeReady || !client || !runtimeBaseUrl) return
     if (codexProfileEnsuredForRef.current === runtimeBaseUrl) {
       void refreshCodexStatus(client)
@@ -3978,6 +5921,13 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     void refreshAutopilot(selectedNovel.id)
   }, [loadProjectGenerationSettings, loadSavedPromptCards, loadSelectedBible, refreshAutopilot, selectedNovel?.id])
 
+  const activeAnnotationChapterNumber = chapterEditor?.chapterNumber ?? selectedNovel?.chapters?.[0]?.number ?? 1
+
+  React.useEffect(() => {
+    if (!selectedNovel?.id || !activeAnnotationChapterNumber) return
+    void loadLatestChapterAnnotations(selectedNovel.id, activeAnnotationChapterNumber)
+  }, [activeAnnotationChapterNumber, loadLatestChapterAnnotations, selectedNovel?.id])
+
   React.useEffect(() => {
     const request = pendingOpenRequestRef.current
     if (!request || !runtimeReady) return
@@ -4001,11 +5951,47 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
     return () => window.clearInterval(timer)
   }, [refreshRuntime])
 
+  const productionEvidence = React.useMemo(
+    () => buildProductionEvidenceSnapshot({
+      runtimeReady,
+      productPath: integrationStatus?.productPath === true,
+      surface: integrationStatus?.surface,
+      selectedNovel,
+      chapterEditor,
+      featureState,
+    }),
+    [chapterEditor, featureState, integrationStatus?.productPath, integrationStatus?.surface, runtimeReady, selectedNovel],
+  )
+  const featureStateWithProductionEvidence = React.useMemo<PlotPilotNativeFeatureState>(
+    () => ({
+      ...featureState,
+      productionEvidence,
+    }),
+    [featureState, productionEvidence],
+  )
   const uiNovels = React.useMemo(
     () => novels.map((novel) => toUiNovel(novel, novel.id === selectedNovel?.id ? selectedBible : null)),
     [novels, selectedBible, selectedNovel?.id],
   )
   const uiSelectedNovel = uiNovels.find((novel) => novel.id === selectedNovel?.id) ?? uiNovels[0] ?? null
+  const currentChapterAnnotations = selectedNovel?.id
+    ? chapterAnnotationsByKey[chapterAnnotationsKey(selectedNovel.id, activeAnnotationChapterNumber)] ?? []
+    : []
+  const resolvedIntegrationStatus = React.useMemo(
+    () => resolveIntegrationStatus(
+      integrationStatus,
+      runtimeStatus,
+      codexStatus,
+      selectedNovel,
+      chapterEditor,
+      featureStateWithProductionEvidence,
+    ),
+    [chapterEditor, codexStatus, featureStateWithProductionEvidence, integrationStatus, runtimeStatus, selectedNovel],
+  )
+
+  React.useEffect(() => {
+    onIntegrationStatusChange?.(resolvedIntegrationStatus)
+  }, [onIntegrationStatusChange, resolvedIntegrationStatus])
 
   return (
     <PlotPilotNativePage
@@ -4015,9 +6001,11 @@ export function PlotPilotNativeContainer({ api, createClient = createPlotPilotCl
       chapterEditor={chapterEditor}
       selectedBibleData={selectedBible as unknown as PlotPilotBibleEditorData | null}
       codexStatus={toUiCodexStatus(codexStatus)}
+      integrationStatus={resolvedIntegrationStatus}
       projectGuardStatus={toProjectGuardStatus(writingSpec, humanizer)}
       lastWritingSpecFailure={lastWritingSpecFailure}
-      featureState={featureState}
+      chapterAnnotations={currentChapterAnnotations}
+      featureState={featureStateWithProductionEvidence}
       handlers={handlers}
       logs={toUiLogs(runtimeLogs)}
     />

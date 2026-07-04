@@ -30,7 +30,9 @@ const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5_000
 const DEFAULT_POLL_INTERVAL_MS = 100
 const DEFAULT_MAX_LOG_ENTRIES = 500
 const EMBEDDED_BOOT_MODULE = 'plotpilot_embedded_boot:app'
-const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
+const MODULE_DIR = typeof __dirname === 'string'
+  ? __dirname
+  : dirname(fileURLToPath(import.meta.url))
 
 export interface PlotPilotSpawnOptions {
   cwd: string
@@ -204,6 +206,39 @@ function prependPythonPath(pathEntry: string, current = process.env.PYTHONPATH ?
     .map((entry) => entry.trim())
     .filter(Boolean)
   return Array.from(new Set(entries)).join(delimiter)
+}
+
+function prependToolPath(current = process.env.PATH ?? ''): string {
+  const home = homedir()
+  const entries = [
+    join(home, '.local', 'bin'),
+    join(home, '.codex', 'plugins', '.plugin-appserver'),
+    join(home, '.bun', 'bin'),
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+    '/usr/sbin',
+    '/sbin',
+    ...current.split(delimiter),
+  ]
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+  return Array.from(new Set(entries)).join(delimiter)
+}
+
+function resolveCodexCli(): string | undefined {
+  const configured = process.env.CODEX_CLI
+  if (configured && existsSync(configured)) return configured
+
+  for (const candidate of [
+    join(homedir(), '.local', 'bin', process.platform === 'win32' ? 'codex.exe' : 'codex'),
+    join(homedir(), '.codex', 'plugins', '.plugin-appserver', process.platform === 'win32' ? 'codex.exe' : 'codex'),
+  ]) {
+    if (existsSync(candidate)) return candidate
+  }
+
+  return undefined
 }
 
 export function resolveDefaultPlotPilotPythonExe(projectRoot: string): string {
@@ -490,6 +525,9 @@ export class PlotPilotRuntimeManager {
   }
 
   getStatus(): PlotPilotRuntimeStatus {
+    if (this.adopted && this.port) {
+      return this.currentStatus()
+    }
     if (!this.child || this.hasExited(this.child)) {
       this.markStopped()
     }
@@ -552,6 +590,11 @@ export class PlotPilotRuntimeManager {
       AITEXT_PROD_DATA_DIR: this.dataDir,
       LOG_FILE: logFile,
       PYTHONPATH: prependPythonPath(resolveEmbeddedBootPath()),
+      PATH: prependToolPath(),
+    }
+    const codexCli = resolveCodexCli()
+    if (codexCli) {
+      env.CODEX_CLI = codexCli
     }
     const spawnOptions: PlotPilotSpawnOptions = {
       cwd: this.projectRoot,

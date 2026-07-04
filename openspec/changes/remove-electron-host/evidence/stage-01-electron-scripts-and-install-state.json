@@ -1,0 +1,108 @@
+{
+  "date": "2026-06-29",
+  "scriptInventory": {
+    "legacyRootScripts": [
+      "electron:clean",
+      "electron:build",
+      "electron:build:*",
+      "electron:start",
+      "electron:dev",
+      "electron:dev:*",
+      "electron:dist:*",
+      "typecheck:electron",
+      "lint:electron"
+    ],
+    "legacyInstallers": [
+      "scripts/install-app.sh",
+      "scripts/install-app.ps1"
+    ],
+    "legacyPackagers": [
+      "scripts/build/common.ts",
+      "scripts/build/darwin.ts",
+      "scripts/build/win32.ts",
+      "scripts/build/linux.ts",
+      "apps/electron/electron-builder.yml",
+      "apps/electron/scripts/build-linux.sh",
+      "apps/electron/scripts/build-win.ps1"
+    ],
+    "productionCandidateScripts": [
+      "scripts/launch-drama-browser-mac.sh",
+      "scripts/package-zen-drama-mac.sh",
+      "scripts/launch-drama.ps1",
+      "scripts/launch-zen-drama.ps1",
+      "scripts/package-zen-drama-win.ps1",
+      "scripts/install-zen-drama-package.ps1"
+    ],
+    "knownLeaksToMove": [
+      {
+        "path": "package.json",
+        "issue": "server:dev and server:prod still set CRAFT_BUNDLED_ASSETS_ROOT=$PWD/apps/electron"
+      },
+      {
+        "path": "scripts/package-zen-drama-win.ps1",
+        "issue": "Windows package still copies apps/electron/resources/drama-icon.ico"
+      }
+    ]
+  },
+  "installedAppState": {
+    "inspectedPaths": [
+      "/Applications/Drama.app",
+      "/Applications/Drama Browser.app",
+      "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app"
+    ],
+    "applicationsDramaApp": {
+      "exists": true,
+      "bundleIdentifier": "com.jupiternaut.drama",
+      "executable": "Drama",
+      "classification": "legacy-electron",
+      "electronFrameworkPresent": true,
+      "helpers": [
+        "Drama Helper.app",
+        "Drama Helper (Renderer).app",
+        "Drama Helper (GPU).app",
+        "Drama Helper (Plugin).app"
+      ],
+      "frameworks": [
+        "Electron Framework.framework",
+        "Squirrel.framework",
+        "Mantle.framework",
+        "ReactiveObjC.framework"
+      ],
+      "linkageConclusion": "main executable links to Electron Framework"
+    },
+    "applicationsDramaBrowserApp": {
+      "exists": false,
+      "classification": "not-installed"
+    },
+    "sourceBuiltDramaBrowserApp": {
+      "exists": true,
+      "path": "/Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin/dist/drama-browser/Drama Browser.app",
+      "bundleIdentifier": "app.drama-browser.local",
+      "executable": "drama-browser",
+      "classification": "source-built-gecko",
+      "electronFrameworkPresent": false,
+      "helpers": [
+        "drama-browser-gpu-helper.app",
+        "drama-browser-media-plugin-helper.app",
+        "drama-browser-plugin-container.app"
+      ],
+      "frameworks": [
+        "ChannelPrefs.framework"
+      ],
+      "geckoBinaries": [
+        "XUL",
+        "libmozglue.dylib",
+        "libnss3.dylib",
+        "libmozavcodec.dylib",
+        "libmozavutil.dylib",
+        "libmozinference.dylib"
+      ],
+      "linkageConclusion": "main executable links to libmozglue/XUL stack, not Electron"
+    },
+    "processContext": {
+      "dramaElectronProcesses": "none observed",
+      "runningDramaGecko": "/Users/gengrf/drama-browser/dist/zen-drama-mac/Drama Browser.app",
+      "unrelatedElectronProcesses": "unrelated Electron helpers from /Applications/Nimbalyst.app observed; production verifier should scope to Drama process tree or stop unrelated Electron apps first"
+    }
+  }
+}

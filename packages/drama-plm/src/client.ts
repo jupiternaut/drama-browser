@@ -50,7 +50,10 @@ import type {
   PlotPilotSuggestMainPlotOptionsResponse,
   PlotPilotPlotOutlineResponse,
   PlotPilotPromptListResponse,
+  PlotPilotPromptCreateRequest,
   PlotPilotPromptStatsResponse,
+  PlotPilotPromptUpdateRequest,
+  PlotPilotPromptWriteResponse,
   PlotPilotReaderSimulationListResponse,
   PlotPilotReaderSimulationResponse,
   PlotPilotReviewChapterResponse,
@@ -80,11 +83,13 @@ export interface PlotPilotClientOptions {
   protocol?: 'http' | 'https' | (string & {})
   fetch?: PlotPilotFetch
   headers?: HeadersInit
+  timeoutMs?: number
 }
 
 export interface PlotPilotRequestOptions {
   signal?: AbortSignal
   headers?: HeadersInit
+  timeoutMs?: number
 }
 
 export interface PlotPilotGenerateBibleStreamOptions extends PlotPilotRequestOptions {
@@ -300,6 +305,15 @@ export interface PlotPilotClient {
   ): Promise<PlotPilotAiTraceTimelineResponse>
   getPromptStats(options?: PlotPilotRequestOptions): Promise<PlotPilotPromptStatsResponse>
   listPrompts(options?: PlotPilotRequestOptions): Promise<PlotPilotPromptListResponse>
+  updatePrompt(
+    nodeKey: string,
+    data: PlotPilotPromptUpdateRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotPromptWriteResponse>
+  createPromptNode(
+    data: PlotPilotPromptCreateRequest,
+    options?: PlotPilotRequestOptions,
+  ): Promise<PlotPilotPromptWriteResponse>
 }
 
 export type PlotPilotCallOptions = PlotPilotClientOptions & PlotPilotRequestOptions
@@ -337,6 +351,18 @@ export class PlotPilotResponseParseError extends Error {
     this.name = 'PlotPilotResponseParseError'
     this.url = url
     this.body = body
+  }
+}
+
+export class PlotPilotRequestTimeoutError extends Error {
+  readonly url: string
+  readonly timeoutMs: number
+
+  constructor(url: string, timeoutMs: number) {
+    super(`PlotPilot request timed out after ${timeoutMs}ms: ${url}`)
+    this.name = 'PlotPilotRequestTimeoutError'
+    this.url = url
+    this.timeoutMs = timeoutMs
   }
 }
 
@@ -511,11 +537,38 @@ async function requestJson<T>(
     headers.set('Content-Type', 'application/json')
   }
 
-  const response = await fetchImpl(url, {
-    ...init,
-    headers,
-    signal: requestOptions?.signal ?? init.signal,
-  })
+  const timeoutMs = requestOptions?.timeoutMs
+  const upstreamSignal = requestOptions?.signal ?? init.signal
+  const controller = timeoutMs !== undefined ? new AbortController() : null
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  let timeoutElapsed = false
+  const abortFromUpstream = () => controller?.abort()
+
+  if (controller) {
+    if (upstreamSignal?.aborted) controller.abort()
+    else upstreamSignal?.addEventListener('abort', abortFromUpstream, { once: true })
+    timeout = setTimeout(() => {
+      timeoutElapsed = true
+      controller.abort()
+    }, timeoutMs)
+  }
+
+  let response: Response
+  try {
+    response = await fetchImpl(url, {
+      ...init,
+      headers,
+      signal: controller?.signal ?? upstreamSignal,
+    })
+  } catch (error) {
+    if (timeoutElapsed && timeoutMs !== undefined) {
+      throw new PlotPilotRequestTimeoutError(url, timeoutMs)
+    }
+    throw error
+  } finally {
+    if (timeout) clearTimeout(timeout)
+    upstreamSignal?.removeEventListener('abort', abortFromUpstream)
+  }
 
   if (!response.ok) {
     throw new PlotPilotHttpError(response.status, url, await readErrorBody(response))
@@ -1884,6 +1937,7 @@ function requestOptionsFromCallOptions(options: PlotPilotCallOptions): PlotPilot
   return {
     signal: options.signal,
     headers: options.headers,
+    timeoutMs: options.timeoutMs,
   }
 }
 
@@ -2670,6 +2724,32 @@ export function createPlotPilotClient(options: PlotPilotClientOptions = {}): Plo
         roots,
         '/llm-control/prompts',
         { method: 'GET' },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    updatePrompt(nodeKey, data, requestOptions) {
+      return requestJson<PlotPilotPromptWriteResponse>(
+        fetchImpl,
+        roots,
+        `/llm-control/prompts/${encodeSegment(nodeKey)}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        },
+        clientHeaders,
+        requestOptions,
+      )
+    },
+    createPromptNode(data, requestOptions) {
+      return requestJson<PlotPilotPromptWriteResponse>(
+        fetchImpl,
+        roots,
+        '/llm-control/prompts/nodes',
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
         clientHeaders,
         requestOptions,
       )

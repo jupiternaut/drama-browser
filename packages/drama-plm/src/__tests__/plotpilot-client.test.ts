@@ -3,6 +3,7 @@ import {
   createPlotPilotClient,
   extractPlotPilotWritingSpecFailure,
   PlotPilotHttpError,
+  PlotPilotRequestTimeoutError,
 } from '../client.ts'
 
 type FetchCall = {
@@ -46,7 +47,30 @@ function streamResponse(body: string, contentType: string): Response {
   )
 }
 
+function abortableNeverFetch(): typeof fetch {
+  return ((_input: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener('abort', () => {
+      reject(new DOMException('Aborted', 'AbortError'))
+    }, { once: true })
+  })) as typeof fetch
+}
+
 describe('createPlotPilotClient', () => {
+  it('supports bounded status request timeouts', async () => {
+    const client = createPlotPilotClient({
+      port: 8005,
+      fetch: abortableNeverFetch(),
+    })
+
+    try {
+      await client.getCodexStatus({ timeoutMs: 5 })
+      throw new Error('Expected getCodexStatus to time out.')
+    } catch (error) {
+      expect(error).toBeInstanceOf(PlotPilotRequestTimeoutError)
+      expect((error as PlotPilotRequestTimeoutError).timeoutMs).toBe(5)
+    }
+  })
+
   it('derives /health from an API v1 base URL and keeps API calls under /api/v1', async () => {
     const { fetch, calls } = createFetchStub((url) => {
       if (url.endsWith('/health')) {

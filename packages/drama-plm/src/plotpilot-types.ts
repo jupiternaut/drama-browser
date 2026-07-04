@@ -125,6 +125,8 @@ export interface GenerateChapterRequest {
   script_prompt_template?: string
   prose_prompt_template?: string
   prompt_variables?: Record<string, string>
+  revision_mode?: 'annotation_revision' | 'draft_generation'
+  revision_context_markdown?: string
 }
 
 export interface PlotPilotHostedWriteRequest {
@@ -132,6 +134,10 @@ export interface PlotPilotHostedWriteRequest {
   to_chapter: number
   auto_save?: boolean
   auto_outline?: boolean
+  revision_mode?: 'annotation_revision' | 'draft_generation'
+  revision_chapter_number?: number
+  revision_context_markdown?: string
+  prompt_variables?: Record<string, string>
 }
 
 export type PlotPilotHostedWriteStreamEvent =
@@ -486,6 +492,32 @@ export interface PlotPilotPromptStatsResponse {
 }
 
 export interface PlotPilotPromptListResponse {
+  [key: string]: unknown
+}
+
+export interface PlotPilotPromptUpdateRequest {
+  system?: string | null
+  user_template?: string | null
+  name?: string | null
+  description?: string | null
+  tags?: string[] | null
+  change_summary?: string
+}
+
+export interface PlotPilotPromptCreateRequest {
+  template_id?: string
+  node_key?: string
+  name?: string
+  description?: string
+  category?: string
+  system?: string
+  user_template?: string
+}
+
+export interface PlotPilotPromptWriteResponse {
+  status?: string
+  node?: Record<string, unknown> | null
+  message?: string
   [key: string]: unknown
 }
 

@@ -1,0 +1,6 @@
+# open drama://start process verification
+## Drama Browser processes
+16975 /Applications/Drama Browser.app/Contents/MacOS/drama-browser
+
+## resolved target
+/Applications/Drama Browser.app

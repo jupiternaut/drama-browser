@@ -5,6 +5,7 @@ import {
   BookOpen,
   Box,
   Brain,
+  Brush,
   Bug,
   Captions,
   CheckCircle2,
@@ -12,11 +13,15 @@ import {
   ChevronLeft,
   Clapperboard,
   Clock3,
+  CornerDownRight,
+  Eraser,
   FileText,
   Film,
+  FolderOpen,
   Gauge,
   GitBranch,
   GripVertical,
+  Highlighter,
   Image,
   Layers,
   ListChecks,
@@ -47,12 +52,17 @@ import {
   SkipForward,
   Terminal,
   Trash2,
+  Upload,
   UserRound,
   Users,
   Volume2,
   WandSparkles,
 } from 'lucide-react'
 import { Button, LiquidEther, PanelHeader, StatusBadge, cn, type StatusTone } from '@drama/ui'
+import type {
+  DramaPlmHostAdapter,
+  DramaPlmSurfaceClassification,
+} from '@drama/host'
 
 export type PlotPilotRuntimeState = 'offline' | 'starting' | 'ready' | 'error'
 export type PlotPilotWorkspaceSurface =
@@ -81,6 +91,75 @@ export interface PlotPilotCodexStatus {
   email?: string | null
   planType?: string | null
   error?: string | null
+}
+
+export type PlotPilotIntegrationSurface = DramaPlmSurfaceClassification
+export type PlotPilotCanonicalIntegrationSurface = Exclude<DramaPlmSurfaceClassification, 'product-zen-panel'>
+
+export type PlotPilotReadinessTier =
+  | 'shell-ready'
+  | 'runtime-ready'
+  | 'plm-sidecar-ready'
+  | 'ai-ready'
+  | 'workflow-preview-ready'
+  | 'plotpilot-parity-ready'
+
+export type PlotPilotReadinessState = 'ready' | 'pending' | 'blocked'
+
+export interface PlotPilotReadinessStatus {
+  tier: PlotPilotReadinessTier
+  state: PlotPilotReadinessState
+  message: string
+}
+
+export type PlotPilotParityCheckState = 'ready' | 'partial' | 'blocked'
+
+export interface PlotPilotParityCheck {
+  id: string
+  label: string
+  state: PlotPilotParityCheckState
+  detail: string
+  evidence?: string
+}
+
+export type PlotPilotProductionEvidenceState = 'ready' | 'partial' | 'blocked'
+
+export interface PlotPilotProductionEvidenceItem {
+  id: string
+  label: string
+  state: PlotPilotProductionEvidenceState
+  detail: string
+  evidence?: string
+  updatedAt?: string
+}
+
+export interface PlotPilotProductionEvidenceSnapshot {
+  fixtureName?: string
+  fixtureId?: string
+  projectId?: string
+  projectTitle?: string
+  chapterId?: string
+  chapterNumber?: number
+  chapterTitle?: string
+  pathHints?: string[]
+  generatedAt: string
+  stage9Ready?: boolean
+  stage9NonReady?: string[]
+  items: PlotPilotProductionEvidenceItem[]
+}
+
+export interface PlotPilotIntegrationStatus {
+  surface: PlotPilotIntegrationSurface
+  canonicalSurface?: PlotPilotCanonicalIntegrationSurface
+  hostAdapter?: DramaPlmHostAdapter
+  productPath: boolean
+  currentUrl?: string
+  reason?: string
+  tiers: PlotPilotReadinessStatus[]
+  parityChecks?: PlotPilotParityCheck[]
+  productionEvidence?: PlotPilotProductionEvidenceSnapshot
+  parityGaps?: string[]
+  workspacePathHints?: string[]
 }
 
 export interface PlotPilotProjectGuardStatus {
@@ -200,6 +279,29 @@ export interface PlotPilotOnboardingDraft {
   targetWordsPerChapter: number
 }
 
+export interface PlotPilotWorkspaceUploadDraft {
+  fileName: string
+  mimeType?: string
+  content: string
+}
+
+type BrowserSaveFilePickerHandle = {
+  createWritable: () => Promise<{
+    write: (data: Blob) => Promise<void>
+    close: () => Promise<void>
+  }>
+}
+
+type BrowserSaveFilePickerWindow = Window & {
+  showSaveFilePicker?: (options?: {
+    suggestedName?: string
+    types?: Array<{
+      description: string
+      accept: Record<string, string[]>
+    }>
+  }) => Promise<BrowserSaveFilePickerHandle>
+}
+
 export interface PlotPilotOutlineDraft {
   mainStoryOverview: string
   coreConflict: string
@@ -308,6 +410,9 @@ export interface PlotPilotNativeFeatureState {
   promptStats?: Record<string, unknown> | null
   prompts?: Array<Record<string, unknown>>
   activeInvocation?: Record<string, unknown> | null
+  postChapterMemorySync?: Record<string, unknown> | null
+  productionFixture?: Record<string, unknown> | null
+  productionEvidence?: PlotPilotProductionEvidenceSnapshot
   autopilotStatus?: Record<string, unknown> | null
   autopilotCircuitBreaker?: Record<string, unknown> | null
   autopilotEvents?: Array<Record<string, unknown>>
@@ -326,6 +431,7 @@ export interface PlotPilotNativeHandlers {
   onCreateNovelFromOnboarding?: (draft: PlotPilotOnboardingDraft) => void
   onSaveNovelSetup?: (novelId: string, draft: PlotPilotOnboardingDraft) => void
   onImportStorylet?: () => void
+  onImportWorkspaceFile?: (draft: PlotPilotWorkspaceUploadDraft) => void
   onSelectNovel?: (novelId: string) => void
   onGenerateBible?: (novelId: string) => void
   onSaveBible?: (novelId: string, bible: PlotPilotBibleEditorData) => void
@@ -338,8 +444,15 @@ export interface PlotPilotNativeHandlers {
   onGenerateMacroPlan?: (novelId: string) => void
   onContinuePlanning?: (novelId: string, currentChapter: number) => void
   onGenerateBeat?: (novelId: string) => void
-  onGenerateChapter?: (novelId: string, chapterNumber?: number) => void
-  onHostedWrite?: (novelId: string, fromChapter: number, toChapter: number, autoSave: boolean, autoOutline: boolean) => void
+  onGenerateChapter?: (novelId: string, chapterNumber?: number, revisionContext?: PlotPilotChapterRevisionContext) => void
+  onHostedWrite?: (
+    novelId: string,
+    fromChapter: number,
+    toChapter: number,
+    autoSave: boolean,
+    autoOutline: boolean,
+    revisionContext?: PlotPilotChapterRevisionContext,
+  ) => void
   onRefreshAutopilot?: (novelId: string) => void
   onStartAutopilot?: (
     novelId: string,
@@ -369,7 +482,13 @@ export interface PlotPilotNativeHandlers {
   onRefreshChapters?: (novelId: string) => void
   onWriteBackChapter?: (novelId: string, chapterNumber?: number) => void
   onChangeChapterDraft?: (content: string) => void
-  onSaveChapter?: (novelId: string, chapterNumber: number, content: string) => void
+  onSaveChapter?: (
+    novelId: string,
+    chapterNumber: number,
+    content: string,
+    revisionContext?: PlotPilotChapterRevisionContext,
+  ) => void
+  onSaveChapterAnnotations?: (novelId: string, chapterNumber: number, annotations: PlotPilotChapterAnnotation[]) => void
   onBindWritingSpec?: (novelId: string, writingSpecId: string) => void
   onClearWritingSpec?: (novelId: string) => void
   onUpdateHumanizer?: (novelId: string, settings: PlotPilotHumanizerSettingsDraft) => void
@@ -380,6 +499,54 @@ export interface PlotPilotNativeHandlers {
   onStopGeneration?: (jobId: string) => void
 }
 
+const CODEX_BACKED_HANDLER_KEYS = [
+  'onGenerateBible',
+  'onSuggestMainPlotOptions',
+  'onGeneratePlotOutline',
+  'onGenerateMacroPlan',
+  'onContinuePlanning',
+  'onGenerateBeat',
+  'onGenerateChapter',
+  'onHostedWrite',
+  'onStartAutopilot',
+  'onResumeAutopilot',
+  'onReviewChapter',
+  'onSimulateReaders',
+  'onInferKnowledgeGraph',
+  'onResumeInvocation',
+  'onRetryInvocation',
+] as const satisfies ReadonlyArray<keyof PlotPilotNativeHandlers>
+
+function isCodexReady(status?: PlotPilotCodexStatus | null): boolean {
+  return status?.available === true && status.authenticated === true
+}
+
+function codexUnavailableMessage(status?: PlotPilotCodexStatus | null): string {
+  if (!status) return 'Codex AI 状态尚未载入，生成动作暂时锁定。'
+  if (!status.available) return status.error ?? 'Codex CLI 或 ChatGPT OAuth 不可用，生成动作暂时锁定。'
+  if (!status.authenticated) return status.error ?? 'Codex 尚未登录，生成动作需要完成认证后再启用。'
+  return 'Codex 已就绪。'
+}
+
+function createCodexGuardedHandlers(
+  handlers: PlotPilotNativeHandlers | undefined,
+  codexStatus?: PlotPilotCodexStatus | null,
+): PlotPilotNativeHandlers | undefined {
+  if (!handlers || isCodexReady(codexStatus)) return handlers
+  const guarded: PlotPilotNativeHandlers = { ...handlers }
+  for (const key of CODEX_BACKED_HANDLER_KEYS) {
+    delete guarded[key]
+  }
+  return guarded
+}
+
+function readinessByTier(
+  status: PlotPilotIntegrationStatus | undefined,
+  tier: PlotPilotReadinessTier,
+): PlotPilotReadinessStatus | undefined {
+  return status?.tiers.find((row) => row.tier === tier)
+}
+
 export interface PlotPilotNativePageProps {
   runtimeStatus?: PlotPilotRuntimeStatus
   novels?: PlotPilotNovel[]
@@ -387,8 +554,10 @@ export interface PlotPilotNativePageProps {
   chapterEditor?: PlotPilotChapterEditor | null
   selectedBibleData?: PlotPilotBibleEditorData | null
   codexStatus?: PlotPilotCodexStatus | null
+  integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+  chapterAnnotations?: PlotPilotChapterAnnotation[]
   featureState?: PlotPilotNativeFeatureState
   handlers?: PlotPilotNativeHandlers
   logs?: PlotPilotLogEntry[]
@@ -468,8 +637,10 @@ export function PlotPilotNativePage({
   chapterEditor,
   selectedBibleData,
   codexStatus,
+  integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
+  chapterAnnotations = [],
   featureState = {},
   handlers,
   logs = idleLogs,
@@ -487,8 +658,10 @@ export function PlotPilotNativePage({
       chapterEditor={chapterEditor}
       selectedBibleData={selectedBibleData}
       codexStatus={codexStatus}
+      integrationStatus={integrationStatus}
       projectGuardStatus={projectGuardStatus}
       lastWritingSpecFailure={lastWritingSpecFailure}
+      chapterAnnotations={chapterAnnotations}
       featureState={featureState}
       handlers={handlers}
       logs={logs}
@@ -500,8 +673,12 @@ export function PlotPilotNativePage({
 }
 
 type ScriptStudioMode = 'script' | 'beats' | 'outline'
+type ScriptStudioExperienceMode = 'lazy' | 'pro'
+type ScriptStudioPaperMode = 'edit' | 'annotate'
+export type ScriptStudioAnnotationColor = 'amber' | 'mint' | 'rose' | 'sky'
 type ScriptStudioWorkspaceMode =
   | 'creation'
+  | 'reader'
   | 'setup'
   | 'planning'
   | 'production'
@@ -527,6 +704,63 @@ interface ScriptStudioChapterView {
   updatedAt?: string
   summary: string
   colorClassName: string
+}
+
+export interface PlotPilotReaderInkPoint {
+  x: number
+  y: number
+}
+
+export interface PlotPilotReaderInkStroke {
+  tool: 'pen' | 'arrow'
+  color: string
+  width: number
+  opacity?: number
+  points: PlotPilotReaderInkPoint[]
+}
+
+export interface PlotPilotChapterAnnotation {
+  id: string
+  kind?: 'text' | 'ink'
+  start: number
+  end: number
+  quote: string
+  note: string
+  color: ScriptStudioAnnotationColor
+  status?: 'open' | 'resolved'
+  createdAt: string
+  ink?: PlotPilotReaderInkStroke
+}
+
+export type PlotPilotStoryContextKind = 'character' | 'plot' | 'world' | 'style'
+
+export interface PlotPilotStoryContextCard {
+  id: string
+  kind: PlotPilotStoryContextKind
+  title: string
+  body: string
+  source?: string
+  priority?: number
+}
+
+export interface PlotPilotStoryContextBundle {
+  schema: 'plotpilot.story_context.v1'
+  novelId?: string
+  chapterNumber?: number
+  focusCardIds?: string[]
+  cards: PlotPilotStoryContextCard[]
+}
+
+export interface PlotPilotChapterRevisionContext {
+  annotations?: PlotPilotChapterAnnotation[]
+  instruction?: string
+  storyContext?: PlotPilotStoryContextBundle
+}
+
+interface ScriptStudioTextSelection {
+  start: number
+  end: number
+  quote: string
 }
 
 interface ScriptStudioStorageCardView {
@@ -575,36 +809,89 @@ const scriptStudioNavItems: Array<{
 ]
 
 const scriptStudioToolbarItems: Array<{
+  id: string
   label: string
   icon: React.ComponentType<{ className?: string }>
+  description: string
+  usage: string
+  snippet: string
 }> = [
-  { label: '场次', icon: Clapperboard },
-  { label: '动作', icon: Activity },
-  { label: '角色', icon: UserRound },
-  { label: '括号', icon: Quote },
-  { label: '对话', icon: MessageCircle },
-  { label: '转场', icon: Repeat2 },
-  { label: '注释', icon: MessageSquareText },
-  { label: '字幕', icon: Captions },
+  {
+    id: 'scene',
+    label: '场次',
+    icon: Clapperboard,
+    description: '新建一个剧本场景标题，标记内外景、地点和时间。',
+    usage: '点击后在光标处插入场景头。',
+    snippet: '\n\nEXT. 地点 - 日\n\n',
+  },
+  {
+    id: 'action',
+    label: '动作',
+    icon: Activity,
+    description: '写画面、人物动作、环境变化，不属于台词。',
+    usage: '用于补充镜头里发生了什么。',
+    snippet: '\n\n人物动作与画面描写。\n\n',
+  },
+  {
+    id: 'character',
+    label: '角色',
+    icon: UserRound,
+    description: '插入说话人，通常放在对白上一行。',
+    usage: '先点角色，再点对话。',
+    snippet: '\n\n                         角色名\n',
+  },
+  {
+    id: 'parenthetical',
+    label: '括号',
+    icon: Quote,
+    description: '给对白补充语气、停顿或小动作。',
+    usage: '放在角色名和对白之间。',
+    snippet: '                     （语气/动作）\n',
+  },
+  {
+    id: 'dialogue',
+    label: '对话',
+    icon: MessageCircle,
+    description: '插入角色真正说出口的话。',
+    usage: '用于角色名下方的对白正文。',
+    snippet: '              这里写对白。\n',
+  },
+  {
+    id: 'transition',
+    label: '转场',
+    icon: Repeat2,
+    description: '标记镜头或段落切换，例如 CUT TO。',
+    usage: '通常放在一个场景结束处。',
+    snippet: '\n                                                    CUT TO:\n\n',
+  },
+  {
+    id: 'note',
+    label: '注释',
+    icon: MessageSquareText,
+    description: '写给自己或协作者的改写备注，不属于正文。',
+    usage: '用于记录待补资料、修改意图。',
+    snippet: '\n\n[注释：这里记录改写意图或待补资料]\n\n',
+  },
+  {
+    id: 'caption',
+    label: '字幕',
+    icon: Captions,
+    description: '插入屏幕上出现的文字或旁白字幕。',
+    usage: '用于片头、信息牌、画外文字。',
+    snippet: '\n\n字幕：屏幕上出现的文字。\n\n',
+  },
 ]
 
-const scriptStudioFallbackDraft = `EXT. 东海海面 - 日
+const scriptStudioFallbackDraft = `当前章节还没有载入正文。
 
-正午时分，烈日当空。无边无垠的海面泛着白光，惨碧的波浪轻轻摇曳。
+请先导入文稿、打开章节，或在右侧围绕人物、情节、环境写下本章要求后生成正文。`
 
-                         雄尤
-                     （不住的问）
-              爹，看见了没有？
-
-十二个桨手齐声大笑。
-
-                         桨手们
-              公子爷，你也忒健忘了。哪有一出海便有收获的？
-
-                         雄尤
-              为了找它，已经出海七次，每次都是空手而归，怎不让人着急！
-
-中年汉子站船头，迎风而立，手握千里镜，朗声大笑。`
+const scriptStudioPrimaryPill = 'var(--drama-plm-pill-primary, rgba(23,74,56,0.9))'
+const scriptStudioPrimaryPillHover = 'var(--drama-plm-pill-primary-hover, #113d2f)'
+const scriptStudioPrimaryPillShadow = 'var(--drama-plm-pill-primary-shadow, rgba(23,74,56,0.18))'
+const scriptStudioSecondaryPill = 'var(--drama-plm-pill-secondary, #174a38)'
+const scriptStudioPillInk = 'var(--drama-plm-pill-ink, #30342e)'
+const scriptStudioPillSurface = 'var(--drama-plm-pill-tertiary, rgba(255,255,255,0.52))'
 
 const scriptStudioChapterColors = [
   'bg-[#5477d4]',
@@ -622,12 +909,29 @@ const scriptStudioWorkspaceModes: Array<{
   icon: React.ComponentType<{ className?: string }>
 }> = [
   { id: 'creation', label: '创作', detail: '剧本 / 节拍 / 大纲', icon: PenLine },
+  { id: 'reader', label: '阅读', detail: '版式 / 批注 / 画笔', icon: Highlighter },
   { id: 'setup', label: '设定', detail: 'Onboarding / Bible', icon: BookOpen },
   { id: 'planning', label: '规划', detail: '主线 / 宏观 / 连续规划', icon: GitBranch },
   { id: 'production', label: '生产', detail: 'Autopilot / 连写', icon: Gauge },
   { id: 'review', label: '审阅', detail: '审稿 / 读者模拟', icon: ShieldCheck },
   { id: 'debug', label: '调试', detail: 'Trace / Prompt / Memory', icon: Bug },
 ]
+
+function getInitialScriptStudioWorkspaceMode(): ScriptStudioWorkspaceMode {
+  const params = new URLSearchParams(globalThis.location?.search ?? '')
+  const value = params.get('workspace') ?? params.get('workspaceMode') ?? params.get('plmWorkspace')
+  return scriptStudioWorkspaceModes.some((item) => item.id === value)
+    ? value as ScriptStudioWorkspaceMode
+    : 'creation'
+}
+
+function getInitialScriptStudioExperienceMode(): ScriptStudioExperienceMode {
+  const params = new URLSearchParams(globalThis.location?.search ?? '')
+  const value = params.get('experience') ?? params.get('experienceMode') ?? params.get('plmExperience')
+  if (value === 'pro' || value === 'tools') return 'pro'
+  const workspace = getInitialScriptStudioWorkspaceMode()
+  return workspace === 'creation' ? 'lazy' : 'pro'
+}
 
 type ScriptStudioAdvancedAction = {
   label: string
@@ -661,10 +965,12 @@ function ScriptStudioPlmSurface({
   chapterEditor,
   selectedBibleData,
   codexStatus,
+  integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
+  chapterAnnotations,
   featureState,
-  handlers,
+  handlers: rawHandlers,
   logs,
   ready,
   busy,
@@ -676,8 +982,10 @@ function ScriptStudioPlmSurface({
   chapterEditor?: PlotPilotChapterEditor | null
   selectedBibleData?: PlotPilotBibleEditorData | null
   codexStatus?: PlotPilotCodexStatus | null
+  integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+  chapterAnnotations?: PlotPilotChapterAnnotation[]
   featureState: PlotPilotNativeFeatureState
   handlers?: PlotPilotNativeHandlers
   logs: PlotPilotLogEntry[]
@@ -685,10 +993,12 @@ function ScriptStudioPlmSurface({
   busy: boolean
   className?: string
 }) {
+  const [experienceMode, setExperienceMode] = React.useState<ScriptStudioExperienceMode>(() => getInitialScriptStudioExperienceMode())
   const [mode, setMode] = React.useState<ScriptStudioMode>('script')
-  const [workspaceMode, setWorkspaceMode] = React.useState<ScriptStudioWorkspaceMode>('creation')
+  const [workspaceMode, setWorkspaceMode] = React.useState<ScriptStudioWorkspaceMode>(() => getInitialScriptStudioWorkspaceMode())
   const [activeNav, setActiveNav] = React.useState<ScriptStudioNavId>('script')
   const [draft, setDraft] = React.useState(chapterEditor?.content ?? '')
+  const workspaceUploadInputRef = React.useRef<HTMLInputElement | null>(null)
   const chapters = React.useMemo(
     () => createScriptStudioChapters(novel, chapterEditor),
     [novel, chapterEditor],
@@ -711,12 +1021,46 @@ function ScriptStudioPlmSurface({
     () => createScriptStudioPromptCards(featureState),
     [featureState],
   )
+  const storyContext = React.useMemo(
+    () => createScriptStudioStoryContextBundle({
+      novel,
+      activeChapter,
+      activeChapterNumber,
+      chapterEditor,
+      outlineLines,
+      relationLines,
+      characterCards,
+      selectedBibleData,
+    }),
+    [
+      activeChapter,
+      activeChapterNumber,
+      chapterEditor,
+      characterCards,
+      novel,
+      outlineLines,
+      relationLines,
+      selectedBibleData,
+    ],
+  )
   const activeJob = runtimeStatus.activeJob
   const runtimeLabel = runtimeMeta[runtimeStatus.state].label
   const completedChapters = chapters.filter((chapter) => chapter.wordCount && chapter.wordCount > 0).length
   const totalChapters = novel?.targetChapters ?? novel?.chapterCount ?? chapters.length
   const progressPct = activeJob?.progress ?? (totalChapters > 0 ? (completedChapters / totalChapters) * 100 : 0)
   const canUseNovel = Boolean(novel && ready && !busy)
+  const handlers = React.useMemo(
+    () => createCodexGuardedHandlers(rawHandlers, codexStatus),
+    [rawHandlers, codexStatus],
+  )
+  const canCreateOrAdd = !busy && (
+    !novel
+      ? Boolean(handlers?.onCreateNovel)
+      : chapters.length === 0
+        ? Boolean(handlers?.onPrepareFirstChapter)
+        : Boolean(handlers?.onGenerateChapter)
+  )
+  const canImportWorkspaceFile = Boolean(ready && !busy && handlers?.onImportWorkspaceFile)
 
   React.useEffect(() => {
     setDraft(chapterEditor?.content ?? '')
@@ -742,6 +1086,56 @@ function ScriptStudioPlmSurface({
     handlers?.onGenerateChapter?.(novel.id, activeChapterNumber)
   }
 
+  const openWorkspaceUpload = () => {
+    if (!canImportWorkspaceFile) return
+    workspaceUploadInputRef.current?.click()
+  }
+
+  const importWorkspaceUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+    if (!file) return
+
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    if (extension !== 'md' && extension !== 'markdown' && extension !== 'txt') {
+      window.alert('只支持 Markdown 或 TXT 文件。')
+      return
+    }
+
+    try {
+      handlers?.onImportWorkspaceFile?.({
+        fileName: file.name,
+        mimeType: file.type || undefined,
+        content: await file.text(),
+      })
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const saveDraftToLocal = React.useCallback(async () => {
+    if (!novel) return
+    const chapterTitle = chapterEditor?.title || activeChapter?.title || `第 ${activeChapterNumber} 章`
+    const fileName = [
+      sanitizeMarkdownFileName(novel.title, '未命名项目'),
+      `第${activeChapterNumber}章`,
+      sanitizeMarkdownFileName(chapterTitle, '正文'),
+    ].join('-') + '.md'
+    const markdown = buildLocalChapterMarkdown({
+      novel,
+      chapterNumber: activeChapterNumber,
+      chapterTitle,
+      content: draft,
+    })
+
+    try {
+      await saveMarkdownToLocalFile(fileName, markdown)
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      window.alert(error instanceof Error ? error.message : String(error))
+    }
+  }, [activeChapter?.title, activeChapterNumber, chapterEditor?.title, draft, novel])
+
   return (
     <div
       className={cn(
@@ -761,67 +1155,99 @@ function ScriptStudioPlmSurface({
         autoResumeDelay={2000}
         opacity={1}
       />
+      <input
+        ref={workspaceUploadInputRef}
+        type="file"
+        accept=".md,.markdown,.txt,text/markdown,text/plain"
+        className="sr-only"
+        onChange={(event) => void importWorkspaceUpload(event)}
+      />
 
       <aside className="relative z-10 hidden min-h-0 w-[214px] shrink-0 flex-col border-r border-[#dedbd2] bg-[#f8f7f2]/90 text-[#22241f] shadow-[inset_-1px_0_0_rgba(255,255,255,0.7)] backdrop-blur-[2px] md:flex">
-        <div className="border-b border-[#e3e0d7] px-3 py-3">
+        <div className="space-y-1.5 border-b border-[#e3e0d7] px-3 py-3">
           <button
             type="button"
             onClick={handlers?.onImportStorylet}
             className="flex h-8 w-full items-center justify-between rounded-[7px] border border-[#d9d6cd] bg-[#fdfcf8] px-2.5 text-left text-xs font-semibold text-[#2a2d27] shadow-[0_1px_2px_rgba(36,32,24,0.06)] outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
           >
-            <span className="truncate">《{novel?.title ?? '搜神记'}》</span>
+            <span className="truncate">《{novel?.title ?? '未命名项目'}》</span>
             <ChevronDown className="size-3.5 text-[#737067]" />
+          </button>
+          <button
+            type="button"
+            onClick={openWorkspaceUpload}
+            disabled={!canImportWorkspaceFile}
+            className="flex h-8 w-full items-center gap-2 rounded-[7px] border border-[#d9d6cd] bg-white/55 px-2.5 text-left text-xs font-semibold text-[#315847] shadow-[0_1px_2px_rgba(36,32,24,0.04)] outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[#174a38]/20 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <Upload className="size-3.5 shrink-0" />
+            <span className="truncate">导入文稿</span>
           </button>
         </div>
 
-        <nav className="space-y-1 px-3 py-3" aria-label="PLM 工作模式">
-          <div className="mb-2 text-xs font-semibold text-[#68645d]">工作模式</div>
-          {scriptStudioWorkspaceModes.map((item) => {
-            const Icon = item.icon
-            const active = workspaceMode === item.id
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setWorkspaceMode(item.id)}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'flex w-full items-center gap-2 rounded-[6px] px-2 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
-                  active ? 'bg-[#e8e7e1] text-[#111411]' : 'text-[#3f433d] hover:bg-[#efeee8]',
-                )}
-              >
-                <Icon className="size-3.5 shrink-0" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-semibold">{item.label}</span>
-                  <span className="mt-0.5 block truncate text-[10px] text-[#817c73]">{item.detail}</span>
-                </span>
-              </button>
-            )
-          })}
-        </nav>
+        {experienceMode === 'pro' ? (
+          <>
+            <nav className="space-y-1 px-3 py-3" aria-label="PLM 工作模式">
+              <div className="mb-2 text-xs font-semibold text-[#68645d]">工作模式</div>
+              {scriptStudioWorkspaceModes.map((item) => {
+                const Icon = item.icon
+                const active = workspaceMode === item.id
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setWorkspaceMode(item.id)}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded-[6px] px-2 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                      active ? 'bg-[#e8e7e1] text-[#111411]' : 'text-[#3f433d] hover:bg-[#efeee8]',
+                    )}
+                  >
+                    <Icon className="size-3.5 shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold">{item.label}</span>
+                      <span className="mt-0.5 block truncate text-[10px] text-[#817c73]">{item.detail}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </nav>
 
-        <nav className="space-y-0.5 border-t border-[#e2ded4] px-3 py-3" aria-label="PLM 创作模块">
-          <div className="mb-2 text-xs font-semibold text-[#68645d]">创作模块</div>
-          {scriptStudioNavItems.map((item) => {
-            const Icon = item.icon
-            const active = workspaceMode === 'creation' && activeNav === item.id
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => selectNav(item.id)}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'flex h-8 w-full items-center gap-2 rounded-[6px] px-2 text-left text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
-                  active ? 'bg-[#e8e7e1] text-[#111411]' : 'text-[#3f433d] hover:bg-[#efeee8]',
-                )}
-              >
-                <Icon className="size-3.5 shrink-0" />
-                <span>{item.label}</span>
-              </button>
-            )
-          })}
-        </nav>
+            <nav className="space-y-0.5 border-t border-[#e2ded4] px-3 py-3" aria-label="PLM 创作模块">
+              <div className="mb-2 text-xs font-semibold text-[#68645d]">创作模块</div>
+              {scriptStudioNavItems.map((item) => {
+                const Icon = item.icon
+                const active = workspaceMode === 'creation' && activeNav === item.id
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => selectNav(item.id)}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'flex h-8 w-full items-center gap-2 rounded-[6px] px-2 text-left text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                      active ? 'bg-[#e8e7e1] text-[#111411]' : 'text-[#3f433d] hover:bg-[#efeee8]',
+                    )}
+                  >
+                    <Icon className="size-3.5 shrink-0" />
+                    <span>{item.label}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          </>
+        ) : (
+          <ScriptStudioLazySidebar
+            novel={novel}
+            activeChapterNumber={activeChapterNumber}
+            activeJob={activeJob}
+            ready={ready}
+            busy={busy}
+            storyContext={storyContext}
+            canImportWorkspaceFile={canImportWorkspaceFile}
+            onImportWorkspaceFile={openWorkspaceUpload}
+            onSave={() => void saveDraftToLocal()}
+          />
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           <div className="mb-2 mt-1 text-xs font-semibold text-[#68645d]">节拍</div>
@@ -847,6 +1273,7 @@ function ScriptStudioPlmSurface({
         </div>
 
         <div className="border-t border-[#e2ded4] px-3 py-3">
+          <ScriptStudioExperienceSwitch value={experienceMode} onChange={setExperienceMode} />
           <div className="flex items-center gap-2">
             <div className="grid size-8 place-items-center rounded-full bg-[#d9d3c6] text-xs font-bold text-[#284235]">
               诗
@@ -871,62 +1298,76 @@ function ScriptStudioPlmSurface({
             </div>
           </div>
 
-          <div className="hidden max-w-[680px] items-center gap-1 overflow-x-auto rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] sm:flex">
-            {scriptStudioWorkspaceModes.map((item) => {
-              const Icon = item.icon
-              return (
+          {experienceMode === 'pro' ? (
+            <div className="hidden max-w-[680px] items-center gap-1 overflow-x-auto rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] sm:flex">
+              {scriptStudioWorkspaceModes.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setWorkspaceMode(item.id)}
+                    aria-pressed={workspaceMode === item.id}
+                    className={cn(
+                      'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                      workspaceMode === item.id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
+                    )}
+                  >
+                    <Icon className="size-3.5" />
+                    {item.label}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="hidden items-center gap-2 rounded-full border border-[#dfe3d8] px-3 py-1 text-xs font-semibold text-[#315847] shadow-[0_1px_2px_rgba(36,32,24,0.04)] sm:flex" style={{ backgroundColor: 'rgba(255,255,255,0.48)' }}>
+              <WandSparkles className="size-3.5" />
+              写作模式
+            </div>
+          )}
+
+          {experienceMode === 'pro' ? (
+            <div className={cn(
+              'hidden items-center gap-1 rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] lg:flex',
+              workspaceMode !== 'creation' && 'opacity-50',
+            )}>
+              {([
+                ['script', '编辑', PenLine],
+                ['beats', '节拍', ListChecks],
+                ['outline', '大纲', ScrollText],
+              ] as const).map(([id, label, Icon]) => (
                 <button
-                  key={item.id}
+                  key={id}
                   type="button"
-                  onClick={() => setWorkspaceMode(item.id)}
-                  aria-pressed={workspaceMode === item.id}
+                  onClick={() => {
+                    setWorkspaceMode('creation')
+                    setMode(id)
+                  }}
+                  aria-pressed={workspaceMode === 'creation' && mode === id}
                   className={cn(
                     'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
-                    workspaceMode === item.id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
+                    workspaceMode === 'creation' && mode === id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
                   )}
                 >
                   <Icon className="size-3.5" />
-                  {item.label}
+                  {label}
                 </button>
-              )
-            })}
-          </div>
-
-          <div className={cn(
-            'hidden items-center gap-1 rounded-[7px] border border-[#e3e0d8] bg-[#f7f6f1] p-1 shadow-[0_1px_2px_rgba(36,32,24,0.04)] lg:flex',
-            workspaceMode !== 'creation' && 'opacity-50',
-          )}>
-            {([
-              ['script', '编辑', PenLine],
-              ['beats', '节拍', ListChecks],
-              ['outline', '大纲', ScrollText],
-            ] as const).map(([id, label, Icon]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => {
-                  setWorkspaceMode('creation')
-                  setMode(id)
-                }}
-                aria-pressed={workspaceMode === 'creation' && mode === id}
-                className={cn(
-                  'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
-                  workspaceMode === 'creation' && mode === id ? 'bg-white text-[#1c241f] shadow-[0_1px_2px_rgba(36,32,24,0.08)]' : 'text-[#858077] hover:text-[#3d4039]',
-                )}
-              >
-                <Icon className="size-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : null}
 
           <div className="flex items-center gap-2">
+            <IntegrationBadge status={integrationStatus} />
             <RuntimeBadge state={runtimeStatus.state} />
             <button
               type="button"
               onClick={createOrAdd}
-              disabled={busy || (!handlers?.onCreateNovel && !handlers?.onPrepareFirstChapter && !handlers?.onGenerateChapter)}
+              disabled={!canCreateOrAdd}
               className="flex h-8 items-center gap-1.5 rounded-[7px] bg-[#174a38] px-3 text-xs font-semibold text-white shadow-[0_2px_5px_rgba(23,74,56,0.18)] outline-none transition hover:bg-[#113d2f] focus-visible:ring-2 focus-visible:ring-[#174a38]/25 disabled:cursor-not-allowed disabled:opacity-45"
+              style={{
+                background: `linear-gradient(180deg, ${scriptStudioPrimaryPill}, ${scriptStudioPrimaryPillHover})`,
+                boxShadow: `0 2px 8px ${scriptStudioPrimaryPillShadow}`,
+              }}
             >
               <Plus className="size-3.5" />
               添加
@@ -934,57 +1375,85 @@ function ScriptStudioPlmSurface({
           </div>
         </header>
 
-        <section className="min-h-0 flex-1 overflow-auto bg-transparent px-3 py-4 lg:px-5">
-          {workspaceMode === 'creation' ? (
-            <div className="grid min-h-full w-full min-w-[720px] grid-cols-[minmax(0,1fr)_264px] gap-4">
-            <div className="min-w-0">
-              {mode === 'script' ? (
-                <ScriptStudioPaper
-                  title="剧本"
-                  subtitle={chapterEditor?.title ?? activeChapter?.title ?? novel?.title ?? '新剧本'}
-                  draft={draft}
-                  placeholder={scriptStudioFallbackDraft}
-                  onDraftChange={setDraft}
-                  novel={novel}
-                  chapterNumber={activeChapterNumber}
-                  ready={ready}
-                  busy={busy}
-                  handlers={handlers}
-                />
-              ) : null}
+        <section className="min-h-0 flex-1 overflow-auto bg-transparent px-3 py-4 lg:px-6">
+          <ScriptStudioLayerFailureBanner
+            runtimeStatus={runtimeStatus}
+            integrationStatus={integrationStatus}
+            codexStatus={codexStatus}
+            handlers={rawHandlers}
+            busy={busy}
+          />
+          {experienceMode === 'lazy' ? (
+            <ScriptStudioLazyWorkspace
+              novel={novel}
+              activeChapterNumber={activeChapterNumber}
+              activeChapterTitle={chapterEditor?.title ?? activeChapter?.title ?? novel?.title ?? '新剧本'}
+              draft={draft}
+              onDraftChange={setDraft}
+              ready={ready}
+              busy={busy}
+              handlers={handlers}
+              activeJob={activeJob}
+              completedChapters={completedChapters}
+              totalChapters={totalChapters}
+              progressPct={progressPct}
+              codexStatus={codexStatus}
+              projectGuardStatus={projectGuardStatus}
+              lastWritingSpecFailure={lastWritingSpecFailure}
+              chapterAnnotations={chapterAnnotations}
+              storyContext={storyContext}
+              onOpenPro={() => setExperienceMode('pro')}
+            />
+          ) : workspaceMode === 'creation' ? (
+            <div className="grid min-h-full w-full min-w-[720px] grid-cols-[minmax(0,1fr)_264px] gap-5 xl:grid-cols-[minmax(0,1fr)_284px]">
+              <div className="min-w-0">
+                {mode === 'script' ? (
+                  <ScriptStudioPaper
+                    title="剧本"
+                    subtitle={chapterEditor?.title ?? activeChapter?.title ?? novel?.title ?? '新剧本'}
+                    draft={draft}
+                    placeholder={scriptStudioFallbackDraft}
+                    onDraftChange={setDraft}
+                    novel={novel}
+                    chapterNumber={activeChapterNumber}
+                    ready={ready}
+                    busy={busy}
+                    handlers={handlers}
+                  />
+                ) : null}
 
-              {mode === 'beats' ? (
-                <ScriptStudioBeatPaper
-                  novel={novel}
-                  chapters={chapters}
-                  activeChapterNumber={activeChapterNumber}
-                  onOpenChapter={(chapterNumber) => novel ? handlers?.onOpenChapter?.(novel.id, chapterNumber) : undefined}
-                />
-              ) : null}
+                {mode === 'beats' ? (
+                  <ScriptStudioBeatPaper
+                    novel={novel}
+                    chapters={chapters}
+                    activeChapterNumber={activeChapterNumber}
+                    onOpenChapter={(chapterNumber) => novel ? handlers?.onOpenChapter?.(novel.id, chapterNumber) : undefined}
+                  />
+                ) : null}
 
-              {mode === 'outline' ? (
-                <ScriptStudioOutlinePaper
-                  novel={novel}
-                  outlineLines={outlineLines}
-                  featureState={featureState}
-                  ready={ready}
-                  busy={busy}
-                  handlers={handlers}
-                />
-              ) : null}
+                {mode === 'outline' ? (
+                  <ScriptStudioOutlinePaper
+                    novel={novel}
+                    outlineLines={outlineLines}
+                    featureState={featureState}
+                    ready={ready}
+                    busy={busy}
+                    handlers={handlers}
+                  />
+                ) : null}
 
-              <div className="mt-4 flex items-center gap-3 text-sm font-semibold text-[#315847]">
-                <span className={mode === 'outline' ? 'text-[#174a38]' : 'text-[#8a867c]'}>大纲</span>
-                <span className="text-[#b4afa5]">→</span>
-                <span className={mode === 'beats' ? 'text-[#174a38]' : 'text-[#8a867c]'}>节拍</span>
-                <span className="text-[#b4afa5]">→</span>
-                <span className={mode === 'script' ? 'text-[#174a38]' : 'text-[#8a867c]'}>剧本</span>
-                <span className="h-px min-w-12 flex-1 bg-[#dad6cc]" />
-                <span className="font-mono text-lg text-[#315847]">
-                  {String(Math.min(activeChapterNumber, 99)).padStart(2, '0')} / {String(Math.max(totalChapters, 1)).padStart(2, '0')}
-                </span>
+                <div className="mx-auto mt-4 flex max-w-[420px] items-center gap-3 text-sm font-semibold text-[#315847]">
+                  <span className={mode === 'outline' ? 'text-[#174a38]' : 'text-[#8a867c]'}>大纲</span>
+                  <span className="text-[#b4afa5]">→</span>
+                  <span className={mode === 'beats' ? 'text-[#174a38]' : 'text-[#8a867c]'}>节拍</span>
+                  <span className="text-[#b4afa5]">→</span>
+                  <span className={mode === 'script' ? 'text-[#174a38]' : 'text-[#8a867c]'}>剧本</span>
+                  <span className="h-px min-w-12 flex-1 bg-[#dad6cc]" />
+                  <span className="font-mono text-lg text-[#315847]">
+                    {String(Math.min(activeChapterNumber, 99)).padStart(2, '0')} / {String(Math.max(totalChapters, 1)).padStart(2, '0')}
+                  </span>
+                </div>
               </div>
-            </div>
 
             <ScriptStudioRightRail
               mode={mode}
@@ -1002,11 +1471,24 @@ function ScriptStudioPlmSurface({
               draft={draft}
               novel={novel}
               codexStatus={codexStatus}
+              integrationStatus={integrationStatus}
               projectGuardStatus={projectGuardStatus}
               lastWritingSpecFailure={lastWritingSpecFailure}
               handlers={handlers}
             />
           </div>
+          ) : workspaceMode === 'reader' ? (
+            <ScriptStudioMagazineReaderWorkspace
+              novel={novel}
+              chapterNumber={activeChapterNumber}
+              title={chapterEditor?.title ?? activeChapter?.title ?? novel?.title ?? '阅读批注'}
+              draft={draft}
+              placeholder={scriptStudioFallbackDraft}
+              chapterAnnotations={chapterAnnotations}
+              handlers={handlers}
+              ready={ready}
+              busy={busy}
+            />
           ) : (
             <ScriptStudioAdvancedWorkspace
               workspaceMode={workspaceMode}
@@ -1021,12 +1503,1658 @@ function ScriptStudioPlmSurface({
               ready={ready}
               busy={busy}
               codexStatus={codexStatus}
+              integrationStatus={integrationStatus}
               projectGuardStatus={projectGuardStatus}
               lastWritingSpecFailure={lastWritingSpecFailure}
             />
           )}
         </section>
       </main>
+    </div>
+  )
+}
+
+function ScriptStudioExperienceSwitch({
+  value,
+  onChange,
+}: {
+  value: ScriptStudioExperienceMode
+  onChange: (value: ScriptStudioExperienceMode) => void
+}) {
+  return (
+    <div className="mb-3 rounded-[9px] border border-[#dedbd2] p-1" style={{ backgroundColor: 'rgba(255,255,255,0.48)' }}>
+      <div className="grid grid-cols-2 gap-1">
+        {([
+          ['lazy', '写作', WandSparkles],
+          ['pro', '工具', SlidersHorizontal],
+        ] as const).map(([id, label, Icon]) => {
+          const active = value === id
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onChange(id)}
+              aria-pressed={active}
+              className="flex h-7 items-center justify-center gap-1 rounded-[7px] text-[11px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
+              style={{
+                backgroundColor: active ? scriptStudioPrimaryPill : 'transparent',
+                color: active ? '#fff' : '#555a51',
+                boxShadow: active ? `0 5px 14px ${scriptStudioPrimaryPillShadow}` : 'none',
+              }}
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioLazySidebar({
+  novel,
+  activeChapterNumber,
+  activeJob,
+  ready,
+  busy,
+  storyContext,
+  canImportWorkspaceFile,
+  onImportWorkspaceFile,
+  onSave,
+}: {
+  novel: PlotPilotNovel | null
+  activeChapterNumber: number
+  activeJob?: PlotPilotGenerationJob | null
+  ready: boolean
+  busy: boolean
+  storyContext: PlotPilotStoryContextBundle
+  canImportWorkspaceFile: boolean
+  onImportWorkspaceFile: () => void
+  onSave: () => void
+}) {
+  const disabled = !ready || busy
+  const triadCards = storyContext.cards.filter((card) => card.kind !== 'style')
+
+  return (
+    <div className="border-b border-[#e2ded4] px-3 py-3">
+      <div className="mb-2 text-xs font-semibold text-[#68645d]">小说三要素</div>
+      <div className="space-y-1.5">
+        {triadCards.map((card) => {
+          const meta = storyContextMeta(card.kind)
+          const Icon = meta.icon
+          return (
+            <div
+              key={card.id}
+              className="rounded-[8px] border border-[#e1ddd2] px-2.5 py-2"
+              style={{ backgroundColor: 'rgba(255,255,255,0.46)' }}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: meta.color }}>
+                <Icon className="size-3.5" />
+                {meta.label}
+              </div>
+              <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-[#6f6b63]">{card.body}</div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-3 space-y-1.5">
+        <button
+          type="button"
+          onClick={onImportWorkspaceFile}
+          disabled={!canImportWorkspaceFile}
+          className="flex h-9 w-full items-center gap-2 rounded-[8px] px-2 text-left text-xs font-semibold outline-none transition hover:opacity-90 disabled:opacity-45"
+          style={{
+            backgroundColor: scriptStudioPrimaryPill,
+            boxShadow: `0 12px 24px ${scriptStudioPrimaryPillShadow}`,
+            color: '#fff',
+          }}
+        >
+          <Upload className="size-3.5" />
+          导入文稿
+        </button>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={disabled || !novel}
+          className="flex h-9 w-full items-center gap-2 rounded-[8px] px-2 text-left text-xs font-semibold outline-none transition hover:opacity-90 disabled:opacity-45"
+          style={{
+            backgroundColor: scriptStudioPrimaryPill,
+            boxShadow: `0 12px 24px ${scriptStudioPrimaryPillShadow}`,
+            color: '#fff',
+          }}
+        >
+          <Save className="size-3.5" />
+          保存到本地
+        </button>
+      </div>
+      <div className="mt-3 rounded-[8px] border border-[#e1ddd2] px-2.5 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.38)' }}>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7c766b]">当前</div>
+        <div className="mt-1 truncate text-xs font-semibold text-[#2a2d27]">
+          第 {activeChapterNumber} 章
+        </div>
+        <div className="mt-1 truncate text-[11px] text-[#6f6b63]">
+          {activeJob?.label ?? (ready ? '准备好了' : '正在准备')}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ScriptStudioLazyWorkspace({
+  novel,
+  activeChapterNumber,
+  activeChapterTitle,
+  draft,
+  onDraftChange,
+  ready,
+  busy,
+  handlers,
+  activeJob,
+  codexStatus,
+  projectGuardStatus,
+  lastWritingSpecFailure,
+  chapterAnnotations,
+  storyContext,
+  onOpenPro,
+}: {
+  novel: PlotPilotNovel | null
+  activeChapterNumber: number
+  activeChapterTitle: string
+  draft: string
+  onDraftChange: (value: string) => void
+  ready: boolean
+  busy: boolean
+  handlers?: PlotPilotNativeHandlers
+  activeJob?: PlotPilotGenerationJob | null
+  completedChapters: number
+  totalChapters: number
+  progressPct: number
+  codexStatus?: PlotPilotCodexStatus | null
+  projectGuardStatus?: PlotPilotProjectGuardStatus | null
+  lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
+  chapterAnnotations?: PlotPilotChapterAnnotation[]
+  storyContext: PlotPilotStoryContextBundle
+  onOpenPro: () => void
+}) {
+  const [chatPrompt, setChatPrompt] = React.useState('')
+  const [annotations, setAnnotations] = React.useState<PlotPilotChapterAnnotation[]>(chapterAnnotations ?? [])
+  const [chatAnnotationIds, setChatAnnotationIds] = React.useState<string[]>([])
+  const [chatStoryContextIds, setChatStoryContextIds] = React.useState<string[]>([])
+  const canUseNovel = Boolean(novel && ready && !busy)
+  const canSave = Boolean(canUseNovel && handlers?.onSaveChapter)
+  const canContinue = Boolean((novel && ready && !busy && handlers?.onGenerateChapter) || (!novel && !busy && handlers?.onCreateNovel))
+  const canCheck = Boolean(canUseNovel && handlers?.onReviewChapter)
+  const wordCount = countDraftText(draft)
+  const chatAnnotations = React.useMemo(
+    () => chatAnnotationIds
+      .map((annotationId) => annotations.find((annotation) => annotation.id === annotationId))
+      .filter((annotation): annotation is PlotPilotChapterAnnotation => Boolean(annotation)),
+    [annotations, chatAnnotationIds],
+  )
+  const chatStoryContextCards = React.useMemo(
+    () => chatStoryContextIds
+      .map((cardId) => storyContext.cards.find((card) => card.id === cardId))
+      .filter((card): card is PlotPilotStoryContextCard => Boolean(card)),
+    [chatStoryContextIds, storyContext.cards],
+  )
+  const storyContextForRequest = React.useMemo<PlotPilotStoryContextBundle>(() => ({
+    ...storyContext,
+    focusCardIds: chatStoryContextIds,
+  }), [chatStoryContextIds, storyContext])
+  const revisionContext = React.useMemo<PlotPilotChapterRevisionContext>(() => ({
+    annotations,
+    storyContext: storyContextForRequest,
+  }), [annotations, storyContextForRequest])
+
+  React.useEffect(() => {
+    setAnnotations(chapterAnnotations ?? [])
+  }, [chapterAnnotations, novel?.id, activeChapterNumber])
+
+  React.useEffect(() => {
+    setChatAnnotationIds((current) => current.filter((annotationId) => (
+      annotations.some((annotation) => annotation.id === annotationId)
+    )))
+  }, [annotations])
+
+  React.useEffect(() => {
+    setChatStoryContextIds((current) => current.filter((cardId) => (
+      storyContext.cards.some((card) => card.id === cardId)
+    )))
+  }, [storyContext.cards])
+
+  const updateAnnotations = React.useCallback((nextAnnotations: PlotPilotChapterAnnotation[]) => {
+    setAnnotations(nextAnnotations)
+    if (novel) {
+      handlers?.onSaveChapterAnnotations?.(novel.id, activeChapterNumber, nextAnnotations)
+    }
+  }, [activeChapterNumber, handlers, novel])
+
+  const addAnnotationToChat = React.useCallback((annotationId: string) => {
+    setChatAnnotationIds((current) => current.includes(annotationId) ? current : [...current, annotationId])
+  }, [])
+
+  const removeAnnotationFromChat = React.useCallback((annotationId: string) => {
+    setChatAnnotationIds((current) => current.filter((item) => item !== annotationId))
+  }, [])
+
+  const toggleStoryContextFocus = React.useCallback((cardId: string) => {
+    setChatStoryContextIds((current) => (
+      current.includes(cardId)
+        ? current.filter((item) => item !== cardId)
+        : [...current, cardId]
+    ))
+  }, [])
+
+  const removeStoryContextFocus = React.useCallback((cardId: string) => {
+    setChatStoryContextIds((current) => current.filter((item) => item !== cardId))
+  }, [])
+
+  const saveDraft = () => {
+    if (!novel) return
+    handlers?.onSaveChapter?.(novel.id, activeChapterNumber, draft, revisionContext)
+  }
+
+  const continueWriting = () => {
+    if (!novel) {
+      handlers?.onCreateNovel?.()
+      return
+    }
+    handlers?.onGenerateChapter?.(novel.id, activeChapterNumber, revisionContext)
+  }
+
+  const checkChapter = () => {
+    if (!novel) return
+    handlers?.onReviewChapter?.(novel.id, activeChapterNumber)
+  }
+
+  const submitChatPrompt = () => {
+    const instruction = chatPrompt.trim()
+    if (!instruction && chatAnnotations.length === 0 && chatStoryContextCards.length === 0) return
+    if (!novel) {
+      handlers?.onCreateNovel?.()
+      return
+    }
+    handlers?.onGenerateChapter?.(novel.id, activeChapterNumber, {
+      annotations: chatAnnotations,
+      instruction,
+      storyContext: storyContextForRequest,
+    })
+    setChatPrompt('')
+    setChatAnnotationIds([])
+    setChatStoryContextIds([])
+  }
+
+  return (
+    <div
+      data-plm-lazy-layout="reader-left-controls-right"
+      className="mx-auto grid min-h-full w-full max-w-[1180px] gap-5 lg:grid-cols-[minmax(0,1fr)_320px]"
+    >
+      <ScriptStudioLazyPaper
+        title={activeChapterTitle}
+        chapterNumber={activeChapterNumber}
+        draft={draft}
+        placeholder={scriptStudioFallbackDraft}
+        annotations={annotations}
+        chatAnnotationIds={chatAnnotationIds}
+        onAnnotationsChange={updateAnnotations}
+        onAddAnnotationToChat={addAnnotationToChat}
+        onDraftChange={(value) => {
+          onDraftChange(value)
+          handlers?.onChangeChapterDraft?.(value)
+        }}
+      />
+
+      <aside
+        data-plm-control-rail="true"
+        className="h-fit overflow-x-visible rounded-[20px] border p-3 shadow-[0_24px_70px_rgba(43,38,27,0.14)] backdrop-blur-2xl lg:sticky lg:top-4 lg:max-h-[calc(100vh-132px)] lg:overflow-y-auto"
+        style={{
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.62), rgba(246,244,238,0.28))',
+          borderColor: 'rgba(255,255,255,0.62)',
+          WebkitBackdropFilter: 'blur(26px) saturate(1.32)',
+          backdropFilter: 'blur(26px) saturate(1.32)',
+        }}
+      >
+        <section
+          className="relative overflow-hidden rounded-[18px] border border-[#d9d2c3] p-3 shadow-[0_16px_34px_rgba(43,38,27,0.11)]"
+          style={{
+            background: [
+              'radial-gradient(circle at 10px 10px, rgba(80,74,61,0.13) 1.7px, transparent 1.8px)',
+              'linear-gradient(135deg, rgba(255,255,255,0.88), rgba(237,234,224,0.62))',
+            ].join(', '),
+            backgroundSize: '15px 15px, auto',
+          }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#315847]">
+                <WandSparkles className="size-3.5" />
+                写作卡组
+              </div>
+              <h2 className="mt-1 truncate text-xl font-semibold text-[#20241f]">AI 写作助手</h2>
+              <div className="mt-1 text-[11px] leading-5 text-[#6f6b63]">
+                {activeJob?.label ?? (ready ? '可以开始写' : '正在准备写作环境')}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                title="保存当前章"
+                aria-label="保存当前章"
+                onClick={saveDraft}
+                disabled={!canSave}
+                className="grid size-8 place-items-center rounded-[9px] border border-[#ded9cd] text-[#70766d] outline-none transition hover:bg-white/72 hover:text-[#174a38] disabled:cursor-not-allowed disabled:opacity-35"
+                style={{ backgroundColor: 'rgba(255,255,255,0.62)' }}
+              >
+                <Save className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={onOpenPro}
+                className="grid size-8 place-items-center rounded-[9px] border border-[#ded9cd] text-[#555a51] outline-none transition hover:bg-white/72 hover:text-[#174a38]"
+                style={{ backgroundColor: 'rgba(255,255,255,0.62)' }}
+                title="更多工具"
+                aria-label="更多工具"
+              >
+                <SlidersHorizontal className="size-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <ScriptStudioLazyMetric label="章节" value={`第 ${activeChapterNumber} 章`} />
+            <ScriptStudioLazyMetric label="字数" value={`${wordCount || novel?.wordCount || 0} 字`} />
+            <ScriptStudioLazyMetric label="批注" value={`${annotations.length} 条`} />
+          </div>
+
+          <div className="mt-3 rounded-[12px] border border-[#e2ddd2] px-3 py-2.5" style={{ backgroundColor: 'rgba(255,255,255,0.52)' }}>
+            <div className="flex items-center justify-between gap-2 text-[11px] leading-5 text-[#6f6b63]">
+              <span>AI {codexStatus?.authenticated ? '已连接' : '未连接'}</span>
+              <span>WritingSpec {projectGuardStatus?.writingSpecId ? 'on' : '未设置'}</span>
+            </div>
+          </div>
+        </section>
+
+        {lastWritingSpecFailure ? (
+          <div className="mt-3 rounded-[10px] border border-[#ead7a0] px-3 py-2 text-xs leading-5 text-[#6d540b]" style={{ backgroundColor: 'rgba(255,249,232,0.72)' }}>
+            {lastWritingSpecFailure.message}
+          </div>
+        ) : null}
+
+        <ScriptStudioStoryContextPanel
+          storyContext={storyContext}
+          focusCardIds={chatStoryContextIds}
+          onToggleFocus={toggleStoryContextFocus}
+        />
+
+        <section
+          className="mt-3 overflow-hidden rounded-[18px] border p-3 text-white shadow-[0_18px_38px_rgba(43,38,27,0.18)]"
+          style={{
+            ...storyContextComicBackground('character', chatPrompt.trim().length > 0 || chatStoryContextCards.length > 0 || chatAnnotations.length > 0),
+            borderColor: 'rgba(103,126,113,0.48)',
+          }}
+        >
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold text-white">Agent 对话卡</div>
+              <div className="mt-0.5 text-[11px] text-white/76">人物、情节、环境、批注一起发送</div>
+            </div>
+            <span className="grid size-9 place-items-center rounded-full bg-white/18 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]">
+              <MessageSquareText className="size-4" />
+            </span>
+          </div>
+
+          {chatStoryContextCards.length > 0 || chatAnnotations.length > 0 ? (
+            <div className="mb-3 grid gap-1.5">
+              {chatStoryContextCards.map((card) => {
+                const meta = storyContextMeta(card.kind)
+                const Icon = meta.icon
+                return (
+                  <button
+                    key={card.id}
+                    type="button"
+                    title="从对话移除"
+                    onClick={() => removeStoryContextFocus(card.id)}
+                    className="group flex min-h-10 w-full items-center gap-2 rounded-[12px] border border-[#d7e1d9] bg-[#f7fffa]/70 px-2 text-left outline-none transition hover:bg-white/82"
+                  >
+                    <span className="grid size-7 shrink-0 place-items-center rounded-[9px]" style={{ backgroundColor: meta.bg, color: meta.color }}>
+                      <Icon className="size-3.5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold text-[#315847]">{card.title}</span>
+                      <span className="block truncate text-[10px] text-[#7b8d81]">{meta.label} context</span>
+                    </span>
+                    <span className="text-[#8aa093] group-hover:text-[#65776d]" aria-hidden="true">×</span>
+                  </button>
+                )
+              })}
+              {chatAnnotations.map((annotation, index) => (
+                <button
+                  key={annotation.id}
+                  type="button"
+                  title="从对话移除"
+                  onClick={() => removeAnnotationFromChat(annotation.id)}
+                  className="group flex min-h-10 w-full items-center gap-2 rounded-[12px] border border-[#ded8ca] bg-white/62 px-2 text-left outline-none transition hover:bg-white/82"
+                >
+                  <span className="grid size-7 shrink-0 place-items-center rounded-[9px] bg-[#f6efd9] text-[#7b5b19]">
+                    <Quote className="size-3.5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-semibold text-[#4c554c]">批注 {index + 1}</span>
+                    <span className="block truncate text-[10px] text-[#8a867c]">{annotation.quote}</span>
+                  </span>
+                  <span className="text-[#9a948a] group-hover:text-[#7b766c]" aria-hidden="true">×</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <label className="block rounded-[16px] bg-white/94 p-3 text-[#28241e] shadow-[0_10px_24px_rgba(43,38,27,0.14)]">
+            <span className="text-xs font-semibold text-[#4d554c]">你想让它怎么写？</span>
+            <textarea
+              value={chatPrompt}
+              onChange={(event) => setChatPrompt(event.currentTarget.value)}
+              placeholder="比如：围绕人物关系改甜一点；情节别提前开挂；环境多一点高淳潮热和小镇闲话"
+              className="mt-2 min-h-24 w-full resize-none rounded-[14px] border border-[#ded9cd] px-3 py-2 text-sm leading-6 text-[#28241e] shadow-inner outline-none placeholder:text-[#9a948a] focus:border-[#174a38]/45"
+              style={{ backgroundColor: 'rgba(250,249,245,0.9)' }}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={submitChatPrompt}
+            disabled={!ready || busy || (!chatPrompt.trim() && chatAnnotations.length === 0 && chatStoryContextCards.length === 0)}
+            className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-[14px] border border-white/34 bg-white/22 px-3 py-2 text-sm font-semibold text-white outline-none transition hover:bg-white/28 disabled:cursor-not-allowed disabled:opacity-45"
+            style={{
+              background: `linear-gradient(180deg, ${scriptStudioSecondaryPill}, ${scriptStudioPrimaryPill})`,
+              boxShadow: `0 14px 28px ${scriptStudioPrimaryPillShadow}`,
+            }}
+          >
+            <Sparkles className="size-4" />
+            发送给 Agent
+          </button>
+
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <ScriptStudioLazyActionButton
+              icon={Sparkles}
+              label={novel ? '续写本章' : '新建一本书'}
+              detail={novel ? '快捷继续' : '创建项目'}
+              onClick={continueWriting}
+              disabled={!canContinue}
+            />
+            <ScriptStudioLazyActionButton icon={ShieldCheck} label="检查节奏" detail="看问题" onClick={checkChapter} disabled={!canCheck} />
+          </div>
+        </section>
+
+        <ScriptStudioMusicPlayer className="mt-3" />
+      </aside>
+    </div>
+  )
+}
+
+function ScriptStudioLazyMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[10px] border border-[#e2ddd2] px-3 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.42)' }}>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#8a867c]">{label}</div>
+      <div className="mt-1 truncate text-sm font-semibold text-[#252822]">{value}</div>
+    </div>
+  )
+}
+
+function storyContextMeta(kind: PlotPilotStoryContextKind) {
+  switch (kind) {
+    case 'character':
+      return { label: '人物', icon: UserRound, color: '#315847', bg: 'rgba(234,246,239,0.68)', short: '人' }
+    case 'plot':
+      return { label: '情节', icon: GitBranch, color: '#4d5685', bg: 'rgba(237,240,252,0.68)', short: '节' }
+    case 'world':
+      return { label: '环境', icon: MapPin, color: '#6a4a17', bg: 'rgba(255,247,229,0.68)', short: '境' }
+    case 'style':
+      return { label: '文风', icon: Palette, color: '#6b3f5f', bg: 'rgba(252,238,248,0.68)', short: '风' }
+  }
+}
+
+function storyContextComicBackground(kind: PlotPilotStoryContextKind, active: boolean) {
+  const palette: Record<PlotPilotStoryContextKind, { from: string; to: string; dot: string; border: string }> = {
+    character: {
+      from: 'var(--drama-plm-card-character-from, rgba(168,185,173,0.96))',
+      to: 'var(--drama-plm-card-character-to, rgba(122,142,130,0.9))',
+      dot: 'var(--drama-plm-card-character-dot, rgba(45,61,52,0.24))',
+      border: 'var(--drama-plm-card-character-border, rgba(103,126,113,0.45))',
+    },
+    plot: {
+      from: 'var(--drama-plm-card-plot-from, rgba(163,171,207,0.96))',
+      to: 'var(--drama-plm-card-plot-to, rgba(104,114,162,0.9))',
+      dot: 'var(--drama-plm-card-plot-dot, rgba(41,49,91,0.24))',
+      border: 'var(--drama-plm-card-plot-border, rgba(94,105,153,0.45))',
+    },
+    world: {
+      from: 'var(--drama-plm-card-world-from, rgba(202,181,131,0.96))',
+      to: 'var(--drama-plm-card-world-to, rgba(151,126,70,0.9))',
+      dot: 'var(--drama-plm-card-world-dot, rgba(80,60,22,0.22))',
+      border: 'var(--drama-plm-card-world-border, rgba(139,111,53,0.45))',
+    },
+    style: {
+      from: 'var(--drama-plm-card-style-from, rgba(205,166,195,0.96))',
+      to: 'var(--drama-plm-card-style-to, rgba(149,96,134,0.9))',
+      dot: 'var(--drama-plm-card-style-dot, rgba(91,44,80,0.22))',
+      border: 'var(--drama-plm-card-style-border, rgba(139,88,126,0.45))',
+    },
+  }
+  const color = palette[kind]
+  const glow = active ? 'radial-gradient(circle at 78% 10%, rgba(255,255,255,0.38), transparent 34%)' : 'radial-gradient(circle at 78% 10%, rgba(255,255,255,0.18), transparent 32%)'
+  return {
+    background: [
+      `radial-gradient(circle at 8px 8px, ${color.dot} 1.8px, transparent 2px)`,
+      glow,
+      `linear-gradient(145deg, ${color.from}, ${color.to})`,
+    ].join(', '),
+    backgroundSize: '15px 15px, auto, auto',
+    borderColor: color.border,
+  }
+}
+
+function ScriptStudioStoryContextPanel({
+  storyContext,
+  focusCardIds,
+  onToggleFocus,
+}: {
+  storyContext: PlotPilotStoryContextBundle
+  focusCardIds: string[]
+  onToggleFocus: (cardId: string) => void
+}) {
+  return (
+    <section className="mt-3 overflow-visible">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div>
+          <div className="text-sm font-semibold text-[#252822]">小说三要素</div>
+          <div className="mt-0.5 text-[11px] text-[#817c73]">Story cards</div>
+        </div>
+        <div className="text-[10px] font-semibold text-[#8a867c]">向左展开</div>
+      </div>
+      <div className="-mx-1 overflow-x-auto overflow-y-visible pb-2">
+        <div className="flex min-w-max flex-row-reverse justify-end gap-2 px-1">
+        {storyContext.cards.map((card) => {
+          const meta = storyContextMeta(card.kind)
+          const Icon = meta.icon
+          const active = focusCardIds.includes(card.id)
+          return (
+            <button
+              key={card.id}
+              type="button"
+              onClick={() => onToggleFocus(card.id)}
+              aria-pressed={active}
+              className={cn(
+                'group relative h-[176px] shrink-0 overflow-hidden rounded-[18px] border p-3 text-left text-white shadow-[0_18px_36px_rgba(43,38,27,0.16)] outline-none transition-[width,transform,box-shadow] duration-300 hover:-translate-x-1 focus-visible:ring-2 focus-visible:ring-[#174a38]/25',
+                active
+                  ? 'w-[286px]'
+                  : 'w-[232px] hover:w-[286px]',
+              )}
+              style={storyContextComicBackground(card.kind, active)}
+            >
+              <div className="relative z-10 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-white/86">
+                    <Icon className="size-3.5" />
+                    {meta.label}
+                  </div>
+                  <div className="mt-1 line-clamp-1 text-base font-semibold text-white">{card.title}</div>
+                  <div className="mt-0.5 text-[11px] text-white/72">{card.kind}.profile</div>
+                </div>
+                <span className="shrink-0 rounded-full bg-white/22 px-2 py-1 text-[10px] font-semibold text-white">
+                  {active ? '已加入' : '加入'}
+                </span>
+              </div>
+              <p className="relative z-10 mt-3 line-clamp-3 text-xs leading-5 text-white/86">{card.body}</p>
+              <div className="absolute inset-x-3 bottom-3 z-10 flex h-12 items-center gap-2 rounded-[14px] bg-white/94 px-3 text-[#555a51] shadow-[0_10px_22px_rgba(43,38,27,0.14)]">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#f4f2eb] text-sm font-semibold text-[#31352f]">{meta.short}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-semibold text-[#2f332d]">{meta.label}</span>
+                  <span className="block truncate text-[10px] text-[#7f7a70]">加入 Agent 对话</span>
+                </span>
+                <ChevronDown className="size-4 shrink-0 text-[#7f7a70]" />
+              </div>
+            </button>
+          )
+        })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ScriptStudioLazyActionButton({
+  icon: Icon,
+  label,
+  detail,
+  onClick,
+  disabled,
+  primary = false,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  detail?: string
+  onClick: () => void
+  disabled?: boolean
+  primary?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex min-h-10 items-center justify-center gap-2 rounded-[10px] border px-3 py-2 text-sm font-semibold outline-none transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45"
+      style={{
+        background: primary ? `linear-gradient(180deg, ${scriptStudioPrimaryPill}, ${scriptStudioPrimaryPillHover})` : scriptStudioPillSurface,
+        borderColor: primary ? scriptStudioPrimaryPill : '#ded9cd',
+        color: primary ? '#fff' : scriptStudioPillInk,
+        boxShadow: primary ? `0 12px 26px ${scriptStudioPrimaryPillShadow}` : '0 8px 18px rgba(43,38,27,0.06)',
+      }}
+    >
+      <Icon className="size-4" />
+      <span className="min-w-0 text-left leading-tight">
+        <span className="block truncate">{label}</span>
+        {detail ? <span className={primary ? 'block truncate text-[11px] font-medium text-white/72' : 'block truncate text-[11px] font-medium text-[#7b766c]'}>{detail}</span> : null}
+      </span>
+    </button>
+  )
+}
+
+const scriptStudioAnnotationColorClassNames: Record<ScriptStudioAnnotationColor, string> = {
+  amber: 'bg-[#f8d676]/50 ring-[#d9aa2b]/22',
+  mint: 'bg-[#9edfc4]/42 ring-[#2f8b68]/22',
+  rose: 'bg-[#f4a4a4]/38 ring-[#b95252]/22',
+  sky: 'bg-[#9fb8ef]/42 ring-[#4775bf]/22',
+}
+
+const scriptStudioAnnotationColors: ScriptStudioAnnotationColor[] = ['rose', 'mint', 'sky', 'amber']
+
+function createScriptStudioAnnotationId() {
+  return `ann-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function isScriptStudioInkAnnotation(
+  annotation: PlotPilotChapterAnnotation,
+): annotation is PlotPilotChapterAnnotation & { ink: PlotPilotReaderInkStroke } {
+  return annotation.kind === 'ink' && Array.isArray(annotation.ink?.points) && annotation.ink.points.length > 0
+}
+
+function isScriptStudioTextAnnotation(annotation: PlotPilotChapterAnnotation): boolean {
+  return !isScriptStudioInkAnnotation(annotation)
+}
+
+function getScriptStudioTextSelection(container: HTMLElement): ScriptStudioTextSelection | null {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null
+
+  const range = selection.getRangeAt(0)
+  if (!container.contains(range.startContainer) || !container.contains(range.endContainer)) return null
+
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  let runningOffset = 0
+  let start = -1
+  let end = -1
+  let node = walker.nextNode()
+
+  while (node) {
+    const textLength = node.textContent?.length ?? 0
+    if (node === range.startContainer) start = runningOffset + range.startOffset
+    if (node === range.endContainer) end = runningOffset + range.endOffset
+    runningOffset += textLength
+    if (start >= 0 && end >= 0) break
+    node = walker.nextNode()
+  }
+
+  if (start < 0 || end < 0) return null
+
+  const selectionStart = Math.min(start, end)
+  const selectionEnd = Math.max(start, end)
+  const quote = container.textContent?.slice(selectionStart, selectionEnd) ?? range.toString()
+
+  if (!quote.trim()) return null
+
+  return {
+    start: selectionStart,
+    end: selectionEnd,
+    quote,
+  }
+}
+
+function renderScriptStudioAnnotatedText({
+  text,
+  annotations,
+  activeAnnotationId,
+  onSelectAnnotation,
+}: {
+  text: string
+  annotations: PlotPilotChapterAnnotation[]
+  activeAnnotationId: string | null
+  onSelectAnnotation: (id: string) => void
+}) {
+  const sortedAnnotations = annotations
+    .filter((annotation) => (
+      isScriptStudioTextAnnotation(annotation)
+      && annotation.start >= 0
+      && annotation.end <= text.length
+      && annotation.end > annotation.start
+    ))
+    .sort((a, b) => a.start - b.start)
+  const nodes: React.ReactNode[] = []
+  let cursor = 0
+
+  for (const annotation of sortedAnnotations) {
+    if (annotation.end <= cursor) continue
+    const start = Math.max(annotation.start, cursor)
+    if (start > cursor) nodes.push(text.slice(cursor, start))
+
+    const selectedText = text.slice(start, annotation.end)
+    const active = activeAnnotationId === annotation.id
+    nodes.push(
+      <mark
+        key={annotation.id}
+        role="button"
+        tabIndex={0}
+        title={annotation.note}
+        onClick={() => onSelectAnnotation(annotation.id)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onSelectAnnotation(annotation.id)
+          }
+        }}
+        className={cn(
+          'cursor-pointer rounded-[5px] px-0.5 text-[#272923] ring-1 transition hover:ring-[#174a38]/30 focus:outline-none focus:ring-2 focus:ring-[#174a38]/34',
+          scriptStudioAnnotationColorClassNames[annotation.color],
+          active && 'shadow-[0_0_0_2px_rgba(23,74,56,0.16)]',
+        )}
+      >
+        {selectedText}
+      </mark>,
+    )
+    cursor = annotation.end
+  }
+
+  if (cursor < text.length) nodes.push(text.slice(cursor))
+
+  return nodes.length ? nodes : text
+}
+
+function ScriptStudioLazyPaper({
+  title,
+  chapterNumber,
+  draft,
+  placeholder,
+  annotations,
+  chatAnnotationIds,
+  onAnnotationsChange,
+  onAddAnnotationToChat,
+  onDraftChange,
+}: {
+  title: string
+  chapterNumber: number
+  draft: string
+  placeholder: string
+  annotations: PlotPilotChapterAnnotation[]
+  chatAnnotationIds: string[]
+  onAnnotationsChange: (annotations: PlotPilotChapterAnnotation[]) => void
+  onAddAnnotationToChat: (annotationId: string) => void
+  onDraftChange: (value: string) => void
+}) {
+  const [paperMode, setPaperMode] = React.useState<ScriptStudioPaperMode>('edit')
+  const [selectionDraft, setSelectionDraft] = React.useState<ScriptStudioTextSelection | null>(null)
+  const [annotationNote, setAnnotationNote] = React.useState('')
+  const [activeAnnotationId, setActiveAnnotationId] = React.useState<string | null>(null)
+  const textLayerRef = React.useRef<HTMLDivElement | null>(null)
+  const visibleText = draft.trim().length > 0 ? draft : placeholder
+  const canAnnotate = visibleText.trim().length > 0
+  const activeAnnotation = activeAnnotationId ? annotations.find((annotation) => annotation.id === activeAnnotationId) ?? null : null
+
+  React.useEffect(() => {
+    const filteredAnnotations = annotations.filter((annotation) => (
+      isScriptStudioInkAnnotation(annotation)
+      || (annotation.end <= visibleText.length && visibleText.slice(annotation.start, annotation.end) === annotation.quote)
+    ))
+    if (filteredAnnotations.length !== annotations.length) {
+      onAnnotationsChange(filteredAnnotations)
+    }
+  }, [annotations, onAnnotationsChange, visibleText])
+
+  const captureAnnotationSelection = React.useCallback(() => {
+    if (!canAnnotate || paperMode !== 'annotate') return
+
+    const container = textLayerRef.current
+    if (!container) return
+
+    const nextSelection = getScriptStudioTextSelection(container)
+    if (!nextSelection) return
+
+    setSelectionDraft(nextSelection)
+    setActiveAnnotationId(null)
+  }, [canAnnotate, paperMode])
+
+  const saveAnnotation = React.useCallback(() => {
+    const note = annotationNote.trim()
+    if (!selectionDraft || !note) return
+
+    const id = createScriptStudioAnnotationId()
+    onAnnotationsChange([
+      ...annotations,
+      {
+        id,
+        kind: 'text',
+        start: selectionDraft.start,
+        end: selectionDraft.end,
+        quote: selectionDraft.quote,
+        note,
+        color: scriptStudioAnnotationColors[annotations.length % scriptStudioAnnotationColors.length] ?? 'amber',
+        status: 'open',
+        createdAt: new Date().toISOString(),
+      },
+    ])
+    setActiveAnnotationId(id)
+    setSelectionDraft(null)
+    setAnnotationNote('')
+    window.getSelection()?.removeAllRanges()
+  }, [annotationNote, annotations, onAnnotationsChange, selectionDraft])
+
+  const removeAnnotation = React.useCallback((annotationId: string) => {
+    onAnnotationsChange(annotations.filter((annotation) => annotation.id !== annotationId))
+    setActiveAnnotationId((current) => current === annotationId ? null : current)
+  }, [annotations, onAnnotationsChange])
+
+  return (
+    <div
+      data-plm-reader-module="true"
+      className="mx-auto flex w-full max-w-[748px] flex-col items-center gap-3 xl:flex-row xl:items-start xl:justify-center"
+    >
+      <article
+        className="w-full max-w-[430px] overflow-hidden rounded-[18px] border border-[#dedbd2]/88 shadow-[0_26px_72px_rgba(43,38,27,0.15)]"
+        style={{ backgroundColor: 'rgba(253,252,248,0.94)' }}
+      >
+        <div className="flex min-h-[72px] items-center justify-between gap-3 border-b border-[#e5e1d8] px-5 py-3">
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-[#8b867d]">第 {chapterNumber} 章</div>
+            <h2 className="mt-1 truncate text-base font-semibold text-[#252822]">{title}</h2>
+          </div>
+          <div
+            className="flex shrink-0 items-center gap-1 rounded-[10px] border border-white/60 p-1 backdrop-blur-2xl"
+            style={{
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.58), rgba(248,246,240,0.28))',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.76), 0 8px 20px rgba(43,38,27,0.08)',
+            }}
+          >
+            {([
+              ['edit', '编辑', PenLine],
+              ['annotate', '批注', MessageSquareText],
+            ] as const).map(([mode, label, Icon]) => {
+              const active = paperMode === mode
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setPaperMode(mode)}
+                  className={cn(
+                    'flex h-7 items-center gap-1 rounded-[7px] px-2 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                    active ? 'text-[#242821]' : 'text-[#777268] hover:text-[#242821]',
+                  )}
+                  style={{ backgroundColor: active ? 'rgba(255,255,255,0.76)' : 'transparent' }}
+                >
+                  <Icon className="size-3.5" />
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {paperMode === 'edit' ? (
+          <textarea
+            value={draft}
+            onChange={(event) => onDraftChange(event.currentTarget.value)}
+            placeholder={placeholder}
+            spellCheck={false}
+            className={cn(
+              'min-h-[760px] w-full resize-none px-8 py-7',
+              'font-serif text-[14px] leading-[2.08] text-[#28241e] outline-none',
+              'placeholder:whitespace-pre-wrap placeholder:text-[#2f2b25]/72',
+            )}
+            style={{ backgroundColor: 'transparent' }}
+          />
+        ) : (
+          <div className="min-h-[760px] px-8 py-7">
+            <div
+              ref={textLayerRef}
+              role="document"
+              aria-label="章节批注文本"
+              onMouseUp={captureAnnotationSelection}
+              onKeyUp={captureAnnotationSelection}
+              className={cn(
+                'min-h-[704px] select-text whitespace-pre-wrap font-serif text-[14px] leading-[2.08] outline-none',
+                canAnnotate ? 'text-[#28241e]' : 'text-[#2f2b25]/42',
+              )}
+              tabIndex={0}
+            >
+              {canAnnotate
+                ? renderScriptStudioAnnotatedText({
+                    text: visibleText,
+                    annotations,
+                    activeAnnotationId,
+                    onSelectAnnotation: setActiveAnnotationId,
+                  })
+                : visibleText}
+            </div>
+          </div>
+        )}
+      </article>
+
+      {paperMode === 'annotate' ? (
+        <aside
+          className="w-full max-w-[270px] rounded-[18px] border border-white/58 p-3 shadow-[0_22px_58px_rgba(43,38,27,0.14)] backdrop-blur-2xl"
+          style={{
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.44), rgba(246,244,238,0.22))',
+            WebkitBackdropFilter: 'blur(26px) saturate(1.42)',
+            backdropFilter: 'blur(26px) saturate(1.42)',
+          }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#252822]">
+              <MessageSquareText className="size-4" />
+              批注
+            </div>
+            <span className="rounded-full border border-white/48 px-2 py-1 text-[11px] font-semibold text-[#60655d]">
+              {annotations.length}
+            </span>
+          </div>
+
+          <div className="mt-3 rounded-[12px] border border-white/52 p-3" style={{ backgroundColor: 'rgba(255,255,255,0.42)' }}>
+            {selectionDraft ? (
+              <>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777268]">Selected</div>
+                <blockquote className="mt-2 line-clamp-4 rounded-[9px] bg-[#fffdf7]/62 px-3 py-2 text-xs leading-5 text-[#343831]">
+                  {selectionDraft.quote}
+                </blockquote>
+                <textarea
+                  value={annotationNote}
+                  onChange={(event) => setAnnotationNote(event.currentTarget.value)}
+                  placeholder="写批注..."
+                  className="mt-3 min-h-24 w-full resize-none rounded-[10px] border border-[#ded9cd]/82 bg-white/58 px-3 py-2 text-xs leading-5 text-[#28241e] outline-none placeholder:text-[#9a948a] focus:border-[#174a38]/42"
+                />
+                <button
+                  type="button"
+                  onClick={saveAnnotation}
+                  disabled={!annotationNote.trim()}
+                  className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-[9px] bg-[#174a38] px-3 text-xs font-semibold text-white outline-none transition hover:bg-[#1f5b46] disabled:cursor-not-allowed disabled:opacity-45"
+                  style={{
+                    background: `linear-gradient(180deg, ${scriptStudioPrimaryPill}, ${scriptStudioPrimaryPillHover})`,
+                    boxShadow: `0 10px 20px ${scriptStudioPrimaryPillShadow}`,
+                  }}
+                >
+                  <Save className="size-3.5" />
+                  保存批注
+                </button>
+              </>
+            ) : activeAnnotation ? (
+              <>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777268]">Active</div>
+                <blockquote className="mt-2 line-clamp-4 rounded-[9px] bg-[#fffdf7]/62 px-3 py-2 text-xs leading-5 text-[#343831]">
+                  {activeAnnotation.quote}
+                </blockquote>
+                <p className="mt-3 rounded-[9px] bg-white/48 px-3 py-2 text-xs leading-5 text-[#30342e]">{activeAnnotation.note}</p>
+              </>
+            ) : (
+              <div className="rounded-[10px] bg-white/42 px-3 py-5 text-center text-xs leading-5 text-[#6e746b]">
+                {canAnnotate ? '选择正文后写批注' : '先写入正文'}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {annotations.map((annotation) => (
+              <div
+                key={annotation.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setActiveAnnotationId(annotation.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    setActiveAnnotationId(annotation.id)
+                  }
+                }}
+                className={cn(
+                  'group w-full rounded-[12px] border p-3 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/20',
+                  activeAnnotationId === annotation.id ? 'border-[#174a38]/30 bg-white/62' : 'border-white/44 bg-white/34 hover:bg-white/52',
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className={cn('mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-1', scriptStudioAnnotationColorClassNames[annotation.color])} />
+                  <div className="min-w-0 flex-1">
+                    <div className="line-clamp-2 text-xs font-semibold leading-5 text-[#30342e]">{annotation.quote}</div>
+                    <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-[#687068]">{annotation.note}</div>
+                  </div>
+                  <button
+                    type="button"
+                    title={chatAnnotationIds.includes(annotation.id) ? '已加入对话' : '加入对话'}
+                    aria-label={chatAnnotationIds.includes(annotation.id) ? '已加入对话' : '加入对话'}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onAddAnnotationToChat(annotation.id)
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        onAddAnnotationToChat(annotation.id)
+                      }
+                    }}
+                    className={cn(
+                      'flex h-7 shrink-0 items-center gap-1 rounded-[8px] px-2 text-[10px] font-semibold outline-none transition',
+                      chatAnnotationIds.includes(annotation.id)
+                        ? 'bg-[#174a38]/10 text-[#174a38]'
+                        : 'text-[#6d746b] opacity-0 hover:bg-white/58 hover:text-[#174a38] group-hover:opacity-100',
+                    )}
+                  >
+                    {chatAnnotationIds.includes(annotation.id) ? <CheckCircle2 className="size-3.5" /> : <Plus className="size-3.5" />}
+                    Chat
+                  </button>
+                  <button
+                    type="button"
+                    title="删除批注"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      removeAnnotation(annotation.id)
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        removeAnnotation(annotation.id)
+                      }
+                    }}
+                    className="grid size-7 shrink-0 place-items-center rounded-[8px] text-[#8a867d] opacity-0 transition hover:bg-[#fff8f2] hover:text-[#8e3b2f] group-hover:opacity-100"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+      ) : null}
+    </div>
+  )
+}
+
+type ScriptStudioReaderTool = 'highlight' | 'pen' | 'arrow' | 'eraser'
+
+interface ScriptStudioReaderInkStroke extends PlotPilotReaderInkStroke {
+  id: string
+}
+
+const scriptStudioReaderPalette: Array<{
+  id: ScriptStudioAnnotationColor
+  label: string
+  hex: string
+  ink: string
+}> = [
+  { id: 'rose', label: '粉', hex: '#f2a7bb', ink: '#8d3650' },
+  { id: 'mint', label: '绿', hex: '#cdeea5', ink: '#54731d' },
+  { id: 'sky', label: '蓝', hex: '#aac3f4', ink: '#3f64a8' },
+  { id: 'amber', label: '黄', hex: '#f4dc87', ink: '#8a6818' },
+]
+
+const scriptStudioReaderToolItems: Array<{
+  id: ScriptStudioReaderTool
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+}> = [
+  { id: 'highlight', label: '荧光笔', icon: Highlighter },
+  { id: 'pen', label: '画笔', icon: Brush },
+  { id: 'arrow', label: '箭头', icon: CornerDownRight },
+  { id: 'eraser', label: '橡皮', icon: Eraser },
+]
+
+const scriptStudioReaderToolHints: Record<ScriptStudioReaderTool, string> = {
+  highlight: '荧光笔：选中正文后自动染色并保存。',
+  pen: '画笔：在纸页上拖动，松手自动保存。',
+  arrow: '箭头：拖出方向线，松手自动保存。',
+  eraser: '橡皮：点一下纸页，撤销最后一条手写批注。',
+}
+
+const scriptStudioReaderFigureAssets = [
+  {
+    src: '/reader-assets/pixel-forest.png',
+    caption: 'Fig. 1  像素横版场景 / platform forest sample',
+  },
+  {
+    src: '/reader-assets/pixel-stage.png',
+    caption: 'Fig. 2  16-bit 舞台场景 / stage sample',
+  },
+]
+
+function createScriptStudioReaderStrokeId() {
+  return `stroke-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function getScriptStudioReaderPaletteColor(color: ScriptStudioAnnotationColor) {
+  return scriptStudioReaderPalette.find((item) => item.id === color) ?? {
+    id: 'rose',
+    label: '粉',
+    hex: '#f2a7bb',
+    ink: '#8d3650',
+  }
+}
+
+function createScriptStudioReaderParagraphs(text: string) {
+  const cleaned = text
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  const paragraphs = cleaned
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+
+  if (paragraphs.length >= 4) return paragraphs
+  if (!cleaned) return []
+
+  const chunks = cleaned.match(/[^。！？!?]{18,90}[。！？!?]?/g)
+  return chunks?.map((chunk) => chunk.trim()).filter(Boolean).slice(0, 12) ?? [cleaned]
+}
+
+function getScriptStudioReaderPoint(event: React.PointerEvent<SVGSVGElement>): PlotPilotReaderInkPoint {
+  const rect = event.currentTarget.getBoundingClientRect()
+  return {
+    x: ((event.clientX - rect.left) / Math.max(rect.width, 1)) * 1000,
+    y: ((event.clientY - rect.top) / Math.max(rect.height, 1)) * 1414,
+  }
+}
+
+function renderScriptStudioReaderPath(points: PlotPilotReaderInkPoint[]) {
+  if (points.length === 0) return ''
+  return points.reduce((path, point, index) => (
+    index === 0 ? `M ${point.x.toFixed(1)} ${point.y.toFixed(1)}` : `${path} L ${point.x.toFixed(1)} ${point.y.toFixed(1)}`
+  ), '')
+}
+
+function createScriptStudioInkAnnotation(
+  stroke: ScriptStudioReaderInkStroke,
+  color: ScriptStudioAnnotationColor,
+  colorLabel: string,
+): PlotPilotChapterAnnotation {
+  const toolLabel = stroke.tool === 'arrow' ? '箭头' : '画笔'
+  return {
+    id: createScriptStudioAnnotationId(),
+    kind: 'ink',
+    start: 0,
+    end: 0,
+    quote: `手写批注：${toolLabel}`,
+    note: `${colorLabel}色${toolLabel}，${stroke.points.length} 个点。`,
+    color,
+    status: 'open',
+    createdAt: new Date().toISOString(),
+    ink: {
+      tool: stroke.tool,
+      color: stroke.color,
+      width: stroke.width,
+      opacity: stroke.opacity,
+      points: stroke.points,
+    },
+  }
+}
+
+function annotationToScriptStudioReaderStroke(annotation: PlotPilotChapterAnnotation): ScriptStudioReaderInkStroke | null {
+  if (!isScriptStudioInkAnnotation(annotation)) return null
+  return {
+    id: annotation.id,
+    tool: annotation.ink.tool,
+    color: annotation.ink.color,
+    width: annotation.ink.width,
+    opacity: annotation.ink.opacity,
+    points: annotation.ink.points,
+  }
+}
+
+function ScriptStudioMagazineReaderWorkspace({
+  novel,
+  chapterNumber,
+  title,
+  draft,
+  placeholder,
+  chapterAnnotations,
+  handlers,
+  ready,
+  busy,
+}: {
+  novel: PlotPilotNovel | null
+  chapterNumber: number
+  title: string
+  draft: string
+  placeholder: string
+  chapterAnnotations?: PlotPilotChapterAnnotation[]
+  handlers?: PlotPilotNativeHandlers
+  ready: boolean
+  busy: boolean
+}) {
+  const [tool, setTool] = React.useState<ScriptStudioReaderTool>('highlight')
+  const [color, setColor] = React.useState<ScriptStudioAnnotationColor>('rose')
+  const [inkWidth, setInkWidth] = React.useState(5)
+  const [inkOpacity, setInkOpacity] = React.useState(0.82)
+  const [annotations, setAnnotations] = React.useState<PlotPilotChapterAnnotation[]>(chapterAnnotations ?? [])
+  const [activeAnnotationId, setActiveAnnotationId] = React.useState<string | null>(null)
+  const [chatAnnotationIds, setChatAnnotationIds] = React.useState<string[]>([])
+  const [agentInstruction, setAgentInstruction] = React.useState('')
+  const [draftStroke, setDraftStroke] = React.useState<ScriptStudioReaderInkStroke | null>(null)
+  const textLayerRef = React.useRef<HTMLDivElement | null>(null)
+  const visibleText = draft.trim().length > 0 ? draft : placeholder
+  const paragraphs = React.useMemo(() => createScriptStudioReaderParagraphs(visibleText), [visibleText])
+  const abstractText = paragraphs.slice(0, 2).join(' ')
+  const bodyText = paragraphs.length > 2 ? paragraphs.slice(2).join('\n\n') : visibleText
+  const activePaletteColor = getScriptStudioReaderPaletteColor(color)
+  const activeAnnotation = activeAnnotationId ? annotations.find((annotation) => annotation.id === activeAnnotationId) ?? null : null
+  const inkStrokes = React.useMemo(
+    () => annotations
+      .map(annotationToScriptStudioReaderStroke)
+      .filter((stroke): stroke is ScriptStudioReaderInkStroke => Boolean(stroke)),
+    [annotations],
+  )
+  const toolHint = scriptStudioReaderToolHints[tool]
+  const chatAnnotations = React.useMemo(
+    () => chatAnnotationIds
+      .map((annotationId) => annotations.find((annotation) => annotation.id === annotationId))
+      .filter((annotation): annotation is PlotPilotChapterAnnotation => Boolean(annotation)),
+    [annotations, chatAnnotationIds],
+  )
+
+  React.useEffect(() => {
+    setAnnotations(chapterAnnotations ?? [])
+    setChatAnnotationIds([])
+    setActiveAnnotationId(null)
+  }, [chapterAnnotations, novel?.id, chapterNumber])
+
+  const updateAnnotations = React.useCallback((nextAnnotations: PlotPilotChapterAnnotation[]) => {
+    setAnnotations(nextAnnotations)
+    if (novel) {
+      handlers?.onSaveChapterAnnotations?.(novel.id, chapterNumber, nextAnnotations)
+    }
+  }, [chapterNumber, handlers, novel])
+
+  const addSelectionHighlight = React.useCallback(() => {
+    if (tool !== 'highlight') return
+    const container = textLayerRef.current
+    if (!container) return
+    const selection = getScriptStudioTextSelection(container)
+    if (!selection) return
+
+    const id = createScriptStudioAnnotationId()
+    const nextAnnotations = [
+      ...annotations,
+      {
+        id,
+        kind: 'text' as const,
+        start: selection.start,
+        end: selection.end,
+        quote: selection.quote,
+        note: `${activePaletteColor.label}色荧光标记`,
+        color,
+        status: 'open' as const,
+        createdAt: new Date().toISOString(),
+      },
+    ]
+    updateAnnotations(nextAnnotations)
+    setActiveAnnotationId(id)
+    window.getSelection()?.removeAllRanges()
+  }, [activePaletteColor.label, annotations, color, tool, updateAnnotations])
+
+  const removeAnnotation = React.useCallback((annotationId: string) => {
+    updateAnnotations(annotations.filter((annotation) => annotation.id !== annotationId))
+    setActiveAnnotationId((current) => current === annotationId ? null : current)
+    setChatAnnotationIds((current) => current.filter((id) => id !== annotationId))
+  }, [annotations, updateAnnotations])
+
+  const toggleAnnotationForChat = React.useCallback((annotationId: string) => {
+    setChatAnnotationIds((current) => (
+      current.includes(annotationId)
+        ? current.filter((id) => id !== annotationId)
+        : [...current, annotationId]
+    ))
+  }, [])
+
+  const sendAnnotationsToAgent = React.useCallback(() => {
+    if (!novel || !handlers?.onGenerateChapter) return
+    handlers.onGenerateChapter(novel.id, chapterNumber, {
+      annotations: chatAnnotations.length ? chatAnnotations : annotations,
+      instruction: agentInstruction.trim() || '请根据这些阅读批注，指出正文节奏、信息密度和文风问题，并给出可直接改写的建议。',
+    })
+    setAgentInstruction('')
+  }, [agentInstruction, annotations, chapterNumber, chatAnnotations, handlers, novel])
+
+  const onInkPointerDown = React.useCallback((event: React.PointerEvent<SVGSVGElement>) => {
+    if (tool === 'highlight') return
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    if (tool === 'eraser') {
+      const lastInkAnnotation = [...annotations].reverse().find(isScriptStudioInkAnnotation)
+      if (lastInkAnnotation) removeAnnotation(lastInkAnnotation.id)
+      return
+    }
+    const point = getScriptStudioReaderPoint(event)
+    setDraftStroke({
+      id: createScriptStudioReaderStrokeId(),
+      tool,
+      color: activePaletteColor.ink,
+      width: inkWidth,
+      opacity: inkOpacity,
+      points: [point],
+    })
+  }, [activePaletteColor.ink, annotations, inkOpacity, inkWidth, removeAnnotation, tool])
+
+  const onInkPointerMove = React.useCallback((event: React.PointerEvent<SVGSVGElement>) => {
+    if (!draftStroke || tool === 'highlight' || tool === 'eraser') return
+    event.preventDefault()
+    const point = getScriptStudioReaderPoint(event)
+    setDraftStroke((current) => current ? { ...current, points: [...current.points, point] } : current)
+  }, [draftStroke, tool])
+
+  const finishInkStroke = React.useCallback(() => {
+    setDraftStroke((current) => {
+      if (!current || current.points.length < 2) return null
+      const nextAnnotation = createScriptStudioInkAnnotation(current, color, activePaletteColor.label)
+      updateAnnotations([...annotations, nextAnnotation])
+      setActiveAnnotationId(nextAnnotation.id)
+      return null
+    })
+  }, [activePaletteColor.label, annotations, color, updateAnnotations])
+
+  return (
+    <div className="mx-auto grid min-h-full w-full min-w-[1120px] grid-cols-[minmax(0,1fr)_96px] gap-5">
+      <div className="flex justify-center overflow-visible pb-10">
+        <article
+          className="relative h-[1320px] w-[940px] overflow-hidden border border-[#d4d1ca] bg-[#fffefd] text-[#171713] shadow-[0_34px_80px_rgba(35,31,24,0.22)]"
+          style={{
+            backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,1), rgba(252,250,245,1))',
+          }}
+        >
+          <header className="absolute inset-x-[54px] top-[34px] h-[126px] border-b-2 border-[#171713]">
+            <div className="flex items-start justify-between gap-8">
+              <div className="min-w-0">
+                <div className="text-[24px] font-light tracking-[0.01em] text-[#333333]">PLM Reading Workshop</div>
+                <h1 className="mt-2 text-[34px] font-light tracking-[0.04em] text-[#9b5960]">
+                  章节视觉批注与风格校样
+                </h1>
+                <div className="mt-2 text-[13px] font-semibold text-[#2c2c2c]">
+                  {novel?.title ?? '未命名项目'} · 第 {chapterNumber} 章 · {title}
+                </div>
+                <div className="mt-1 text-[10px] text-[#353535]">
+                  Source: PlotPilot / Drama Browser PLM · Reader annotation proof
+                </div>
+              </div>
+              <div className="flex items-center gap-3 pt-1 text-right">
+                <div className="text-[15px] font-semibold leading-tight text-[#171713]">PLM×<br />阅读工坊</div>
+                <div className="grid size-[62px] place-items-center bg-[#0f0f0f] text-[30px] font-semibold text-white">R</div>
+              </div>
+            </div>
+          </header>
+
+          <section className="absolute left-[54px] top-[185px] w-[458px]">
+            <div className="text-center text-[14px] font-semibold text-[#4c8495]">章节视觉批注稿</div>
+            <div className="mt-4 text-[12px] font-semibold text-[#171713]">{novel?.author ?? 'PlotPilot Author'}</div>
+            <p className="mt-3 text-[11px] leading-[1.75] text-[#4c4c4c]">
+              校样页把正文、批注、图片和读者反馈压到同一张纸面上。它不是传统编辑器，而是给作者看的视觉证据板。
+            </p>
+            <div className="mt-4 text-[11px] leading-[1.75]">
+              <span className="font-semibold text-[#1c1c1c]">关键词：</span>
+              <mark className="rounded-sm bg-[#d9f09d]/70 px-1 text-[#34470c]">章节节奏</mark>
+              <mark className="ml-1 rounded-sm bg-[#d9f09d]/70 px-1 text-[#34470c]">人物声线</mark>
+              <mark className="ml-1 rounded-sm bg-[#d9f09d]/70 px-1 text-[#34470c]">环境细节</mark>
+              <mark className="ml-1 rounded-sm bg-[#d9f09d]/70 px-1 text-[#34470c]">AI 腔检查</mark>
+            </div>
+            <div className="mt-6 flex items-start gap-3">
+              <span className="mt-1 size-0 border-y-[8px] border-l-[13px] border-y-transparent border-l-[#ee79a4]" />
+              <p className="text-[11px] leading-[1.78] text-[#333333]">
+                本页将正文拆成论文式阅读材料，方便一眼看到“哪里需要加温度，哪里信息过密，哪里句子像模型总结”。
+              </p>
+            </div>
+          </section>
+
+          <figure className="absolute right-[54px] top-[208px] w-[320px]">
+            <img src={scriptStudioReaderFigureAssets[0]?.src} alt="像素森林场景示意" className="h-[198px] w-full object-cover" />
+            <figcaption className="mt-2 text-[9px] leading-[1.25] text-[#2c2c2c]">{scriptStudioReaderFigureAssets[0]?.caption}</figcaption>
+          </figure>
+
+          <div className="absolute left-[54px] top-[392px] w-[458px]">
+            <h2 className="text-center text-[14px] font-semibold text-[#4c8495]">摘要</h2>
+            <p className="mt-3 rounded-sm bg-[#f2a7bb]/28 px-2 py-1 text-[11px] leading-[1.82] text-[#333333]">
+              {abstractText || '这一页会提取当前章节前两段作为摘要，用高亮和边注辅助判断正文的读者感受。'}
+            </p>
+          </div>
+
+          <div className="absolute right-[54px] top-[440px] w-[320px]">
+            <div className="rounded-sm border border-[#d6c3c8] bg-[#fbfbfb] px-2 py-1 text-[11px] leading-[1.62] text-[#343434]">
+              <mark className="bg-[#adc7f4]/62 px-1 text-[#203c6c]">蓝色批注用于结构问题。</mark>
+              右侧工具栏切到荧光笔后，选择正文即可染色；切到画笔或箭头，可直接在纸页上手写。
+            </div>
+          </div>
+
+          <figure className="absolute right-[54px] top-[570px] w-[320px]">
+            <img src={scriptStudioReaderFigureAssets[1]?.src} alt="像素舞台场景示意" className="h-[178px] w-full object-cover" />
+            <figcaption className="mt-2 text-[9px] leading-[1.25] text-[#2c2c2c]">{scriptStudioReaderFigureAssets[1]?.caption}</figcaption>
+          </figure>
+
+          <section className="absolute inset-x-[54px] bottom-[92px] top-[515px]">
+            <div className="h-full columns-2 gap-[36px] text-[11px] leading-[1.76] text-[#2d2d2d]">
+              <div
+                ref={textLayerRef}
+                onMouseUp={addSelectionHighlight}
+                onKeyUp={addSelectionHighlight}
+                tabIndex={0}
+                className={cn(
+                  'min-h-[670px] whitespace-pre-wrap outline-none',
+                  tool === 'highlight' ? 'cursor-text select-text' : 'select-none',
+                )}
+              >
+                {renderScriptStudioAnnotatedText({
+                  text: bodyText,
+                  annotations,
+                  activeAnnotationId,
+                  onSelectAnnotation: setActiveAnnotationId,
+                })}
+              </div>
+            </div>
+          </section>
+
+          <div className="absolute left-[54px] right-[54px] bottom-[34px] flex items-end justify-between border-t border-[#191919] pt-2 text-[10px] text-[#2e2e2e]">
+            <div>Reader proof · annotations {annotations.length} · ink {inkStrokes.length}</div>
+            <div className="text-[24px] font-light text-[#6d6d6d]">/Page {String(chapterNumber).padStart(2, '0')}</div>
+          </div>
+
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute left-[480px] top-[260px] rotate-[-7deg] text-[12px] font-semibold leading-5 text-[#7b8a19]">
+              重点看这里<br />是否太像总结
+            </div>
+            <div className="absolute left-[445px] top-[300px] h-[45px] w-[84px] rounded-[50%] border border-[#7b8a19]" />
+            <div className="absolute right-[40px] top-[510px] text-[11px] leading-4 text-[#a25c70]">
+              这里可以放<br />节奏边注
+            </div>
+            <div className="absolute left-[68px] bottom-[68px] text-[11px] leading-5 text-[#a25c70]">
+              读者感受：<br />这一段是否太密？
+            </div>
+          </div>
+
+          <svg
+            className={cn(
+              'absolute inset-0 z-20 size-full touch-none',
+              tool === 'highlight' ? 'pointer-events-none' : 'pointer-events-auto',
+            )}
+            viewBox="0 0 1000 1414"
+            preserveAspectRatio="none"
+            onPointerDown={onInkPointerDown}
+            onPointerMove={onInkPointerMove}
+            onPointerUp={finishInkStroke}
+            onPointerCancel={finishInkStroke}
+          >
+            <defs>
+              <marker id="reader-arrow-head" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="strokeWidth">
+                <path d="M 0 0 L 8 4.5 L 0 9 z" fill={activePaletteColor.ink} />
+              </marker>
+            </defs>
+            {[...inkStrokes, ...(draftStroke ? [draftStroke] : [])].map((stroke) => {
+              const path = renderScriptStudioReaderPath(stroke.points)
+              if (!path) return null
+              return (
+                <path
+                  key={stroke.id}
+                  d={path}
+                  fill="none"
+                  stroke={stroke.color}
+                  strokeWidth={stroke.width}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={stroke.opacity ?? inkOpacity}
+                  markerEnd={stroke.tool === 'arrow' ? 'url(#reader-arrow-head)' : undefined}
+                />
+              )
+            })}
+          </svg>
+        </article>
+      </div>
+
+      <aside className="sticky top-4 h-fit rounded-[28px] border border-[#ded8ca] bg-[#fffbf2]/92 p-2 shadow-[0_18px_44px_rgba(43,38,27,0.14)]">
+        <div className="grid gap-2">
+          {scriptStudioReaderToolItems.map((item) => {
+            const Icon = item.icon
+            const active = tool === item.id
+            return (
+              <button
+                key={item.id}
+                type="button"
+                title={item.label}
+                aria-label={item.label}
+                onClick={() => setTool(item.id)}
+                className={cn(
+                  'grid size-12 place-items-center rounded-[18px] border outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/25',
+                  active ? 'border-[#2c2c2c] bg-[#2d2c2a] text-white shadow-[0_10px_22px_rgba(44,44,42,0.18)]' : 'border-[#e1daca] bg-white text-[#3d3b36] hover:bg-[#f3eee3]',
+                )}
+              >
+                <Icon className="size-5" />
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mt-3 rounded-[16px] border border-[#e5ddcf] bg-white px-2 py-2 text-[10px] font-semibold leading-4 text-[#6d675d]">
+          {toolHint}
+        </div>
+
+        <div className="mt-4 grid gap-2">
+          {scriptStudioReaderPalette.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              title={`${item.label}色`}
+              aria-label={`${item.label}色`}
+              onClick={() => setColor(item.id)}
+              className={cn(
+                'mx-auto size-10 rounded-full border outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/25',
+                color === item.id ? 'scale-105 border-[#1c1c1c] shadow-[0_8px_18px_rgba(43,38,27,0.18)]' : 'border-white/70',
+              )}
+              style={{ backgroundColor: item.hex }}
+            />
+          ))}
+        </div>
+
+        <label className="mt-4 block rounded-[16px] border border-[#e5ddcf] bg-white px-2 py-3 text-center text-[10px] font-semibold text-[#6d675d]">
+          粗细
+          <input
+            type="range"
+            min={2}
+            max={12}
+            value={inkWidth}
+            onChange={(event) => setInkWidth(Number(event.currentTarget.value))}
+            className="mt-2 w-full accent-[#873d24]"
+          />
+        </label>
+
+        <label className="mt-2 block rounded-[16px] border border-[#e5ddcf] bg-white px-2 py-3 text-center text-[10px] font-semibold text-[#6d675d]">
+          透明
+          <input
+            type="range"
+            min={0.3}
+            max={1}
+            step={0.05}
+            value={inkOpacity}
+            onChange={(event) => setInkOpacity(Number(event.currentTarget.value))}
+            className="mt-2 w-full accent-[#873d24]"
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={() => {
+            const nextAnnotations = annotations.filter((annotation) => !isScriptStudioInkAnnotation(annotation))
+            const nextIds = new Set(nextAnnotations.map((annotation) => annotation.id))
+            updateAnnotations(nextAnnotations)
+            setActiveAnnotationId((current) => current && nextIds.has(current) ? current : null)
+            setChatAnnotationIds((current) => current.filter((id) => nextIds.has(id)))
+            setDraftStroke(null)
+          }}
+          disabled={inkStrokes.length === 0}
+          className="mt-2 grid size-12 place-items-center rounded-[18px] border border-[#e1daca] bg-white text-[#8d3650] outline-none transition hover:bg-[#fff2f5] disabled:cursor-not-allowed disabled:opacity-35 focus-visible:ring-2 focus-visible:ring-[#8d3650]/25"
+          title="清除手写"
+          aria-label="清除手写"
+        >
+          <Trash2 className="size-5" />
+        </button>
+
+        <div className="mt-4 border-t border-[#e5ddcf] pt-3">
+          <div className="text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a8276]">Notes</div>
+          <div className="mt-2 max-h-[220px] space-y-2 overflow-y-auto pr-1">
+            {annotations.length ? annotations.map((annotation) => {
+              const palette = getScriptStudioReaderPaletteColor(annotation.color)
+              const inChat = chatAnnotationIds.includes(annotation.id)
+              return (
+                <button
+                  key={annotation.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveAnnotationId(annotation.id)
+                    toggleAnnotationForChat(annotation.id)
+                  }}
+                  className={cn(
+                    'w-full rounded-[14px] border px-2 py-2 text-left text-[10px] leading-4 outline-none transition focus-visible:ring-2 focus-visible:ring-[#174a38]/25',
+                    inChat ? 'border-[#32312f] bg-[#fff8ee]' : 'border-[#e2dacb] bg-white hover:bg-[#fffaf2]',
+                  )}
+                >
+                  <span className="mb-1 block h-1.5 rounded-full" style={{ backgroundColor: palette.hex }} />
+                  <span className="line-clamp-2 font-semibold text-[#31312d]">{annotation.quote}</span>
+                  <span className="mt-1 block text-[#8a8276]">{inChat ? '已加入 Agent' : annotation.note}</span>
+                </button>
+              )
+            }) : (
+              <div className="rounded-[14px] border border-[#e2dacb] bg-white px-2 py-4 text-center text-[10px] leading-4 text-[#8a8276]">
+                {toolHint}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <textarea
+          value={agentInstruction}
+          onChange={(event) => setAgentInstruction(event.currentTarget.value)}
+          placeholder="给 Agent 的批注要求"
+          className="mt-3 h-24 w-full resize-none rounded-[16px] border border-[#e2dacb] bg-white px-2 py-2 text-[10px] leading-4 text-[#2f2d29] outline-none placeholder:text-[#aaa296] focus:border-[#873d24]/45"
+        />
+        <button
+          type="button"
+          onClick={sendAnnotationsToAgent}
+          disabled={!ready || busy || !novel || annotations.length === 0 || !handlers?.onGenerateChapter}
+          className="mt-2 flex h-10 w-full items-center justify-center gap-1.5 rounded-[16px] bg-[#2d2c2a] px-2 text-[11px] font-semibold text-white outline-none transition hover:bg-[#873d24] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Sparkles className="size-3.5" />
+          给 Agent
+        </button>
+      </aside>
     </div>
   )
 }
@@ -1044,10 +3172,11 @@ function ScriptStudioAdvancedWorkspace({
   ready,
   busy,
   codexStatus,
+  integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
 }: {
-  workspaceMode: Exclude<ScriptStudioWorkspaceMode, 'creation'>
+  workspaceMode: Exclude<ScriptStudioWorkspaceMode, 'creation' | 'reader'>
   runtimeStatus: PlotPilotRuntimeStatus
   logs: PlotPilotLogEntry[]
   novels: PlotPilotNovel[]
@@ -1059,6 +3188,7 @@ function ScriptStudioAdvancedWorkspace({
   ready: boolean
   busy: boolean
   codexStatus?: PlotPilotCodexStatus | null
+  integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
 }) {
@@ -1100,6 +3230,7 @@ function ScriptStudioAdvancedWorkspace({
             <div className="mt-0.5 truncate text-xs text-[#817c73]">{detail}</div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <IntegrationBadge status={integrationStatus} />
             <RuntimeBadge state={runtimeStatus.state} />
             <span className="rounded-[6px] border border-[#e4e0d6] bg-[#f7f6f1] px-2 py-1 font-mono text-[10px] text-[#68645d]">
               {novels.length} novels
@@ -1107,6 +3238,8 @@ function ScriptStudioAdvancedWorkspace({
           </div>
         </div>
         <div className="space-y-4 bg-[#f8f7f2] p-4">
+          <ScriptStudioIntegrationPanel status={integrationStatus} />
+          <ScriptStudioProductionEvidencePanel snapshot={integrationStatus?.productionEvidence} />
           <ScriptStudioAdvancedOverview cards={cards} />
           <ScriptStudioAdvancedDetail
             workspaceMode={workspaceMode}
@@ -1265,10 +3398,11 @@ function createScriptStudioAdvancedCards({
   ready,
   busy,
   codexStatus,
+  integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
 }: {
-  workspaceMode: Exclude<ScriptStudioWorkspaceMode, 'creation'>
+  workspaceMode: Exclude<ScriptStudioWorkspaceMode, 'creation' | 'reader'>
   runtimeStatus: PlotPilotRuntimeStatus
   logs: PlotPilotLogEntry[]
   novels: PlotPilotNovel[]
@@ -1280,6 +3414,7 @@ function createScriptStudioAdvancedCards({
   ready: boolean
   busy: boolean
   codexStatus?: PlotPilotCodexStatus | null
+  integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
 }): ScriptStudioAdvancedCardView[] {
@@ -1597,7 +3732,7 @@ function ScriptStudioAdvancedDetail({
   projectGuardStatus,
   lastWritingSpecFailure,
 }: {
-  workspaceMode: Exclude<ScriptStudioWorkspaceMode, 'creation'>
+  workspaceMode: Exclude<ScriptStudioWorkspaceMode, 'creation' | 'reader'>
   runtimeStatus: PlotPilotRuntimeStatus
   logs: PlotPilotLogEntry[]
   novel: PlotPilotNovel | null
@@ -3400,6 +5535,7 @@ function ScriptStudioLightMemoryGraphPanel({
   const triples = featureState.knowledgeTriples ?? []
   const searchResults = featureState.knowledgeSearchResults ?? []
   const stats = asUiRecord(featureState.knowledgeStats)
+  const postSync = asUiRecord(featureState.postChapterMemorySync)
   const entities = extractMemoryEntities(triples)
   const canSearch = Boolean(novel && ready && !busy && query.trim() && handlers?.onSearchMemory)
 
@@ -3456,9 +5592,28 @@ function ScriptStudioLightMemoryGraphPanel({
             { label: '实体', value: String(entities.length) },
             { label: '关系', value: String(triples.length) },
             { label: '检索结果', value: String(searchResults.length) },
-            { label: '版本', value: readUiString(stats, ['version', 'updated_at', 'updatedAt']) || '-' },
+            { label: '章后同步', value: readUiString(postSync, ['chapterNumber', 'chapter_number']) || '-' },
           ]}
         />
+
+        {Object.keys(postSync).length ? (
+          <div
+            data-plm-post-chapter-memory-sync="true"
+            className="rounded-[8px] border border-[#dce5d6] bg-white px-3 py-2"
+          >
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="truncate text-xs font-semibold text-[#2f4f3a]">
+                最近章后同步
+              </div>
+              <div className="shrink-0 font-mono text-[10px] text-[#6b7867]">
+                {readUiString(postSync, ['source']) || 'chapter'}
+              </div>
+            </div>
+            <div className="mt-1 line-clamp-2 text-[11px] leading-5 text-[#687063]">
+              chapter {readUiString(postSync, ['chapterNumber', 'chapter_number']) || '-'} / triples {readUiString(postSync, ['tripleCount', 'triple_count']) || '0'} / {readUiString(stats, ['version', 'updated_at', 'updatedAt']) || 'stats refreshed'}
+            </div>
+          </div>
+        ) : null}
 
         <div>
           <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b8579]">实体索引</div>
@@ -3696,71 +5851,167 @@ function ScriptStudioPaper({
   handlers?: PlotPilotNativeHandlers
 }) {
   const disabled = !novel || !ready || busy
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
+  const [activeToolId, setActiveToolId] = React.useState<string | null>(null)
+  const activeTool = activeToolId ? scriptStudioToolbarItems.find((item) => item.id === activeToolId) : null
+
+  const insertScriptSnippet = React.useCallback((snippet: string) => {
+    const textarea = textareaRef.current
+    const selectionStart = textarea?.selectionStart ?? draft.length
+    const selectionEnd = textarea?.selectionEnd ?? draft.length
+    const prefix = draft.slice(0, selectionStart)
+    const suffix = draft.slice(selectionEnd)
+    const nextDraft = `${prefix}${snippet}${suffix}`
+    const nextCursor = selectionStart + snippet.length
+
+    onDraftChange(nextDraft)
+    handlers?.onChangeChapterDraft?.(nextDraft)
+    globalThis.requestAnimationFrame?.(() => {
+      textarea?.focus()
+      textarea?.setSelectionRange(nextCursor, nextCursor)
+    })
+  }, [draft, handlers, onDraftChange])
 
   return (
-    <article className="rounded-[12px] border border-[#dedbd2] bg-[#fdfcf8] shadow-[0_22px_54px_rgba(43,38,27,0.14)]">
-      <div className="flex min-h-12 items-center justify-between border-b border-[#e5e1d8] px-5">
-        <h1 className="text-sm font-semibold text-[#252822]">{title}</h1>
-        <div className="flex items-center gap-1 rounded-[7px] border border-[#e5e1d8] bg-[#f7f6f1] p-1">
-          <button type="button" className="flex h-7 items-center gap-1.5 rounded-[5px] bg-white px-2.5 text-xs font-semibold text-[#2e332d] shadow-[0_1px_2px_rgba(36,32,24,0.06)]">
-            <FileText className="size-3.5" />
-            剧本
-          </button>
-          <button type="button" className="flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-semibold text-[#9a948a]">
-            <Image className="size-3.5" />
-            封面
-          </button>
-        </div>
-      </div>
-
-      <div className="px-5 pb-5 pt-3">
-        <div className="mx-auto mb-6 flex w-fit max-w-full items-center gap-2 rounded-[16px] border border-[#e0ddd4] bg-white px-5 py-3 shadow-[0_10px_24px_rgba(43,38,27,0.12)]">
+    <>
+      <div
+        className="sticky top-3 z-20 mx-auto mb-3 flex w-full max-w-[420px] justify-center px-2"
+        onMouseLeave={() => setActiveToolId(null)}
+      >
+        <div
+          role="toolbar"
+          aria-label="剧本结构插入工具"
+          className="relative flex w-fit max-w-full items-center gap-1 overflow-visible rounded-[22px] border px-2 py-2 backdrop-blur-2xl"
+          style={{
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.34), rgba(246,244,238,0.16))',
+            borderColor: 'rgba(255,255,255,0.64)',
+            boxShadow: '0 22px 54px rgba(38,34,25,0.16), inset 0 1px 0 rgba(255,255,255,0.78), inset 0 -1px 0 rgba(255,255,255,0.24)',
+            WebkitBackdropFilter: 'blur(28px) saturate(1.46)',
+            backdropFilter: 'blur(28px) saturate(1.46)',
+          }}
+        >
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-4 top-1 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.92), transparent)' }}
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-8 top-0 h-full w-16 -skew-x-12"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent)' }}
+          />
           {scriptStudioToolbarItems.map((item) => {
             const Icon = item.icon
+            const active = activeToolId === item.id
             return (
               <button
-                key={item.label}
+                key={item.id}
                 type="button"
                 aria-label={`插入${item.label}`}
-                className="grid h-11 min-w-12 place-items-center gap-1 rounded-[8px] px-1.5 text-[11px] font-semibold text-[#252822] outline-none transition hover:bg-[#f2f0ea] focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
+                title={`${item.label}：${item.description}`}
+                onClick={() => insertScriptSnippet(item.snippet)}
+                onFocus={() => setActiveToolId(item.id)}
+                onMouseEnter={() => setActiveToolId(item.id)}
+                className="relative grid h-10 min-w-10 place-items-center gap-0.5 rounded-[13px] border px-1 text-[10px] font-semibold text-[#252822] outline-none transition duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
+                style={{
+                  backgroundColor: active ? 'rgba(255,255,255,0.54)' : 'rgba(255,255,255,0.14)',
+                  borderColor: active ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.28)',
+                  boxShadow: active
+                    ? '0 10px 22px rgba(37,40,34,0.13), inset 0 1px 0 rgba(255,255,255,0.82)'
+                    : 'inset 0 1px 0 rgba(255,255,255,0.42)',
+                }}
               >
-                <Icon className="size-4" />
+                <Icon className="size-3.5" />
                 <span>{item.label}</span>
               </button>
             )
           })}
+          {activeTool ? (
+            <div
+              className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-30 w-[320px] -translate-x-1/2 rounded-[14px] border px-3 py-2 text-left shadow-[0_18px_42px_rgba(38,34,25,0.16)]"
+              style={{
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.72), rgba(248,246,240,0.42))',
+                borderColor: 'rgba(255,255,255,0.64)',
+                WebkitBackdropFilter: 'blur(24px) saturate(1.35)',
+                backdropFilter: 'blur(24px) saturate(1.35)',
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-[#252822]">{activeTool.label}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6b7167]">插入</span>
+              </div>
+              <div className="mt-1 text-[11px] leading-4 text-[#444941]">{activeTool.description}</div>
+              <div className="mt-1 text-[10px] leading-4 text-[#73786f]">{activeTool.usage}</div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <article
+        className="mx-auto w-full max-w-[420px] overflow-hidden rounded-[16px] border border-[#dedbd2]/88 shadow-[0_24px_64px_rgba(43,38,27,0.16)] backdrop-blur-[1px]"
+        style={{ backgroundColor: 'rgba(253, 252, 248, 0.94)' }}
+      >
+        <div className="flex min-h-11 items-center justify-between gap-2 border-b border-[#e5e1d8] px-4">
+          <h1 className="text-sm font-semibold text-[#252822]">{title}</h1>
+          <div
+            className="flex shrink-0 items-center gap-1 rounded-[7px] border border-[#e5e1d8] p-1"
+            style={{ backgroundColor: 'rgba(247,246,241,0.72)' }}
+          >
+            <button
+              type="button"
+              className="flex h-7 items-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold text-[#2e332d] shadow-[0_1px_2px_rgba(36,32,24,0.06)]"
+              style={{ backgroundColor: 'rgba(255,255,255,0.72)' }}
+            >
+              <FileText className="size-3.5" />
+              剧本
+            </button>
+            <button type="button" className="flex h-7 items-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold text-[#9a948a]">
+              <Image className="size-3.5" />
+              封面
+            </button>
+          </div>
         </div>
 
-        <div className="mx-auto max-w-[760px]">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mx-auto max-w-[352px] px-4 pb-5 pt-5">
+          <div className="mb-3 flex flex-col gap-3">
             <div className="min-w-0">
               <div className="truncate text-xs font-semibold text-[#8b867d]">第 {chapterNumber} 章</div>
-              <div className="mt-0.5 truncate text-base font-semibold text-[#252822]">{subtitle}</div>
+              <div className="mt-0.5 truncate text-sm font-semibold text-[#252822]">{subtitle}</div>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center justify-end gap-1.5">
               <button
                 type="button"
+                title="根据当前大纲、节拍和项目设定生成本章草稿。"
                 onClick={() => novel ? handlers?.onGenerateChapter?.(novel.id, chapterNumber) : undefined}
                 disabled={disabled || !handlers?.onGenerateChapter}
-                className="flex h-8 items-center gap-1.5 rounded-[7px] border border-[#d9d5ca] bg-white px-2.5 text-xs font-semibold text-[#353832] outline-none transition hover:bg-[#f7f6f1] disabled:opacity-45"
+                className="flex h-8 items-center gap-1 rounded-[7px] border border-[#d9d5ca] px-2 text-xs font-semibold text-[#353832] outline-none transition hover:opacity-80 disabled:opacity-45"
+                style={{ backgroundColor: 'rgba(255,255,255,0.72)' }}
               >
                 <Sparkles className="size-3.5" />
                 生成
               </button>
               <button
                 type="button"
+                title="保存当前章节草稿到 PlotPilot 项目。"
                 onClick={() => novel ? handlers?.onSaveChapter?.(novel.id, chapterNumber, draft) : undefined}
                 disabled={disabled || !handlers?.onSaveChapter}
-                className="flex h-8 items-center gap-1.5 rounded-[7px] border border-[#d9d5ca] bg-white px-2.5 text-xs font-semibold text-[#353832] outline-none transition hover:bg-[#f7f6f1] disabled:opacity-45"
+                className="flex h-8 items-center gap-1 rounded-[7px] border border-[#d9d5ca] px-2 text-xs font-semibold text-[#353832] outline-none transition hover:opacity-80 disabled:opacity-45"
+                style={{ backgroundColor: 'rgba(255,255,255,0.72)' }}
               >
                 <Save className="size-3.5" />
                 保存
               </button>
               <button
                 type="button"
+                title="把当前章节写回生产链路，用于后续证据、记忆和项目文件同步。"
                 onClick={() => novel ? handlers?.onWriteBackChapter?.(novel.id, chapterNumber) : undefined}
                 disabled={disabled || !handlers?.onWriteBackChapter}
-                className="flex h-8 items-center gap-1.5 rounded-[7px] bg-[#174a38] px-2.5 text-xs font-semibold text-white outline-none transition hover:bg-[#113d2f] disabled:opacity-45"
+                className="flex h-8 items-center gap-1 rounded-[7px] px-2 text-xs font-semibold outline-none transition hover:opacity-90 disabled:opacity-45"
+                style={{
+                  background: `linear-gradient(180deg, ${scriptStudioPrimaryPill}, ${scriptStudioPrimaryPillHover})`,
+                  boxShadow: `0 8px 18px ${scriptStudioPrimaryPillShadow}`,
+                  color: '#fff',
+                }}
               >
                 <GitBranch className="size-3.5" />
                 回写
@@ -3769,6 +6020,7 @@ function ScriptStudioPaper({
           </div>
 
           <textarea
+            ref={textareaRef}
             value={draft}
             onChange={(event) => {
               onDraftChange(event.currentTarget.value)
@@ -3777,14 +6029,15 @@ function ScriptStudioPaper({
             placeholder={placeholder}
             spellCheck={false}
             className={cn(
-              'min-h-[650px] w-full resize-none rounded-[8px] border border-[#ebe7dc] bg-[#fffefd] px-8 py-8',
-              'font-serif text-[16px] leading-[2.05] text-[#28241e] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] outline-none',
-              'placeholder:whitespace-pre-wrap placeholder:text-[#2f2b25]/72 focus:border-[#cfc8b9]',
+              'min-h-[720px] w-full resize-none px-6 pb-8 pt-4',
+              'font-serif text-[14px] leading-[2.05] text-[#28241e] outline-none',
+              'placeholder:whitespace-pre-wrap placeholder:text-[#2f2b25]/72',
             )}
+            style={{ backgroundColor: 'transparent' }}
           />
         </div>
-      </div>
-    </article>
+      </article>
+    </>
   )
 }
 
@@ -3851,7 +6104,7 @@ function ScriptStudioOutlinePaper({
     <article className="rounded-[12px] border border-[#dedbd2] bg-[#fdfcf8] p-6 shadow-[0_22px_54px_rgba(43,38,27,0.12)]">
       <div className="mb-6 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-[#252822]">《{novel?.title ?? '搜神记'}》</h1>
+          <h1 className="text-lg font-semibold text-[#252822]">《{novel?.title ?? '未命名项目'}》</h1>
           <div className="mt-1 text-xs text-[#8a867c]">26/05/27</div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -3869,6 +6122,10 @@ function ScriptStudioOutlinePaper({
             onClick={() => novel ? handlers?.onGeneratePlotOutline?.(novel.id) : undefined}
             disabled={disabled || !handlers?.onGeneratePlotOutline}
             className="flex h-8 items-center gap-1.5 rounded-[7px] bg-[#174a38] px-2.5 text-xs font-semibold text-white outline-none transition hover:bg-[#113d2f] disabled:opacity-45"
+            style={{
+              background: `linear-gradient(180deg, ${scriptStudioPrimaryPill}, ${scriptStudioPrimaryPillHover})`,
+              boxShadow: `0 8px 18px ${scriptStudioPrimaryPillShadow}`,
+            }}
           >
             <Sparkles className="size-3.5" />
             生成大纲
@@ -3920,6 +6177,7 @@ function ScriptStudioRightRail({
   draft,
   novel,
   codexStatus,
+  integrationStatus,
   projectGuardStatus,
   lastWritingSpecFailure,
   handlers,
@@ -3939,6 +6197,7 @@ function ScriptStudioRightRail({
   draft: string
   novel: PlotPilotNovel | null
   codexStatus?: PlotPilotCodexStatus | null
+  integrationStatus?: PlotPilotIntegrationStatus
   projectGuardStatus?: PlotPilotProjectGuardStatus | null
   lastWritingSpecFailure?: PlotPilotWritingSpecFailureView | null
   handlers?: PlotPilotNativeHandlers
@@ -4013,6 +6272,10 @@ function ScriptStudioRightRail({
           </div>
         </div>
       </ScriptStudioFloatingCard>
+
+      <ScriptStudioProductionEvidencePanel snapshot={integrationStatus?.productionEvidence} compact />
+
+      <ScriptStudioIntegrationPanel status={integrationStatus} compact />
 
       <ScriptStudioStorageDeck
         title="人设存储"
@@ -4133,23 +6396,34 @@ function ScriptStudioMusicPlayer({ className }: { className?: string }) {
   }
 
   return (
-    <section className={cn('rounded-[10px] border border-[#dedbd2] bg-[#fffefd]/96 p-3 shadow-[0_14px_30px_rgba(43,38,27,0.12)]', className)}>
+    <section
+      className={cn('overflow-hidden rounded-[18px] border p-3 text-white shadow-[0_18px_38px_rgba(43,38,27,0.18)]', className)}
+      style={{
+        ...storyContextComicBackground('style', playing),
+        borderColor: 'rgba(139,88,126,0.48)',
+      }}
+    >
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <Music className="size-3.5 shrink-0 text-[#4d514a]" />
-          <h2 className="truncate text-sm font-semibold text-[#282b25]">音乐播放器</h2>
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/18 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]">
+            <Music className="size-4" />
+          </span>
+          <span className="min-w-0">
+            <h2 className="truncate text-sm font-semibold text-white">音乐播放器</h2>
+            <span className="mt-0.5 block truncate text-[11px] text-white/76">Writing ambience</span>
+          </span>
         </div>
-        <span className={cn('size-1.5 rounded-full', playing ? 'bg-[#174a38]' : 'bg-[#c7c1b6]')} />
+        <span className={cn('size-2 rounded-full shadow-[0_0_0_3px_rgba(255,255,255,0.16)]', playing ? 'bg-white' : 'bg-white/42')} />
       </div>
-      <div className="rounded-[8px] border border-[#e5e1d8] bg-[#f8f7f2] p-2.5">
-        <div className="truncate text-xs font-semibold text-[#2d302b]">{track?.title ?? 'Ambient'}</div>
-        <div className="mt-0.5 text-[10px] text-[#8a867c]">{track?.detail ?? 'browser audio'}</div>
+      <div className="rounded-[16px] bg-white/94 p-3 text-[#28241e] shadow-[0_10px_24px_rgba(43,38,27,0.14)]">
+        <div className="truncate text-sm font-semibold text-[#2d302b]">{track?.title ?? 'Ambient'}</div>
+        <div className="mt-0.5 text-[11px] text-[#8a867c]">{track?.detail ?? 'browser audio'}</div>
         <div className="mt-3 flex items-center justify-center gap-2">
           <button
             type="button"
             aria-label="上一首"
             onClick={() => switchTrack(-1)}
-            className="grid size-8 place-items-center rounded-full border border-[#ddd8cc] bg-white text-[#3d4039] outline-none transition hover:bg-[#f1efe8] focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
+            className="grid size-9 place-items-center rounded-full border border-[#ddd8cc] bg-white text-[#3d4039] shadow-[0_4px_10px_rgba(43,38,27,0.08)] outline-none transition hover:bg-[#f1efe8] focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
           >
             <SkipBack className="size-3.5" />
           </button>
@@ -4157,7 +6431,11 @@ function ScriptStudioMusicPlayer({ className }: { className?: string }) {
             type="button"
             aria-label={playing ? '暂停音乐' : '播放音乐'}
             onClick={toggle}
-            className="grid size-10 place-items-center rounded-full bg-[#174a38] text-white shadow-[0_4px_10px_rgba(23,74,56,0.2)] outline-none transition hover:bg-[#113d2f] focus-visible:ring-2 focus-visible:ring-[#174a38]/25"
+            className="grid size-12 place-items-center rounded-full bg-[#174a38] text-white shadow-[0_8px_18px_rgba(23,74,56,0.24)] outline-none transition hover:bg-[#113d2f] focus-visible:ring-2 focus-visible:ring-[#174a38]/25"
+            style={{
+              background: `linear-gradient(180deg, ${scriptStudioSecondaryPill}, ${scriptStudioPrimaryPill})`,
+              boxShadow: `0 8px 18px ${scriptStudioPrimaryPillShadow}`,
+            }}
           >
             {playing ? <Pause className="size-4" /> : <Play className="size-4 translate-x-px" />}
           </button>
@@ -4165,12 +6443,12 @@ function ScriptStudioMusicPlayer({ className }: { className?: string }) {
             type="button"
             aria-label="下一首"
             onClick={() => switchTrack(1)}
-            className="grid size-8 place-items-center rounded-full border border-[#ddd8cc] bg-white text-[#3d4039] outline-none transition hover:bg-[#f1efe8] focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
+            className="grid size-9 place-items-center rounded-full border border-[#ddd8cc] bg-white text-[#3d4039] shadow-[0_4px_10px_rgba(43,38,27,0.08)] outline-none transition hover:bg-[#f1efe8] focus-visible:ring-2 focus-visible:ring-[#174a38]/20"
           >
             <SkipForward className="size-3.5" />
           </button>
         </div>
-        <label className="mt-3 flex items-center gap-2">
+        <label className="mt-3 flex items-center gap-2 rounded-full bg-[#f4f2eb] px-2 py-1.5">
           <Volume2 className="size-3.5 text-[#6d6a62]" />
           <input
             type="range"
@@ -4181,6 +6459,7 @@ function ScriptStudioMusicPlayer({ className }: { className?: string }) {
             onChange={(event) => setVolume(Number(event.currentTarget.value))}
             aria-label="音乐音量"
             className="h-1.5 w-full accent-[#174a38]"
+            style={{ accentColor: scriptStudioPrimaryPill }}
           />
         </label>
       </div>
@@ -4238,6 +6517,10 @@ function ScriptStudioStorageDeck({
             onClick={() => setCreating(true)}
             disabled={disabled || creating}
             className="grid size-7 place-items-center rounded-full border border-[#ded9cc] bg-[#174a38] text-white outline-none transition hover:bg-[#123d2f] focus-visible:ring-2 focus-visible:ring-[#174a38]/20 disabled:cursor-not-allowed disabled:opacity-45"
+            style={{
+              background: `linear-gradient(180deg, ${scriptStudioSecondaryPill}, ${scriptStudioPrimaryPill})`,
+              boxShadow: `0 8px 18px ${scriptStudioPrimaryPillShadow}`,
+            }}
           >
             <Plus className="size-3.5" />
           </button>
@@ -4279,21 +6562,21 @@ function ScriptStudioFancyStorageCard({
   const [draft, setDraft] = React.useState<ScriptStudioStorageCardDraft>(() => toStorageCardDraft(card))
   const tone = {
     sage: {
-      root: '#98a295',
+      root: 'var(--drama-plm-card-world-from, #98a295)',
       dot: 'rgba(36, 45, 36, .28)',
       glow: 'rgba(255, 255, 255, .28)',
       ink: '#f7f8f4',
       chip: 'rgba(255, 255, 255, .34)',
     },
     ink: {
-      root: '#303432',
+      root: 'var(--drama-plm-pill-secondary, #303432)',
       dot: 'rgba(255, 255, 255, .16)',
       glow: 'rgba(187, 221, 199, .18)',
       ink: '#f7f6ee',
       chip: 'rgba(255, 255, 255, .16)',
     },
     gold: {
-      root: '#b49a63',
+      root: 'var(--drama-plm-card-style-from, #b49a63)',
       dot: 'rgba(52, 39, 18, .20)',
       glow: 'rgba(255, 255, 255, .25)',
       ink: '#fffaf0',
@@ -4393,6 +6676,10 @@ function ScriptStudioFancyStorageCard({
               onClick={saveDraft}
               disabled={disabled || !onSave}
               className="inline-flex items-center gap-1 rounded-[6px] bg-[#174a38] px-2.5 py-1 text-[11px] font-semibold text-white outline-none hover:bg-[#123d2f] focus-visible:ring-2 focus-visible:ring-[#174a38]/25 disabled:cursor-not-allowed disabled:opacity-45"
+              style={{
+                background: `linear-gradient(180deg, ${scriptStudioPrimaryPill}, ${scriptStudioPrimaryPillHover})`,
+                boxShadow: `0 8px 18px ${scriptStudioPrimaryPillShadow}`,
+              }}
             >
               <Save className="size-3" />
               保存
@@ -4502,22 +6789,22 @@ function createScriptStudioChapters(
     {
       id: 'fallback-1',
       number: 1,
-      title: '序幕 · 海猎凶兽',
-      summary: '乔羽携子荒尤出海猎器灵云龙，遭遇大荒十大神兽之一，故事主线由此开启。',
+      title: '第 1 章',
+      summary: '等待导入正文、章节大纲或生成提示。这里不再显示跨项目示例稿。',
       colorClassName: scriptStudioChapterColors[0] ?? 'bg-[#5477d4]',
     },
     {
       id: 'fallback-2',
       number: 2,
-      title: '第一幕 · 神帝之殇',
-      summary: '旧秩序崩塌，神权与血书交织，人物关系被推向第一次不可逆转的抉择。',
+      title: '第 2 章',
+      summary: '等待章节规划。建议先确认人物、情节、环境三要素。',
       colorClassName: scriptStudioChapterColors[1] ?? 'bg-[#8b64d9]',
     },
     {
       id: 'fallback-3',
       number: 3,
-      title: '第一幕 · 坠崖奇遇',
-      summary: '主角进入未知场域，获得改写命运的线索，也暴露出世界观深处的裂缝。',
+      title: '第 3 章',
+      summary: '等待前后文。导入样稿后这里会显示真实章节。',
       colorClassName: scriptStudioChapterColors[2] ?? 'bg-[#2f9d72]',
     },
   ]
@@ -4550,10 +6837,9 @@ function createScriptStudioOutlineLines(
   if (lines.length > 0) return lines
 
   return [
-    '乔羽携子荒尤在海猎中遇见云龙，个人命运被拖入神权、血书与旧王朝的冲突。',
-    '主角从局部冒险进入更大的权力结构，必须在亲情、责任与自由之间不断选择。',
-    '反派力量并非单一恶，而是由制度、记忆和误解共同构成，推动故事进入多线并行。',
-    '最终阶段把人物关系、世界秘密和核心主题收束到同一场不可回避的公开抉择。',
+    '尚未载入大纲。请先导入项目大纲，或在情节面板写下当前章目标。',
+    '生成前应至少确认：前章结尾、本章目标、人物推进和章末钩子。',
+    '远景设定只做回声，不能抢当前阶段主线。',
   ]
 }
 
@@ -4576,11 +6862,8 @@ function createScriptStudioRelations(
   }
 
   return [
-    '神女 → 拓拔野（传人 · 三书 · 神木令）',
-    '乔羽 → 荒尤（父子 · 长生创）',
-    '空桑 → 拓拔野（暗声铺 · 三次告别）',
-    '雨师妾 → 拓拔野（敌意 · 盟约）',
-    '木族人 → 所有人（反派 · 旧王龙角）',
+    '尚未载入人物关系。请先补人物卡、声线和当前关系状态。',
+    '人物关系会影响对白、行动边界和本章情绪推进。',
   ]
 }
 
@@ -4632,24 +6915,24 @@ function createScriptStudioCharacterCards(
     {
       id: 'character-fallback-protagonist',
       kind: 'character',
-      title: '拓拔野',
-      subtitle: '主角 / 传承者',
-      body: '外在目标是追索神木令，内在冲突是自由意志与旧秩序召唤之间的拉扯。',
+      title: '主角',
+      subtitle: '人物卡未载入',
+      body: '请补充目标、弱点、声线、秘密、当前状态和本章行动边界。',
       badge: '人设',
-      meta: '主线人物',
-      initials: '拓',
+      meta: '待完善',
+      initials: '主',
       tone: 'sage',
       source: 'fallback',
     },
     {
       id: 'character-fallback-mentor',
       kind: 'character',
-      title: '乔羽',
-      subtitle: '父辈 / 引路人',
-      body: '掌握旧世界的航海经验，也携带上一代失败选择留下的隐秘负债。',
+      title: '关键关系人',
+      subtitle: '人物关系未载入',
+      body: '请补充与主角的关系、冲突、帮助方式和不能越界的地方。',
       badge: '人设',
-      meta: '关系锚点',
-      initials: '乔',
+      meta: '待完善',
+      initials: '关',
       tone: 'gold',
       source: 'fallback',
     },
@@ -4709,6 +6992,102 @@ function createScriptStudioPromptCards(featureState: PlotPilotNativeFeatureState
   ]
 }
 
+function createScriptStudioStoryContextBundle(args: {
+  novel: PlotPilotNovel | null
+  activeChapter?: ScriptStudioChapterView | null
+  activeChapterNumber: number
+  chapterEditor?: PlotPilotChapterEditor | null
+  outlineLines: string[]
+  relationLines: string[]
+  characterCards: ScriptStudioStorageCardView[]
+  selectedBibleData?: PlotPilotBibleEditorData | null
+}): PlotPilotStoryContextBundle {
+  const bibleWorld = args.novel?.bible?.world?.trim()
+  const bibleThemes = args.novel?.bible?.themes?.filter(Boolean).slice(0, 5) ?? []
+  const bibleConstraints = args.novel?.bible?.constraints?.filter(Boolean).slice(0, 5) ?? []
+  const editorWorld = args.selectedBibleData?.world_settings?.slice(0, 4).map((item) => {
+    const record = asUiRecord(item)
+    return [record.name, record.description].filter(Boolean).map(String).join('：')
+  }).filter(Boolean) ?? []
+  const editorLocations = args.selectedBibleData?.locations?.slice(0, 4).map((item) => {
+    const record = asUiRecord(item)
+    return [record.name, record.description].filter(Boolean).map(String).join('：')
+  }).filter(Boolean) ?? []
+  const editorTimeline = args.selectedBibleData?.timeline_notes?.slice(0, 4).map((item) => {
+    const record = asUiRecord(item)
+    return [record.time_point, record.event].filter(Boolean).map(String).join('：')
+  }).filter(Boolean) ?? []
+  const styleNotes = args.selectedBibleData?.style_notes?.slice(0, 5).map((item) => {
+    const record = asUiRecord(item)
+    return firstNonEmptyString(record, ['content', 'description', 'note'])
+  }).filter(Boolean) ?? []
+
+  const characterBody = [
+    ...args.characterCards.slice(0, 4).map((card) => `${card.title}：${card.body}`),
+    ...args.relationLines.slice(0, 5).map((line) => `关系：${line}`),
+  ].join('\n')
+  const plotBody = [
+    args.activeChapter ? `当前章：第 ${args.activeChapter.number} 章《${args.activeChapter.title}》` : `当前章：第 ${args.activeChapterNumber} 章`,
+    args.activeChapter?.summary ? `本章摘要：${args.activeChapter.summary}` : '',
+    ...args.outlineLines.slice(0, 6).map((line) => `大纲：${line}`),
+  ].filter(Boolean).join('\n')
+  const worldBody = [
+    bibleWorld ? `世界：${bibleWorld}` : '',
+    ...editorWorld.map((line) => `世界规则：${line}`),
+    ...editorLocations.map((line) => `地点：${line}`),
+    ...editorTimeline.map((line) => `时间线：${line}`),
+    ...bibleConstraints.map((line) => `约束：${line}`),
+  ].filter(Boolean).join('\n')
+  const styleBody = [
+    args.novel?.lockedWritingStyle ? `锁定文风：${args.novel.lockedWritingStyle}` : '',
+    ...bibleThemes.map((line) => `主题：${line}`),
+    ...styleNotes.map((line) => `风格：${line}`),
+    '生成时必须遵守已成正文事实、当前章目标、角色声线、文风规则、远景设定后置的优先级。',
+  ].filter(Boolean).join('\n')
+
+  const cards: PlotPilotStoryContextCard[] = [
+    {
+      id: 'story-context-characters',
+      kind: 'character',
+      title: '人物',
+      body: characterBody || '人物卡尚未载入。生成前应补充主角、关键关系人、声线、当前关系状态和不能越界的地方。',
+      source: 'bible.characters',
+      priority: 3,
+    },
+    {
+      id: 'story-context-plot',
+      kind: 'plot',
+      title: '情节',
+      body: plotBody || '章节大纲尚未载入。生成前应确认前章结尾、本章目标、人物推进和章末钩子。',
+      source: 'chapter_plan',
+      priority: 2,
+    },
+    {
+      id: 'story-context-world',
+      kind: 'world',
+      title: '环境',
+      body: worldBody || '环境资料尚未载入。生成前应补充时代背景、地点气味、社会规则和本章可触摸的物件。',
+      source: 'bible.world',
+      priority: 4,
+    },
+    {
+      id: 'story-context-style',
+      kind: 'style',
+      title: '文风',
+      body: styleBody,
+      source: 'style_guide',
+      priority: 5,
+    },
+  ]
+
+  return {
+    schema: 'plotpilot.story_context.v1',
+    novelId: args.novel?.id,
+    chapterNumber: args.activeChapterNumber,
+    cards,
+  }
+}
+
 function firstNonEmptyString(record: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     const value = record[key]
@@ -4735,6 +7114,507 @@ function RuntimeBadge({ state }: { state: PlotPilotRuntimeState }) {
     >
       {meta.label}
     </StatusBadge>
+  )
+}
+
+function canonicalIntegrationSurface(surface: PlotPilotIntegrationSurface): PlotPilotCanonicalIntegrationSurface {
+  return surface === 'product-zen-panel' ? 'product-drama-browser' : surface
+}
+
+function integrationSurfaceLabel(surface: PlotPilotIntegrationSurface): string {
+  if (surface === 'product-drama-browser') return 'Drama Browser product path'
+  if (surface === 'product-zen-panel') return 'Drama Browser product path (legacy alias product-zen-panel)'
+  if (surface === 'dev-localhost') return 'dev-localhost'
+  if (surface === 'legacy-electron') return 'legacy-electron'
+  return 'browser-fallback'
+}
+
+function integrationHostAdapterLabel(status: PlotPilotIntegrationStatus): string | null {
+  const adapter = status.hostAdapter
+    ?? (status.currentUrl?.includes('host=zen') || status.productPath ? 'zen-gecko' : undefined)
+  if (adapter === 'zen-gecko') return 'Zen/Gecko adapter'
+  if (adapter === 'browser') return 'browser adapter'
+  if (adapter === 'electron') return 'legacy Electron adapter'
+  return null
+}
+
+function integrationSurfaceDetail(status: PlotPilotIntegrationStatus): string {
+  const canonicalSurface = status.canonicalSurface ?? canonicalIntegrationSurface(status.surface)
+  const adapterLabel = integrationHostAdapterLabel(status)
+  if (canonicalSurface === 'product-drama-browser' && adapterLabel) {
+    return `${integrationSurfaceLabel(status.surface)} · ${adapterLabel}`
+  }
+  return integrationSurfaceLabel(status.surface)
+}
+
+function readinessTierLabel(tier: PlotPilotReadinessTier): string {
+  if (tier === 'shell-ready') return 'Shell'
+  if (tier === 'runtime-ready') return 'Runtime'
+  if (tier === 'plm-sidecar-ready') return 'PLM sidecar'
+  if (tier === 'ai-ready') return 'Codex AI'
+  if (tier === 'workflow-preview-ready') return 'Workflow'
+  return 'PlotPilot parity'
+}
+
+function readinessStateClassName(state: PlotPilotReadinessState): string {
+  if (state === 'ready') return 'border-[#bddbcf] bg-[#edf8f2] text-[#245342]'
+  if (state === 'pending') return 'border-[#ded2a2] bg-[#fff8df] text-[#6a5417]'
+  return 'border-[#ebc6bc] bg-[#fff2ee] text-[#7a3327]'
+}
+
+function parityStateClassName(state: PlotPilotParityCheckState): string {
+  if (state === 'ready') return 'border-[#bddbcf] bg-[#edf8f2] text-[#245342]'
+  if (state === 'partial') return 'border-[#ded2a2] bg-[#fff8df] text-[#6a5417]'
+  return 'border-[#ebc6bc] bg-[#fff2ee] text-[#7a3327]'
+}
+
+function productionEvidenceStateClassName(state: PlotPilotProductionEvidenceState): string {
+  if (state === 'ready') return 'border-[#bddbcf] bg-[#edf8f2] text-[#245342]'
+  if (state === 'partial') return 'border-[#ded2a2] bg-[#fff8df] text-[#6a5417]'
+  return 'border-[#ebc6bc] bg-[#fff2ee] text-[#7a3327]'
+}
+
+function IntegrationBadge({ status }: { status?: PlotPilotIntegrationStatus }) {
+  if (!status) return null
+  return (
+    <span
+      title={status.reason}
+      className={cn(
+        'hidden h-5 items-center rounded-[6px] border px-1.5 py-0.5 font-mono text-[10px] font-semibold sm:inline-flex',
+        status.productPath
+          ? 'border-[#bddbcf] bg-[#edf8f2] text-[#245342]'
+          : 'border-[#ded2a2] bg-[#fff8df] text-[#6a5417]',
+      )}
+    >
+      {integrationSurfaceLabel(status.surface)}
+    </span>
+  )
+}
+
+function ScriptStudioLayerFailureBanner({
+  runtimeStatus,
+  integrationStatus,
+  codexStatus,
+  handlers,
+  busy,
+}: {
+  runtimeStatus: PlotPilotRuntimeStatus
+  integrationStatus?: PlotPilotIntegrationStatus
+  codexStatus?: PlotPilotCodexStatus | null
+  handlers?: PlotPilotNativeHandlers
+  busy?: boolean
+}) {
+  const runtimeTier = readinessByTier(integrationStatus, 'runtime-ready')
+  const sidecarTier = readinessByTier(integrationStatus, 'plm-sidecar-ready')
+  const aiTier = readinessByTier(integrationStatus, 'ai-ready')
+  const workspaceTier = readinessByTier(integrationStatus, 'workflow-preview-ready')
+  const runtimeBlocked = runtimeTier?.state === 'blocked'
+  const sidecarBlocked = !runtimeBlocked && (
+    sidecarTier?.state === 'blocked'
+    || runtimeStatus.state === 'offline'
+    || runtimeStatus.state === 'error'
+  )
+  const aiBlocked = aiTier?.state === 'blocked' || (codexStatus ? !isCodexReady(codexStatus) : false)
+  const workspaceBlocked = workspaceTier?.state === 'blocked'
+  const cards: Array<{
+    id: string
+    icon: React.ComponentType<{ className?: string }>
+    title: string
+    body: string
+    tone: 'red' | 'amber' | 'neutral'
+    className?: string
+    actions?: React.ReactNode
+    meta?: React.ReactNode
+  }> = []
+
+  const copyDiagnostics = () => {
+    const diagnostics = {
+      runtime: {
+        state: runtimeStatus.state,
+        message: runtimeStatus.message,
+        endpoint: runtimeStatus.endpoint,
+      },
+      integration: integrationStatus,
+      codex: codexStatus,
+    }
+    void globalThis.navigator?.clipboard?.writeText(JSON.stringify(diagnostics, null, 2))
+  }
+
+  if (runtimeBlocked) {
+    cards.push({
+      id: 'runtime-unavailable',
+      icon: Power,
+      title: 'Runtime unavailable',
+      body: runtimeTier?.message ?? runtimeStatus.message ?? 'Drama runtime 尚未连上，PLM 只能显示本地壳和诊断信息。',
+      tone: 'red',
+      actions: (
+        <>
+          <button
+            type="button"
+            onClick={handlers?.onStartEngine}
+            disabled={busy || !handlers?.onStartEngine}
+            className="h-7 rounded-[6px] border border-[#d9c6bd] bg-white px-2 text-[11px] font-semibold text-[#6d3326] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            启动
+          </button>
+          <button
+            type="button"
+            onClick={handlers?.onRestartEngine}
+            disabled={busy || !handlers?.onRestartEngine}
+            className="h-7 rounded-[6px] border border-[#d9c6bd] bg-white px-2 text-[11px] font-semibold text-[#6d3326] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            重试
+          </button>
+          <button
+            type="button"
+            onClick={copyDiagnostics}
+            className="h-7 rounded-[6px] border border-[#d9c6bd] bg-white px-2 text-[11px] font-semibold text-[#6d3326]"
+          >
+            复制诊断
+          </button>
+        </>
+      ),
+      meta: runtimeStatus.endpoint ? (
+        <div className="mt-2 break-all rounded-[6px] bg-white/70 px-2 py-1 font-mono text-[10px] text-[#7a4a3e]">
+          {runtimeStatus.endpoint}
+        </div>
+      ) : null,
+    })
+  }
+
+  if (sidecarBlocked) {
+    cards.push({
+      id: 'plotpilot-sidecar-unavailable',
+      icon: AlertTriangle,
+      title: 'PlotPilot sidecar unavailable',
+      body: sidecarTier?.message ?? runtimeStatus.message ?? 'Drama runtime 在线，但 PlotPilot-compatible sidecar 未通过健康检查。',
+      tone: 'amber',
+      actions: (
+        <button
+          type="button"
+          onClick={handlers?.onRestartEngine}
+          disabled={busy || !handlers?.onRestartEngine}
+          className="h-7 rounded-[6px] border border-[#d8c690] bg-white px-2 text-[11px] font-semibold text-[#6f5614] disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          重试 sidecar
+        </button>
+      ),
+    })
+  }
+
+  if (aiBlocked) {
+    cards.push({
+      id: 'codex-unavailable',
+      icon: LogIn,
+      title: 'Codex auth required',
+      body: aiTier?.message ?? codexUnavailableMessage(codexStatus),
+      tone: 'amber',
+      actions: (
+        <button
+          type="button"
+          onClick={handlers?.onStartCodexLogin}
+          disabled={busy || !codexStatus?.available || !handlers?.onStartCodexLogin}
+          className="h-7 rounded-[6px] border border-[#d8c690] bg-white px-2 text-[11px] font-semibold text-[#6f5614] disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          登录 Codex
+        </button>
+      ),
+    })
+  }
+
+  if (workspaceBlocked) {
+    const pathHints = integrationStatus?.workspacePathHints?.filter(Boolean) ?? []
+    cards.push({
+      id: 'workspace-missing',
+      icon: FolderOpen,
+      title: 'Workspace missing',
+      body: workspaceTier?.message ?? '尚未选择可用项目，项目相关 PLM 面板保持锁定。',
+      tone: 'neutral',
+      className: 'lg:col-span-2',
+      actions: (
+        <>
+          <button
+            type="button"
+            onClick={handlers?.onCreateNovel}
+            disabled={busy || !handlers?.onCreateNovel}
+            className="h-7 rounded-[6px] border border-[#d7d0c2] bg-white px-2 text-[11px] font-semibold text-[#353932] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            新建项目
+          </button>
+          <button
+            type="button"
+            onClick={handlers?.onImportStorylet}
+            disabled={busy || !handlers?.onImportStorylet}
+            className="h-7 rounded-[6px] border border-[#d7d0c2] bg-white px-2 text-[11px] font-semibold text-[#353932] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            从 Graph 导入
+          </button>
+          <button
+            type="button"
+            onClick={copyDiagnostics}
+            className="h-7 rounded-[6px] border border-[#d7d0c2] bg-white px-2 text-[11px] font-semibold text-[#353932]"
+          >
+            复制诊断
+          </button>
+        </>
+      ),
+      meta: (
+        <div
+          data-plm-workspace-missing-panel="true"
+          className="mt-3 grid gap-2 md:grid-cols-[1fr_1.2fr_1fr]"
+        >
+          <div className="rounded-[7px] border border-[#ded9cd] bg-[#fbfaf6] p-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#7c766b]">Blocked surfaces</div>
+            <ul className="mt-1.5 space-y-1 text-[11px] leading-4 text-[#4c5048]">
+              <li>Hosted Write / Autopilot</li>
+              <li>章节保存与回写</li>
+              <li>Memory Graph 写入</li>
+            </ul>
+          </div>
+          <div className="rounded-[7px] border border-[#ded9cd] bg-[#fbfaf6] p-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#7c766b]">Detected paths</div>
+            {pathHints.length ? (
+              <div className="mt-1.5 max-h-28 overflow-auto font-mono text-[10px] leading-4 text-[#5b5d56]">
+                {pathHints.map((path) => (
+                  <div key={path} className="break-all">{path}</div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-1.5 text-[11px] leading-4 text-[#5b5d56]">
+                runtime 未返回 projectRoot/dataDir；先重启 runtime 或创建项目。
+              </div>
+            )}
+          </div>
+          <div className="rounded-[7px] border border-[#ded9cd] bg-[#fbfaf6] p-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#7c766b]">Recovery</div>
+            <div className="mt-1.5 text-[11px] leading-4 text-[#4c5048]">
+              先新建或导入一个小说项目。完成后 Script Studio 会解锁章节纸张、storage cards 和生成链路。
+            </div>
+          </div>
+        </div>
+      ),
+    })
+  }
+
+  if (cards.length === 0) return null
+
+  return (
+    <div className="mb-4 grid gap-2 lg:grid-cols-2">
+      {cards.map((card) => {
+        const Icon = card.icon
+        return (
+          <div
+            key={card.id}
+            data-plm-failure={card.id}
+            className={cn(
+              'rounded-[10px] border px-3 py-2.5 shadow-[0_10px_24px_rgba(43,38,27,0.08)] backdrop-blur-[2px]',
+              card.tone === 'red' && 'border-[#e4bfb4] bg-[#fff1ed]/94 text-[#673026]',
+              card.tone === 'amber' && 'border-[#e6d39a] bg-[#fff8df]/94 text-[#684f12]',
+              card.tone === 'neutral' && 'border-[#d8d3c8] bg-[#fffefd]/94 text-[#343831]',
+              card.className,
+            )}
+          >
+            <div className="flex items-start gap-2.5">
+              <div className="grid size-8 shrink-0 place-items-center rounded-[7px] border border-current/15 bg-white/55">
+                <Icon className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold">{card.title}</div>
+                <div className="mt-0.5 text-xs leading-5 opacity-80">{card.body}</div>
+                {card.meta}
+                {card.actions ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">{card.actions}</div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function ScriptStudioProductionEvidencePanel({
+  snapshot,
+  compact = false,
+}: {
+  snapshot?: PlotPilotProductionEvidenceSnapshot
+  compact?: boolean
+}) {
+  if (!snapshot) return null
+  const stateFor = (id: string) => snapshot.items.find((item) => item.id === id)?.state
+  const content = (
+    <div
+      data-plm-production-evidence="true"
+      data-plm-production-project-id={snapshot.projectId ?? ''}
+      data-plm-production-chapter-id={snapshot.chapterId ?? ''}
+      data-plm-production-chapter-number={snapshot.chapterNumber ?? ''}
+      data-plm-stage9-ready={snapshot.stage9Ready ? 'true' : 'false'}
+      data-plm-stage9-non-ready={(snapshot.stage9NonReady ?? []).join(',')}
+      data-plm-hosted-write-evidence={stateFor('hosted-write') ?? ''}
+      data-plm-prompt-evidence={stateFor('prompt') ?? ''}
+      data-plm-memory-evidence={stateFor('memory') ?? ''}
+      data-plm-autopilot-evidence={stateFor('autopilot') ?? ''}
+      className="space-y-2"
+    >
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="min-w-0 rounded-[7px] border border-[#e3dfd4] bg-[#fbfaf6] px-2.5 py-2">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#817c73]">Project</div>
+          <div className="mt-1 truncate text-xs font-semibold text-[#30362f]">{snapshot.projectTitle ?? 'No project'}</div>
+          <div className="mt-1 truncate font-mono text-[10px] text-[#777268]">{snapshot.projectId ?? snapshot.fixtureId ?? 'pending'}</div>
+        </div>
+        <div className="min-w-0 rounded-[7px] border border-[#e3dfd4] bg-[#fbfaf6] px-2.5 py-2">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#817c73]">Chapter</div>
+          <div className="mt-1 truncate text-xs font-semibold text-[#30362f]">
+            {snapshot.chapterNumber ? `第${snapshot.chapterNumber}章` : 'No chapter'}
+          </div>
+          <div className="mt-1 truncate font-mono text-[10px] text-[#777268]">{snapshot.chapterId ?? 'pending'}</div>
+        </div>
+      </div>
+      <div className={compact ? 'space-y-1.5' : 'grid gap-2 md:grid-cols-2 xl:grid-cols-3'}>
+        {snapshot.items.map((item) => (
+          <div
+            key={item.id}
+            data-plm-production-evidence-item={item.id}
+            data-state={item.state}
+            className={cn('min-w-0 rounded-[7px] border px-2.5 py-2', productionEvidenceStateClassName(item.state))}
+          >
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <span className="truncate text-xs font-semibold">{item.label}</span>
+              <span className="font-mono text-[10px] uppercase">{item.state}</span>
+            </div>
+            <div className="mt-1 line-clamp-2 text-[11px] leading-4 opacity-80">{item.detail}</div>
+            {item.evidence ? (
+              <div className="mt-1 truncate font-mono text-[10px] opacity-70">{item.evidence}</div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      {snapshot.pathHints?.length ? (
+        <div className="space-y-1 rounded-[7px] border border-[#e3dfd4] bg-[#fbfaf6] px-2.5 py-2">
+          {snapshot.pathHints.slice(0, 3).map((path, index) => (
+            <div
+              key={`${path}-${index}`}
+              className="min-w-0 break-all font-mono text-[10px] leading-4 text-[#6f6a61]"
+            >
+              {path}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+
+  if (compact) {
+    return (
+      <ScriptStudioFloatingCard title="Production Evidence" icon={Activity}>
+        {content}
+      </ScriptStudioFloatingCard>
+    )
+  }
+
+  return (
+    <ScriptStudioLightPanel
+      icon={Activity}
+      title="PLM Production Evidence"
+      detail={snapshot.fixtureName ?? 'macOS happy path'}
+    >
+      {content}
+    </ScriptStudioLightPanel>
+  )
+}
+
+function ScriptStudioIntegrationPanel({
+  status,
+  compact = false,
+}: {
+  status?: PlotPilotIntegrationStatus
+  compact?: boolean
+}) {
+  if (!status) return null
+  const rows = status.tiers
+  const blockedRows = rows.filter((row) => row.state === 'blocked')
+  const content = (
+    <div className="space-y-2">
+      {!status.productPath ? (
+        <div className="rounded-[7px] border border-[#ead7bd] bg-[#fff8eb] px-2.5 py-2 text-xs leading-5 text-[#6a4a17]">
+          {status.reason ?? '当前不是 Drama Browser product path。'}
+        </div>
+      ) : null}
+      <div className={compact ? 'space-y-1.5' : 'grid gap-2 md:grid-cols-2 xl:grid-cols-3'}>
+        {rows.map((row) => (
+          <div
+            key={row.tier}
+            className={cn(
+              'min-w-0 rounded-[7px] border px-2.5 py-2',
+              readinessStateClassName(row.state),
+            )}
+          >
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <span className="truncate text-xs font-semibold">{readinessTierLabel(row.tier)}</span>
+              <span className="font-mono text-[10px] uppercase">{row.state}</span>
+            </div>
+            <div className="mt-1 line-clamp-2 text-[11px] leading-4 opacity-80">{row.message}</div>
+          </div>
+        ))}
+      </div>
+      {status.currentUrl ? (
+        <div className="truncate rounded-[6px] border border-[#e3dfd4] bg-[#fbfaf6] px-2 py-1.5 font-mono text-[10px] text-[#6f6a61]">
+          {status.currentUrl}
+        </div>
+      ) : null}
+      {status.parityGaps?.length ? (
+        <div className="rounded-[7px] border border-[#ded9cd] bg-[#f8f7f2] px-2.5 py-2 text-[11px] leading-5 text-[#68645d]">
+          <span className="font-semibold text-[#343831]">Parity gaps:</span>{' '}
+          {status.parityGaps.join(' / ')}
+        </div>
+      ) : null}
+      {status.parityChecks?.length ? (
+        <div
+          data-plm-parity-matrix="true"
+          className={compact ? 'space-y-1.5' : 'grid gap-2 md:grid-cols-2'}
+        >
+          {status.parityChecks.map((check) => (
+            <div
+              key={check.id}
+              className={cn('min-w-0 rounded-[7px] border px-2.5 py-2', parityStateClassName(check.state))}
+            >
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <span className="truncate text-xs font-semibold">{check.label}</span>
+                <span className="font-mono text-[10px] uppercase">{check.state}</span>
+              </div>
+              <div className="mt-1 line-clamp-2 text-[11px] leading-4 opacity-80">{check.detail}</div>
+              {check.evidence ? (
+                <div className="mt-1 truncate font-mono text-[10px] opacity-70">{check.evidence}</div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {blockedRows.length ? (
+        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9a5547]">
+          {blockedRows.length} blocked readiness tier{blockedRows.length === 1 ? '' : 's'}
+        </div>
+      ) : null}
+    </div>
+  )
+
+  if (compact) {
+    return (
+      <ScriptStudioFloatingCard title="Integration Contract" icon={ShieldCheck}>
+        {content}
+      </ScriptStudioFloatingCard>
+    )
+  }
+
+  return (
+    <ScriptStudioLightPanel
+      icon={ShieldCheck}
+      title="Drama Browser PLM Integration Contract"
+      detail={integrationSurfaceDetail(status)}
+    >
+      {content}
+    </ScriptStudioLightPanel>
   )
 }
 
@@ -7338,6 +10218,71 @@ function extractMemoryEntities(triples: Array<Record<string, unknown>>): Array<{
 function countDraftText(value: string | undefined) {
   const text = value?.trim() ?? ''
   return text.length
+}
+
+function sanitizeMarkdownFileName(value: string | undefined, fallback: string) {
+  const normalized = value
+    ?.trim()
+    .replace(/[\\/:*?"<>|#\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return (normalized || fallback).slice(0, 96)
+}
+
+function buildLocalChapterMarkdown(args: {
+  novel: PlotPilotNovel | null
+  chapterNumber: number
+  chapterTitle?: string
+  content: string
+}) {
+  const novelTitle = args.novel?.title?.trim() || '未命名项目'
+  const chapterTitle = args.chapterTitle?.trim() || `第 ${args.chapterNumber} 章`
+  const body = args.content.trimEnd()
+  const lines = [
+    '---',
+    `novel: ${novelTitle}`,
+    `chapter: ${args.chapterNumber}`,
+    `title: ${chapterTitle}`,
+    `exported_at: ${new Date().toISOString()}`,
+    '---',
+    '',
+    `# ${chapterTitle}`,
+    '',
+    body || '> 当前章节暂无正文。',
+    '',
+  ]
+  return lines.join('\n')
+}
+
+async function saveMarkdownToLocalFile(fileName: string, markdown: string) {
+  const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+  const picker = (window as BrowserSaveFilePickerWindow).showSaveFilePicker
+
+  if (picker) {
+    const handle = await picker({
+      suggestedName: fileName,
+      types: [
+        {
+          description: 'Markdown 文稿',
+          accept: { 'text/markdown': ['.md'] },
+        },
+      ],
+    })
+    const writable = await handle.createWritable()
+    await writable.write(blob)
+    await writable.close()
+    return
+  }
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  link.rel = 'noopener'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
 }
 
 function normalizeProgressPercent(value: number | undefined) {

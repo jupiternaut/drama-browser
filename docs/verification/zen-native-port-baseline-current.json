@@ -1,0 +1,559 @@
+{
+  "ok": false,
+  "schema": "zen-native-port-verification.v1",
+  "generatedAt": "2026-06-18T01:38:10.390Z",
+  "startedAt": "2026-06-18T01:37:59.460Z",
+  "durationMs": 10930,
+  "strict": false,
+  "zenApp": "/Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app",
+  "runtimeUrl": "http://127.0.0.1:3198",
+  "chromeResource": {
+    "ok": true,
+    "path": "/Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser/chrome/browser/content/browser/drama/app/index.html",
+    "package": "loose-browser-resource",
+    "reason": "Drama chrome-resource index is installed as a loose browser resource."
+  },
+  "runtimeStatus": {
+    "ok": true,
+    "url": "http://127.0.0.1:3198/runtime/status",
+    "status": 200,
+    "durationMs": 5.2,
+    "body": {
+      "state": "ready",
+      "version": "0.1.0",
+      "message": "Drama standalone runtime ready.",
+      "updatedAt": "2026-06-18T01:37:59.465Z",
+      "workspaceRoot": "/Users/gengrf/.craft-agent/workspaces/my-workspace",
+      "startedAt": "2026-06-17T12:56:14.470Z",
+      "runtimePackageRoot": null,
+      "browserShellDistDir": "/Users/gengrf/drama-browser/apps/drama-browser-shell/dist",
+      "plmRuntime": {
+        "state": "running",
+        "healthy": true,
+        "port": 8005,
+        "url": "http://127.0.0.1:8005",
+        "baseUrl": "http://127.0.0.1:8005",
+        "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+        "owned": false,
+        "adopted": true,
+        "projectRoot": "/Users/gengrf/PlotPilot",
+        "dataDir": "/Users/gengrf/.plotpilot/data",
+        "health": {
+          "status": "healthy",
+          "version": "1.0.2",
+          "build_id": "build-20260209-1200-c4d2",
+          "uptime_seconds": 45419.94,
+          "daemon_process": {
+            "running": true,
+            "pid": 17275
+          }
+        }
+      },
+      "endpoints": {
+        "graph": "http://127.0.0.1:3198/graph",
+        "plm": "http://127.0.0.1:3198/plm/runtime/status",
+        "crew": "http://127.0.0.1:3198/crew",
+        "app": "http://127.0.0.1:3198/app",
+        "events": "ws://127.0.0.1:3198/events"
+      }
+    }
+  },
+  "sidecarStatus": {
+    "ok": true,
+    "url": "http://127.0.0.1:3198/plm/runtime/status?checkHealth=true",
+    "status": 200,
+    "durationMs": 3.7,
+    "body": {
+      "state": "running",
+      "healthy": true,
+      "port": 8005,
+      "url": "http://127.0.0.1:8005",
+      "baseUrl": "http://127.0.0.1:8005",
+      "apiBaseUrl": "http://127.0.0.1:8005/api/v1",
+      "owned": false,
+      "adopted": true,
+      "projectRoot": "/Users/gengrf/PlotPilot",
+      "dataDir": "/Users/gengrf/.plotpilot/data",
+      "health": {
+        "status": "healthy",
+        "version": "1.0.2",
+        "build_id": "build-20260209-1200-c4d2",
+        "uptime_seconds": 45693.42,
+        "daemon_process": {
+          "running": true,
+          "pid": 17275
+        }
+      }
+    }
+  },
+  "counts": {
+    "listeners": {
+      "runtime": {
+        "port": 3198,
+        "count": 1,
+        "entries": [
+          "bun     17232 gengrf    4u  IPv4 0xda5d51e3eef45e84      0t0  TCP 127.0.0.1:3198 (LISTEN)"
+        ],
+        "ok": true
+      },
+      "sidecar": {
+        "port": 8005,
+        "count": 1,
+        "entries": [
+          "Python  17264 gengrf   34u  IPv4 0x372192db281d3288      0t0  TCP 127.0.0.1:8005 (LISTEN)"
+        ],
+        "ok": true
+      }
+    },
+    "processes": {
+      "zen": {
+        "pattern": "Zen Browser",
+        "count": 19,
+        "entries": [
+          "425 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/zen -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main -no-remote",
+          "432 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/crashhelper 425 gecko-crash-server-pipe.425 /private/var/folders/9j/cx6fkz613dd_6545wf7kvt4w0000gn/T/TemporaryItems/ org.mozilla.crashhelper.18406869831269323466",
+          "433 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -parentBuildID 20260617194839 -prefsHandle 0:35241 -prefMapHandle 1:295304 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -ipcHandle 0 -initialChannelId {a8f762a2-f703-4761-bbe1-93a61e145c8f} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 2 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.115807898 1 socket",
+          "434 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/gpu-helper.app/Contents/MacOS/Zen GPU Helper -parentBuildID 20260617194839 -prefsHandle 0:35241 -prefMapHandle 1:295304 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -ipcHandle 0 -initialChannelId {932d3454-6ea5-403a-bc9c-660dc43096d2} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 2 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.904192757 2 gpu",
+          "435 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:35467 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {b328b43a-d1a9-41f6-92c4-02b2b159c731} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.1290824152 3 tab",
+          "436 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -parentBuildID 20260617194839 -prefsHandle 0:35467 -prefMapHandle 1:295304 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -ipcHandle 0 -initialChannelId {722dc664-f9c5-4d50-8a99-0f4028967260} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 2 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.30833065 4 rdd",
+          "438 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32247 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {e1fe954a-eec8-4bd9-bc87-97520819fc85} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.786090113 5 tab",
+          "439 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32247 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {fb43b25b-b978-414d-828e-50fdfe80c4bd} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.944868078 6 tab",
+          "440 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32247 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {3e9a7ffa-4687-4a0a-bbd7-2d12b025a491} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.454463030 7 tab",
+          "442 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:35467 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {43241fbe-09bd-4283-bf15-141f95a3e6d6} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.1923172337 9 tab",
+          "445 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -parentBuildID 20260617194839 -sandboxingKind 0 -prefsHandle 0:35602 -prefMapHandle 1:295304 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -ipcHandle 0 -initialChannelId {8368ea33-449e-4966-bef3-75aec3a9ff05} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 2 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.1691284260 10 utility",
+          "474 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32531 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {b110cf44-6b56-440d-89e2-c0c61061941b} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.2059877296 11 tab",
+          "475 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32531 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {27170fee-ac32-45f1-b147-2ed317329c48} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.1532437383 12 tab",
+          "476 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32531 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {5aa21105-50ce-40e1-9669-c2eaf7a0a44d} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.1862603410 13 tab",
+          "1329 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32607 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {67234d49-b39b-412b-8768-c35c86535ef2} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.1390226346 14 tab",
+          "1331 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32607 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {b2618983-2221-49d6-893a-c7bb74d22978} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.1044053117 15 tab",
+          "1336 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32607 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {216e3591-364b-471e-aa35-1c66ac30c76b} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.1682741660 16 tab",
+          "1337 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32607 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {4a26432e-9e09-4b3e-a480-04134eb5410a} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.1583703519 17 tab",
+          "1338 /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container -isForBrowser -prefsHandle 0:32607 -prefMapHandle 1:295304 -jsInitHandle 2:156120 -sbStartup -sbAppPath /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app -sbLevel 3 -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine -sbTestingReadPath /Users/gengrf/zen-browser-desktop/engine/obj-aarch64-apple-darwin -parentBuildID 20260617194839 -ipcHandle 0 -initialChannelId {9609c9b9-da35-47f0-bfd6-f53c2d28d381} -parentPid 425 -crashReporter gecko-crash-server-pipe.425 -crashHelperPid 432 -crashHelperSend 3 -crashHelperRecv 0 -appDir /Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser -profile /Users/gengrf/Library/Application Support/ZenDrama/profile-main org.mozilla.machname.365693041 18 tab"
+        ],
+        "ok": true
+      },
+      "runtime": {
+        "pattern": "runtime-entry-3198|drama-runtime|apps/drama-runtime",
+        "count": 1,
+        "entries": [
+          "17232 /Users/gengrf/.bun/bin/bun /Users/gengrf/.local/share/zen-drama/runtime-entry-3198.ts"
+        ],
+        "ok": true
+      },
+      "sidecar": {
+        "pattern": "plotpilot|PlotPilot",
+        "count": 1,
+        "entries": [
+          "17264 /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python -m uvicorn plotpilot_embedded_boot:app --host 127.0.0.1 --port 8005 --log-level info"
+        ],
+        "ok": true
+      }
+    }
+  },
+  "capturePreflight": {
+    "path": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/screen-capture-preflight.png",
+    "durationMs": 1247.1,
+    "open": {
+      "ok": true,
+      "stdout": "",
+      "stderr": "",
+      "code": 0
+    },
+    "capture": {
+      "ok": true,
+      "stdout": "",
+      "stderr": "",
+      "code": 0
+    },
+    "screenshot": {
+      "path": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/screen-capture-preflight.png",
+      "exists": true,
+      "width": 3420,
+      "height": 2214,
+      "fileSize": 141273,
+      "meanLuma": 0,
+      "lumaStdDev": 0,
+      "blackRatio": 1,
+      "whiteRatio": 0
+    },
+    "blocked": true,
+    "ok": false
+  },
+  "surfaces": [
+    {
+      "surface": "graph",
+      "requestedUri": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+      "activeUri": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+      "surfaceClassification": {
+        "classification": "product-zen-panel",
+        "productPath": true,
+        "currentUrl": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=graph",
+        "reason": "Graph is loaded from the Zen chrome-resource product path."
+      },
+      "resourcePath": "/Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser/chrome/browser/content/browser/drama/app/index.html",
+      "screenshotPath": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/zen-native-graph.png",
+      "textSnapshotPath": null,
+      "screenshot": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/zen-native-graph.png",
+        "exists": true,
+        "width": 3420,
+        "height": 2214,
+        "fileSize": 141273,
+        "meanLuma": 0,
+        "lumaStdDev": 0,
+        "blackRatio": 1,
+        "whiteRatio": 0
+      },
+      "detectors": [
+        {
+          "name": "black-screen",
+          "state": "fail",
+          "reason": "Screenshot is mostly black.",
+          "metrics": {
+            "width": 3420,
+            "height": 2214,
+            "fileSize": 141273,
+            "meanLuma": 0,
+            "lumaStdDev": 0,
+            "blackRatio": 1,
+            "whiteRatio": 0
+          }
+        },
+        {
+          "name": "blank-viewport",
+          "state": "pass",
+          "reason": "Screenshot is not mostly blank.",
+          "metrics": {
+            "width": 3420,
+            "height": 2214,
+            "fileSize": 141273,
+            "meanLuma": 0,
+            "lumaStdDev": 0,
+            "blackRatio": 1,
+            "whiteRatio": 0
+          }
+        },
+        {
+          "name": "browser-default-error",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        },
+        {
+          "name": "raw-json",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        },
+        {
+          "name": "raw-stack-trace",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        },
+        {
+          "name": "first-run-prompt",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        }
+      ],
+      "failureReasons": [
+        "black-screen: Screenshot is mostly black."
+      ],
+      "readiness": [
+        {
+          "tier": "shell-ready",
+          "state": "ready",
+          "message": "Drama chrome-resource index is installed."
+        },
+        {
+          "tier": "first-viewport",
+          "state": "blocked",
+          "message": "First viewport failed visual detectors."
+        },
+        {
+          "tier": "runtime-ready",
+          "state": "ready",
+          "message": "Drama runtime is ready."
+        },
+        {
+          "tier": "plm-sidecar-ready",
+          "state": "ready",
+          "message": "PlotPilot sidecar is healthy."
+        }
+      ],
+      "timings": {
+        "screenshotCaptureMs": 3194.5,
+        "runtimeStatusMs": 5.2,
+        "sidecarStatusMs": 3.7
+      },
+      "capture": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/zen-native-graph.png",
+        "durationMs": 3194.5,
+        "open": {
+          "ok": true,
+          "stdout": "",
+          "stderr": "",
+          "code": 0
+        },
+        "capture": {
+          "ok": true,
+          "stdout": "",
+          "stderr": "",
+          "code": 0
+        },
+        "ok": true
+      },
+      "ok": false
+    },
+    {
+      "surface": "plm",
+      "requestedUri": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+      "activeUri": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+      "surfaceClassification": {
+        "classification": "product-zen-panel",
+        "productPath": true,
+        "currentUrl": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=plm",
+        "reason": "PLM is loaded from the Zen chrome-resource product path."
+      },
+      "resourcePath": "/Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser/chrome/browser/content/browser/drama/app/index.html",
+      "screenshotPath": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/zen-native-plm.png",
+      "textSnapshotPath": null,
+      "screenshot": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/zen-native-plm.png",
+        "exists": true,
+        "width": 3420,
+        "height": 2214,
+        "fileSize": 141273,
+        "meanLuma": 0,
+        "lumaStdDev": 0,
+        "blackRatio": 1,
+        "whiteRatio": 0
+      },
+      "detectors": [
+        {
+          "name": "black-screen",
+          "state": "fail",
+          "reason": "Screenshot is mostly black.",
+          "metrics": {
+            "width": 3420,
+            "height": 2214,
+            "fileSize": 141273,
+            "meanLuma": 0,
+            "lumaStdDev": 0,
+            "blackRatio": 1,
+            "whiteRatio": 0
+          }
+        },
+        {
+          "name": "blank-viewport",
+          "state": "pass",
+          "reason": "Screenshot is not mostly blank.",
+          "metrics": {
+            "width": 3420,
+            "height": 2214,
+            "fileSize": 141273,
+            "meanLuma": 0,
+            "lumaStdDev": 0,
+            "blackRatio": 1,
+            "whiteRatio": 0
+          }
+        },
+        {
+          "name": "browser-default-error",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        },
+        {
+          "name": "raw-json",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        },
+        {
+          "name": "raw-stack-trace",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        },
+        {
+          "name": "first-run-prompt",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        }
+      ],
+      "failureReasons": [
+        "black-screen: Screenshot is mostly black."
+      ],
+      "readiness": [
+        {
+          "tier": "shell-ready",
+          "state": "ready",
+          "message": "Drama chrome-resource index is installed."
+        },
+        {
+          "tier": "first-viewport",
+          "state": "blocked",
+          "message": "First viewport failed visual detectors."
+        },
+        {
+          "tier": "runtime-ready",
+          "state": "ready",
+          "message": "Drama runtime is ready."
+        },
+        {
+          "tier": "plm-sidecar-ready",
+          "state": "ready",
+          "message": "PlotPilot sidecar is healthy."
+        }
+      ],
+      "timings": {
+        "screenshotCaptureMs": 3197.7,
+        "runtimeStatusMs": 5.2,
+        "sidecarStatusMs": 3.7
+      },
+      "capture": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/zen-native-plm.png",
+        "durationMs": 3197.7,
+        "open": {
+          "ok": true,
+          "stdout": "",
+          "stderr": "",
+          "code": 0
+        },
+        "capture": {
+          "ok": true,
+          "stdout": "",
+          "stderr": "",
+          "code": 0
+        },
+        "ok": true
+      },
+      "ok": false
+    },
+    {
+      "surface": "crew",
+      "requestedUri": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+      "activeUri": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+      "surfaceClassification": {
+        "classification": "product-zen-panel",
+        "productPath": true,
+        "currentUrl": "chrome://browser/content/drama/app/index.html?host=zen&runtime=http%3A%2F%2F127.0.0.1%3A3198&surface=crew",
+        "reason": "Skill Crew is loaded from the Zen chrome-resource product path."
+      },
+      "resourcePath": "/Users/gengrf/drama-browser/dist/zen-drama-mac-sourcebuilt/Zen Browser.app/Contents/Resources/browser/chrome/browser/content/browser/drama/app/index.html",
+      "screenshotPath": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/zen-native-crew.png",
+      "textSnapshotPath": null,
+      "screenshot": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/zen-native-crew.png",
+        "exists": true,
+        "width": 3420,
+        "height": 2214,
+        "fileSize": 141273,
+        "meanLuma": 0,
+        "lumaStdDev": 0,
+        "blackRatio": 1,
+        "whiteRatio": 0
+      },
+      "detectors": [
+        {
+          "name": "black-screen",
+          "state": "fail",
+          "reason": "Screenshot is mostly black.",
+          "metrics": {
+            "width": 3420,
+            "height": 2214,
+            "fileSize": 141273,
+            "meanLuma": 0,
+            "lumaStdDev": 0,
+            "blackRatio": 1,
+            "whiteRatio": 0
+          }
+        },
+        {
+          "name": "blank-viewport",
+          "state": "pass",
+          "reason": "Screenshot is not mostly blank.",
+          "metrics": {
+            "width": 3420,
+            "height": 2214,
+            "fileSize": 141273,
+            "meanLuma": 0,
+            "lumaStdDev": 0,
+            "blackRatio": 1,
+            "whiteRatio": 0
+          }
+        },
+        {
+          "name": "browser-default-error",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        },
+        {
+          "name": "raw-json",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        },
+        {
+          "name": "raw-stack-trace",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        },
+        {
+          "name": "first-run-prompt",
+          "state": "not-run",
+          "reason": "No DOM or text snapshot was provided."
+        }
+      ],
+      "failureReasons": [
+        "black-screen: Screenshot is mostly black."
+      ],
+      "readiness": [
+        {
+          "tier": "shell-ready",
+          "state": "ready",
+          "message": "Drama chrome-resource index is installed."
+        },
+        {
+          "tier": "first-viewport",
+          "state": "blocked",
+          "message": "First viewport failed visual detectors."
+        },
+        {
+          "tier": "runtime-ready",
+          "state": "ready",
+          "message": "Drama runtime is ready."
+        },
+        {
+          "tier": "plm-sidecar-ready",
+          "state": "ready",
+          "message": "PlotPilot sidecar is healthy."
+        }
+      ],
+      "timings": {
+        "screenshotCaptureMs": 3192.1,
+        "runtimeStatusMs": 5.2,
+        "sidecarStatusMs": 3.7
+      },
+      "capture": {
+        "path": "/Users/gengrf/drama-browser/docs/verification/zen-native-port-baseline-current/zen-native-crew.png",
+        "durationMs": 3192.1,
+        "open": {
+          "ok": true,
+          "stdout": "",
+          "stderr": "",
+          "code": 0
+        },
+        "capture": {
+          "ok": true,
+          "stdout": "",
+          "stderr": "",
+          "code": 0
+        },
+        "ok": true
+      },
+      "ok": false
+    }
+  ],
+  "failureReasons": [
+    "graph: black-screen: Screenshot is mostly black.",
+    "plm: black-screen: Screenshot is mostly black.",
+    "crew: black-screen: Screenshot is mostly black.",
+    "capture-preflight: macOS screencapture returned an all-black control screenshot."
+  ]
+}

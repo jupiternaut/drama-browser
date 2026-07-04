@@ -1,0 +1,120 @@
+{
+  "ok": true,
+  "schema": "zen-drama-windows-gate-preflight.v1",
+  "checkedAt": "2026-06-18T13:09:02.027Z",
+  "checks": [
+    {
+      "id": "package-json-windows-script",
+      "ok": true,
+      "message": "package.json exposes the Windows Marionette product-path verifier."
+    },
+    {
+      "id": "package-json-shared-script",
+      "ok": true,
+      "message": "package.json exposes the shared Python Marionette verifier."
+    },
+    {
+      "id": "package-json-windows-gate-script",
+      "ok": true,
+      "message": "package.json exposes the end-to-end Windows product gate runner."
+    },
+    {
+      "id": "package-json-prepare-zen-bin-script",
+      "ok": true,
+      "message": "package.json exposes the Windows Zen bin preparation helper."
+    },
+    {
+      "id": "shared-verifier-zen-bin",
+      "ok": true,
+      "message": "Shared verifier can launch a direct Zen executable, not only a macOS app bundle."
+    },
+    {
+      "id": "shared-verifier-screenshot",
+      "ok": true,
+      "message": "Shared verifier captures and analyzes WebDriver screenshots."
+    },
+    {
+      "id": "shared-verifier-budgets",
+      "ok": true,
+      "message": "Shared verifier enforces first viewport, route switch, and startup responsiveness budgets."
+    },
+    {
+      "id": "windows-wrapper-runtime-package-root",
+      "ok": true,
+      "message": "Windows wrapper verifies the runtime belongs to the installed package root."
+    },
+    {
+      "id": "windows-wrapper-installed-zen",
+      "ok": true,
+      "message": "Windows wrapper launches the installed package zen.exe through the shared verifier."
+    },
+    {
+      "id": "windows-wrapper-all-surfaces",
+      "ok": true,
+      "message": "Windows wrapper can verify Graph, PLM, and Skill Crew product paths."
+    },
+    {
+      "id": "windows-wrapper-summary",
+      "ok": true,
+      "message": "Windows wrapper writes a summary JSON artifact."
+    },
+    {
+      "id": "windows-gate-runner-installs-package",
+      "ok": true,
+      "message": "Windows gate runner verifies, installs, and runs Marionette against the package."
+    },
+    {
+      "id": "windows-gate-runner-artifact",
+      "ok": true,
+      "message": "Windows gate runner writes a product-gate summary artifact."
+    },
+    {
+      "id": "windows-gate-workflow",
+      "ok": true,
+      "message": "GitHub workflow can build a package from a Zen installer, run the Windows product gate, and upload evidence."
+    },
+    {
+      "id": "prepare-zen-bin-from-installer",
+      "ok": true,
+      "message": "Windows Zen bin preparation can download/extract an official Zen installer into a packageable bin tree."
+    },
+    {
+      "id": "windows-adapter-dependency-file",
+      "ok": true,
+      "message": "Windows adapter dependency file records this change boundary without claiming Windows runtime verification."
+    },
+    {
+      "id": "windows-adapter-command-file",
+      "ok": true,
+      "message": "Windows adapter dependency file records prepare/package/runtime-gate commands."
+    },
+    {
+      "id": "handoff-windows-command",
+      "ok": true,
+      "message": "Handoff documents the Windows product-path Marionette gate command."
+    },
+    {
+      "id": "handoff-windows-gate-command",
+      "ok": true,
+      "message": "Handoff documents the end-to-end Windows product gate runner and artifact."
+    },
+    {
+      "id": "handoff-windows-adapter-boundary",
+      "ok": true,
+      "message": "Handoff documents that Windows is an adapter dependency deliverable, not a runtime success claim for this change."
+    },
+    {
+      "id": "handoff-no-cross-platform-claim",
+      "ok": true,
+      "message": "Handoff blocks cross-platform runtime wording until Windows gate evidence exists."
+    },
+    {
+      "id": "openspec-windows-adapter-task-complete",
+      "ok": true,
+      "message": "OpenSpec task 7.4 is complete under the current macOS-only runtime verification scope."
+    }
+  ],
+  "nextWindowsCommand": "gh workflow run zen-drama-windows-product-gate.yml --ref <branch-with-this-change>",
+  "packageZipCommand": "bun run zen:drama:windows-gate -- -PackageZip \"path-or-url-to-zen-drama-win-x64.zip\" -AllSurfaces -CheckRouteSwitches",
+  "installedPackageCommand": "bun run zen:drama:verify:marionette:win -- -AllSurfaces -CheckRouteSwitches"
+}
